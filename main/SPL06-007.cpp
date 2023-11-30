@@ -20,6 +20,9 @@ SPL06_007::SPL06_007( char _addr ){
 // Addr. 0x08 MEAS_CTRL Bits 2-0:  111  - Continuous pressure and temperature measurement
 
 bool SPL06_007::begin() {
+#if defined(NOSENSORS)
+    return false;
+#else
 	// ---- Oversampling of >8x for temperature or pressuse requires FIFO operational mode which is not implemented ---
 	// ---- Use rates of 8x or less until feature is implemented ---
 	errors = 0;
@@ -63,6 +66,7 @@ bool SPL06_007::begin() {
 		return false;
 	else
 		return true;
+#endif
 }
 
 double SPL06_007::readTemperature( bool& success ){
@@ -73,6 +77,11 @@ double SPL06_007::readTemperature( bool& success ){
 }
 
 bool SPL06_007::selfTest( float& t, float& p ){
+
+#if defined(NOSENSORS)
+	return false;
+#else
+
 	uint8_t rdata = 0xFF;
 	delay(100); // give first measurement time to settle
 	esp_err_t err = bus->readByte(address, 0x0D, &rdata );  // ID
@@ -120,6 +129,7 @@ bool SPL06_007::selfTest( float& t, float& p ){
 		ESP_LOGI(FNAME,"SPL06_007 selftest addr: %d FAILED, p=%f t=%f", address, p, t );
 		return false;
 	}
+#endif
 }
 
 double SPL06_007::get_altitude(double pressure, double seaLevelhPa) {
@@ -151,6 +161,10 @@ double SPL06_007::get_temp_f()
 
 int32_t SPL06_007::get_traw( bool &ok )
 {
+#if defined(NOSENSORS)
+	ok = false;
+	return 0;
+#else
 	uint8_t data[3];
 	ok = i2c_read_bytes( 0X03, 3, data );   // use correct method to read 3 bytes of volatile data
 	if( ok ){
@@ -164,6 +178,7 @@ int32_t SPL06_007::get_traw( bool &ok )
 	}
 	last_traw = _traw;
 	return _traw;
+#endif
 }
 
 double SPL06_007::get_praw_sc( bool &ok )
@@ -175,6 +190,10 @@ double SPL06_007::get_praw_sc( bool &ok )
 
 double SPL06_007::get_pcomp(bool &ok)
 {
+#if defined(NOSENSORS)
+	ok = false;
+	return 1000.0;
+#else
 	bool ok_t, ok_p;
 	ok = false;
 	int i=0;
@@ -209,6 +228,7 @@ double SPL06_007::get_pcomp(bool &ok)
 	ok = true;
 	last_p = p;
 	return p;
+#endif
 }
 
 
@@ -226,6 +246,9 @@ double SPL06_007::get_pressure( bool &ok )
 
 double SPL06_007::get_scale_factor( int reg )
 {
+#if defined(NOSENSORS)
+	return 0;
+#else
 	double k = 0;
 	uint8_t tmp_Byte;
 	tmp_Byte = i2c_read_uint8( reg );   // MSB
@@ -268,6 +291,7 @@ double SPL06_007::get_scale_factor( int reg )
 		break;
 	}
 	return k;
+#endif
 }
 
 // #define RANDOM_TEST
@@ -275,6 +299,10 @@ double SPL06_007::get_scale_factor( int reg )
 
 int32_t SPL06_007::get_praw( bool &ok )
 {
+#if defined(NOSENSORS)
+	ok = false;
+	return 0;
+#else
 	uint8_t data[3];
 	ok = i2c_read_bytes( 0X00, 3, data );
 	if( ok )
@@ -302,20 +330,28 @@ int32_t SPL06_007::get_praw( bool &ok )
 #endif
 	last_praw = _praw;
 	return _praw;
+#endif  // NOSENSORS
 }
 
 int16_t SPL06_007::get_c0()
 {
+#if defined(NOSENSORS)
+	return 0;
+#else
 	uint8_t bytes[2];
 	i2c_read_bytes( 0x10, 2, bytes );
 	c0 = (bytes[0] << 4) | (bytes[1] >> 4);
 	if(c0 & (1 << 11)) // Check for 2's complement negative number
 		c0 = c0 | 0XF000; // Set left bits to one for 2's complement conversion of negitive number
 	return c0;
+#endif
 }
 
 int16_t SPL06_007::get_c1()
 {
+#if defined(NOSENSORS)
+	return 0;
+#else
 	uint8_t bytes[2];
 	i2c_read_bytes( 0x11, 2, bytes );
 	bytes[0] = bytes[0] & 0XF;
@@ -323,10 +359,14 @@ int16_t SPL06_007::get_c1()
 	if(c1 & (1 << 11)) // Check for 2's complement negative number
 		c1 = c1 | 0XF000; // Set left bits to one for 2's complement conversion of negitive number
 	return c1;
+#endif
 }
 
 int32_t SPL06_007::get_c00()
 {
+#if defined(NOSENSORS)
+	return 0;
+#else
 	int32_t ret;
 	uint8_t bytes[4];
 	i2c_read_bytes( 0x13, 3, bytes );
@@ -335,10 +375,14 @@ int32_t SPL06_007::get_c00()
 	if(ret & (1 << 19))
 		ret = ret | 0XFFF00000; // Set left bits to one for 2's complement conversion of negitive number
 	return ret;
+#endif
 }
 
 int32_t SPL06_007::get_c10()
 {
+#if defined(NOSENSORS)
+	return 0;
+#else
 	int32_t ret;
 	uint8_t bytes[4];
 	i2c_read_bytes( 0x15, 3, bytes );
@@ -347,27 +391,37 @@ int32_t SPL06_007::get_c10()
 	if(ret & (1 << 19))
 		ret = ret | 0XFFF00000; // Set left bits to one for 2's complement conversion of negitive number
 	return ret;
+#endif
 }
 
 int16_t SPL06_007::get_16bit( uint8_t addr )
 {
+#if defined(NOSENSORS)
+	return 0;
+#else
 	uint8_t tmp_MSB,tmp_LSB;
 	tmp_MSB = i2c_read_uint8( addr );
 	tmp_LSB = i2c_read_uint8( addr+1 );
 	return (int16_t)(tmp_LSB | (tmp_MSB<<8));
+#endif
 }
 
 void SPL06_007::i2c_write_uint8( uint8_t eeaddress, uint8_t data )
 {
+#if !defined(NOSENSORS)
 	esp_err_t err = bus->writeByte(address, eeaddress, data );
 	if( err != ESP_OK ){
 		ESP_LOGE(FNAME,"Error I2C write, status :%d", err );
 		errors++;
 	}
+#endif
 }
 
 bool SPL06_007::i2c_read_bytes( uint8_t eeaddress, int num, uint8_t *data )
 {
+#if defined(NOSENSORS)
+    return false;
+#else
 	esp_err_t err = bus->readBytes(address, eeaddress, num, data );
 	if( err != ESP_OK ){
 		ESP_LOGE(FNAME,"Error I2C bytes read, status :%d", err );
@@ -375,15 +429,18 @@ bool SPL06_007::i2c_read_bytes( uint8_t eeaddress, int num, uint8_t *data )
 		return false;
 	}
 	return true;
+#endif
 }
 
 uint8_t SPL06_007::i2c_read_uint8( uint8_t eeaddress )
 {
 	uint8_t rdata = 0xFF;
+#if !defined(NOSENSORS)
 	esp_err_t err = bus->readByte(address, eeaddress, &rdata );
 	if( err != ESP_OK ){
 		ESP_LOGE(FNAME,"Error I2C read, status :%d", err );
 		errors++;
 	}
+#endif
 	return rdata;
 }

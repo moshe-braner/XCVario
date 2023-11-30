@@ -12,6 +12,9 @@ xSemaphoreHandle i2c_mutex = 0;
 
 void I2C::init(gpio_num_t sda, gpio_num_t scl, uint32_t frequency, i2c_port_t num)
 {
+#if defined(NOSENSORS)
+    return;
+#else
 	ESP_LOGI(FNAME,"I2C(sda=%02x  scl=%02x)", sda, scl);
 	if( i2c_mutex ) {
 		ESP_LOGW(FNAME,"I2C driver already installed for sda=%02x  scl=%02x", sda, scl );
@@ -47,28 +50,40 @@ void I2C::init(gpio_num_t sda, gpio_num_t scl, uint32_t frequency, i2c_port_t nu
 	if(!error){
 		ESP_LOGI(FNAME,"I2C init SUCCESS");
 	}
+#endif
 }
 
 esp_err_t I2C::write(uint8_t byte, int ack, i2c_rw_t rw)
 {
+#if defined(NOSENSORS)
+    return ESP_FAIL;
+#else
 	esp_err_t ret = i2c_master_write_byte(cmd, (byte<<1)| rw , ack);
 	if( ret == ESP_FAIL){
 		ESP_LOGE(FNAME,"I2C ERROR write byte: %x", ret);
 	}
 	return ret;
+#endif
 }
 
 esp_err_t I2C::write_byte(uint8_t byte, int ack)
 {
+#if defined(NOSENSORS)
+    return ESP_FAIL;
+#else
 	esp_err_t ret = i2c_master_write_byte(cmd, byte , ack);
 	if( ret == ESP_FAIL){
 		ESP_LOGE(FNAME,"I2C ERROR write data byte: %x", ret);
 	}
 	return ret;
+#endif
 }
 
 esp_err_t I2C::write16bit( uint8_t addr, uint16_t word )
 {
+#if defined(NOSENSORS)
+    return ESP_FAIL;
+#else
 	xSemaphoreTake(i2c_mutex,portMAX_DELAY );
 	cmd = i2c_cmd_link_create();
 	uint8_t datah=(uint8_t(word>>8));
@@ -85,10 +100,14 @@ esp_err_t I2C::write16bit( uint8_t addr, uint16_t word )
     i2c_cmd_link_delete(cmd);
     xSemaphoreGive(i2c_mutex);
     return ret;
+#endif
 }
 
 esp_err_t I2C::write8bit( uint8_t addr, uint16_t word )
 {
+#if defined(NOSENSORS)
+    return ESP_FAIL;
+#else
 	xSemaphoreTake(i2c_mutex,portMAX_DELAY );
 	cmd = i2c_cmd_link_create();
 	uint8_t datal=(uint8_t(word & 0xFF));
@@ -104,11 +123,15 @@ esp_err_t I2C::write8bit( uint8_t addr, uint16_t word )
     i2c_cmd_link_delete(cmd);
     xSemaphoreGive(i2c_mutex);
     return ret;
+#endif
 }
 
 
 esp_err_t I2C::read16bit( uint8_t addr, uint16_t *word )
 {
+#if defined(NOSENSORS)
+    return ESP_FAIL;
+#else
 	xSemaphoreTake(i2c_mutex,portMAX_DELAY );
 	cmd = i2c_cmd_link_create();
 	uint8_t datah, datal;
@@ -125,10 +148,14 @@ esp_err_t I2C::read16bit( uint8_t addr, uint16_t *word )
     i2c_cmd_link_delete(cmd);
     xSemaphoreGive(i2c_mutex);
     return ret;
+#endif
 }
 
 esp_err_t I2C::read32bit( uint8_t addr, uint8_t *data )
 {
+#if defined(NOSENSORS)
+    return ESP_FAIL;
+#else
 	xSemaphoreTake(i2c_mutex,portMAX_DELAY );
 	cmd = i2c_cmd_link_create();
 	start();
@@ -147,10 +174,14 @@ esp_err_t I2C::read32bit( uint8_t addr, uint8_t *data )
     i2c_cmd_link_delete(cmd);
     xSemaphoreGive(i2c_mutex);
     return ret;
+#endif
 }
 
 esp_err_t I2C::read8bit( uint8_t addr, uint16_t *word )
 {
+#if defined(NOSENSORS)
+    return ESP_FAIL;
+#else
 	xSemaphoreTake(i2c_mutex,portMAX_DELAY );
 	cmd = i2c_cmd_link_create();
 	uint8_t datal;
@@ -167,11 +198,15 @@ esp_err_t I2C::read8bit( uint8_t addr, uint16_t *word )
     i2c_cmd_link_delete(cmd);
     xSemaphoreGive(i2c_mutex);
     return ret;
+#endif
 }
 
 
 esp_err_t I2C::scan(  uint8_t addr  )
 {
+#if defined(NOSENSORS)
+    return ESP_FAIL;
+#else
 	bool found=true;
 	cmd = i2c_cmd_link_create();
 	uint8_t _start = 3;
@@ -206,26 +241,34 @@ esp_err_t I2C::scan(  uint8_t addr  )
 		return ESP_FAIL;
 	}
 	return ESP_OK;
+#endif
 }
 
 esp_err_t I2C::read(uint8_t *byte, int ack) //(i2c_ack_type_t)
 {
+#if defined(NOSENSORS)
+    return ESP_FAIL;
+#else
 	esp_err_t ret = i2c_master_read_byte(cmd, byte, (i2c_ack_type_t)ack); //Read data back on B
 	if (ret == ESP_FAIL) {
 		ESP_LOGE(FNAME,"ERROR master read byte I2C link: %x", ret);
 	}
 	return ret;
+#endif
 }
 
 
 void I2C::start()
 {
+#if !defined(NOSENSORS)
 	i2c_master_start(cmd);
+#endif
 }
 
 
 void I2C::stop()
 {
+#if !defined(NOSENSORS)
 	i2c_master_stop(cmd);
+#endif
 }
-

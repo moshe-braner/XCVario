@@ -98,11 +98,15 @@ QMC5883L::~QMC5883L()
 
 bool QMC5883L::checkBus()
 {
+#if defined(NOSENSORS)
+	return false;
+#else
 	if( m_bus == nullptr )	{
 		// ESP_LOGE( FNAME, "QMC5883L bus pointer is zero" );
 		return false;
 	}
 	return true;
+#endif
 }
 
 /** Write with data part. */
@@ -158,6 +162,9 @@ uint8_t QMC5883L::readRegister( const uint8_t addr,	const uint8_t reg,	const uin
 // scan bus for I2C address
 esp_err_t QMC5883L::selfTest()
 {
+#if defined(NOSENSORS)
+	return ESP_FAIL;
+#else
 	ESP_LOGI( FNAME, "QMC5883L selftest");
 	// load last known calibration.
 	if( !checkBus() )	{
@@ -187,7 +194,7 @@ esp_err_t QMC5883L::selfTest()
 	ESP_LOGI( FNAME, "QMC5883L selftest PASSED");
 	m_sensor = true;
 	return ESP_OK;
-
+#endif
 }
 
 esp_err_t QMC5883L::initialize() {
@@ -201,6 +208,9 @@ esp_err_t QMC5883L::initialize() {
  */
 esp_err_t QMC5883L::initialize2( int a_odr, int a_osr )
 {
+#if defined(NOSENSORS)
+	return ESP_FAIL;
+#else
 	esp_err_t e1, e2, e3, e4;
 	e1 = e2 = e3 = e4 = 0;
 	X = Y = Z = 0;
@@ -234,10 +244,14 @@ esp_err_t QMC5883L::initialize2( int a_odr, int a_osr )
 		return ESP_FAIL;
 	}
 	return ESP_FAIL;
+#endif
 }
 
 bool QMC5883L::rawAxes( t_magn_axes &axes )
 {
+#if defined(NOSENSORS)
+	return false;
+#else
 	uint8_t data[6];
 	uint8_t status = 0;
 	// Check, if data are available
@@ -303,6 +317,7 @@ bool QMC5883L::rawAxes( t_magn_axes &axes )
 	if( age > 10 )
 		m_sensor = false;
 	return false;
+#endif
 }
 
 /**
@@ -311,6 +326,10 @@ bool QMC5883L::rawAxes( t_magn_axes &axes )
  */
 int16_t QMC5883L::temperature( bool *ok )
 {
+#if defined(NOSENSORS)
+	*ok = false;
+	return 0.0;
+#else
 	assert( (ok != nullptr) && "Passing of NULL pointer is forbidden" );
 
 	uint8_t data[2];
@@ -325,4 +344,5 @@ int16_t QMC5883L::temperature( bool *ok )
 	if( ok != nullptr )
 		*ok = true;
 	return t;
+#endif
 }

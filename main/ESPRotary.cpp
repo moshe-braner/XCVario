@@ -15,21 +15,93 @@
 #include <algorithm>
 #include "Flarm.h"
 
+#if defined(SUNTON28)
+
+#include "SetupNG.h"
+#include "XPT2046.h"
+
+enum
+{
+    TOUCH_NONE,
+    TOUCH_UP,
+    TOUCH_MIDDLE,
+    TOUCH_DOWN
+};
+
+#define MAX_UP      (Y_MIN + (Y_MAX-Y_MIN)/4)
+#define MIN_MIDDLE  (Y_MIN + (Y_MAX-Y_MIN)/4 + (Y_MAX-Y_MIN)/8)
+#define MAX_MIDDLE  (Y_MAX - (Y_MAX-Y_MIN)/4 - (Y_MAX-Y_MIN)/8)
+#define MIN_DOWN    (Y_MAX - (Y_MAX-Y_MIN)/4)
+
+int ESPRotary::touch_state()
+{
+    // de-bounce: freeze state for 120 ms after change
+    static int old_state = TOUCH_NONE;
+    static uint32_t next_time = 0;
+    uint32_t new_time = millis();
+    if (new_time < next_time)
+        return old_state;
+    int new_state = TOUCH_NONE;
+    // check if hardware "boot" button pressed
+    // otherwise use the touchscreen
+    gpio_set_direction(GPIO_NUM_0, GPIO_MODE_INPUT);
+    if( !gpio_get_level(GPIO_NUM_0) ) {
+        new_state = TOUCH_MIDDLE;
+    } else {
+        int16_t x, y;
+        if (getTouch(x,y) != false) {
+            // Touching logical top of screen should send "up"
+            // (touch screen is not inverted even when display is)
+            if (y < MAX_UP) {
+                if( display_orientation.get() == DISPLAY_TOPDOWN )
+                    new_state = TOUCH_DOWN;
+                else
+                    new_state = TOUCH_UP;
+            } else if (y > MIN_DOWN) {
+                if( display_orientation.get() == DISPLAY_TOPDOWN )
+                    new_state = TOUCH_UP;
+                else
+                    new_state = TOUCH_DOWN;
+            } else if (y > MIN_MIDDLE && y < MAX_MIDDLE) {
+                new_state = TOUCH_MIDDLE;
+            }
+        }
+    }
+    if (new_state != old_state) {
+        ESP_LOGI(FNAME,"touch_state -> %d", new_state );  // 0=release, 2=middle
+        old_state = new_state;
+        next_time = new_time + 120;
+    }
+    return new_state;
+}
+
+#else
+
 gpio_num_t ESPRotary::clk, ESPRotary::dt;
 gpio_num_t ESPRotary::sw = GPIO_NUM_0;
-std::list<RotaryObserver *> ESPRotary::observers;
 
 pcnt_config_t ESPRotary::enc;
 pcnt_config_t ESPRotary::enc2;
 int16_t ESPRotary::r_enc_count  = 0;
 int16_t ESPRotary::r_enc2_count = 0;
+
+#define ROTARY_SINGLE_INC 0
+#define ROTARY_DOUBLE_INC 1
+
+#endif   // SUNTON28
+
+std::list<RotaryObserver *> ESPRotary::observers;
+
 int ESPRotary::timer = 0;
 bool ESPRotary::released = true;
 bool ESPRotary::pressed = false;
 bool ESPRotary::longPressed = false;
 
-#define ROTARY_SINGLE_INC 0
-#define ROTARY_DOUBLE_INC 1
+#if defined(SUNTON28)
+bool ESPRotary::up = false;
+bool ESPRotary::down = false;
+#endif
+
 static TaskHandle_t pid = NULL;
 
 void ESPRotary::attach(RotaryObserver *obs) {
@@ -43,6 +115,23 @@ void ESPRotary::detach(RotaryObserver *obs) {
 		observers.erase(it);
 	}
 }
+
+#if defined(SUNTON28)
+
+bool ESPRotary::readSwitch() {
+    if( Flarm::bincom )
+        return false;
+    return (touch_state() == TOUCH_MIDDLE);
+}
+
+void ESPRotary::begin() {
+    XPT2046_init();
+    xTaskCreatePinnedToCore(&ESPRotary::informObservers, "informObservers", 5096, NULL, 14, &pid, 0);
+}
+
+static int old_touch = TOUCH_NONE;
+
+#else
 
 bool ESPRotary::readSwitch() {
   if( Flarm::bincom )
@@ -116,7 +205,9 @@ void ESPRotary::begin(gpio_num_t aclk, gpio_num_t adt, gpio_num_t asw ) {
 }
 
 int16_t old_cnt = 0;
-int old_button = RELEASE;
+// int old_button = RELEASE;
+
+#endif   // SUNTON28
 
 void ESPRotary::sendRelease(){
 	// ESP_LOGI(FNAME,"Release action");
@@ -129,7 +220,6 @@ void ESPRotary::sendRelease(){
 
 void ESPRotary::sendPress(){
 	// ESP_LOGI(FNAME,"Pressed action");
-	pressed = true;
 	if( Flarm::bincom )
 		return;
 	for (auto &observer : observers)
@@ -140,7 +230,6 @@ void ESPRotary::sendPress(){
 
 void ESPRotary::sendLongPress(){
 	// ESP_LOGI(FNAME,"Long pressed action");
-	longPressed = true;
 	if( Flarm::bincom )
 		return;
 	for (auto &observer : observers)
@@ -157,7 +246,7 @@ void ESPRotary::sendDown( int diff ){
 }
 
 void ESPRotary::sendEsc(){
-	// ESP_LOGI(FNAME,"Rotary up action");
+	// ESP_LOGI(FNAME,"Rotary Esc action");
 	if( Flarm::bincom )
 		return;
 	for (auto &observer : observers)
@@ -175,10 +264,92 @@ void ESPRotary::sendUp( int diff ){
 void ESPRotary::informObservers( void * args )
 {
 	while( 1 ) {
+
 	  if( Flarm::bincom ) {
 	    vTaskDelay(20 / portTICK_PERIOD_MS);
 	    continue;
 	  }
+
+#if defined(SUNTON28)
+
+		int touch = touch_state();
+
+		if( touch == TOUCH_MIDDLE ){  // pressed
+			timer++;
+			old_touch = TOUCH_MIDDLE;
+			released = false;
+			pressed = false;
+			up = false;
+			down = false;
+			if( timer > 25 ){  // > 500 mS
+				if( !longPressed ){
+					ESP_LOGI(FNAME,"informObservers: sendLongPress");
+					longPressed = true;
+					sendLongPress();
+					sendRelease();
+				}
+			}
+
+		} else if( touch == TOUCH_NONE ){   // released
+
+			if( old_touch==TOUCH_MIDDLE && !released ){
+				// ESP_LOGI(FNAME,"timer=%d", timer );
+				if( timer < 25 ){  // < 500 mS
+					if( !pressed && !longPressed ){
+						ESP_LOGI(FNAME,"informObservers: sendPress");
+						pressed = true;
+						sendPress();
+						sendRelease();
+					}
+				}
+			}
+			else if ( old_touch==TOUCH_UP && !up && !released ) {
+				ESP_LOGI(FNAME,"informObservers: sendUp");
+				up = true;
+				sendUp( 1 );
+			}
+			else if ( old_touch==TOUCH_DOWN && !down && !released ) {
+				ESP_LOGI(FNAME,"informObservers: sendDown");
+				down = true;
+				sendDown( 1 );
+			}
+
+			// cleanup after release:
+			old_touch = TOUCH_NONE;
+			released = true;
+			//sendRelease();
+			longPressed = false;
+			timer = 0;
+			delay( 40 );
+
+		} else {   // UP or DOWN
+
+			old_touch = touch;
+			timer++;
+			if( timer > 12 ){   // long-pressed > 240 mS - repeat action
+				if( touch == TOUCH_UP && !up ){
+					ESP_LOGI(FNAME,"repeat up");
+					up = true;
+                    sendUp( 1 );
+				} else
+				if( touch == TOUCH_DOWN && !down ){
+					ESP_LOGI(FNAME,"repeat down");
+					down = true;
+                    sendDown( 1 );
+				}
+				timer = 0;
+				delay( 40 );
+
+			} else {      // send up or down later, when released
+				released = false;
+				//pressed = false;
+				up = false;
+				down = false;
+			}
+		}
+
+#else  // not SUNTON28
+
 		int button = gpio_get_level((gpio_num_t)sw);
 		if( button == 0 ){  // Push button is being pressed
 			timer++;
@@ -186,6 +357,7 @@ void ESPRotary::informObservers( void * args )
 			pressed = false;
 			if( timer > 20 ){  // > 400 mS
 				if( !longPressed ){
+					longPressed = true;
 					sendLongPress();
 					sendRelease();
 
@@ -198,6 +370,7 @@ void ESPRotary::informObservers( void * args )
 				longPressed = false;
 				if( timer < 20 ){  // > 400 mS
 					if( !pressed ){
+						pressed = true;
 						sendPress();
 						sendRelease();
 					}
@@ -239,6 +412,9 @@ void ESPRotary::informObservers( void * args )
 				sendUp( abs(diff) );
 			}
 		}
+
+#endif   // SUNTON28
+
 		if( uxTaskGetStackHighWaterMark( pid ) < 256 )
 			ESP_LOGW(FNAME,"Warning rotary task stack low: %d bytes", uxTaskGetStackHighWaterMark( pid ) );
 		vTaskDelay(20 / portTICK_PERIOD_MS);

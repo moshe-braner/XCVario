@@ -2,6 +2,7 @@
 #include <math.h>
 #include <logdef.h>
 
+// #include "sensor.h"   // for NOSENSORS & SUNTON28
 
 ABPMRR::ABPMRR()
 {
@@ -47,6 +48,11 @@ int ABPMRR::measure()
 
 char ABPMRR::fetch_pressure(uint16_t &P_dat, uint16_t &T_dat)
 {
+#if defined(NOSENSORS)
+	P_dat = 0;
+	T_dat = 0;
+	return 0;
+#else
 	// ESP_LOGI(FNAME,"ABPMRR::fetch_pressure");
 	char _status;
 	uint8_t data[4];
@@ -67,6 +73,7 @@ char ABPMRR::fetch_pressure(uint16_t &P_dat, uint16_t &T_dat)
 	T_dat = (((uint16_t)Temp_H) << 3) | (Temp_L >>5);
 	// ESP_LOGI(FNAME,"fetch_pressure() status: %d, err %d,  P:%04x T: %04x",  _status, err, P_dat, T_dat );
 	return _status;
+#endif
 }
 
 float ABPMRR::readPascal( float minimum, bool &ok ){
@@ -93,6 +100,10 @@ float ABPMRR::readPascal( float minimum, bool &ok ){
 }
 
 bool    ABPMRR::selfTest( int& adval ){
+#if defined(NOSENSORS)
+	adval = 0;
+	return true;
+#else
 	uint8_t data[4];
 	esp_err_t err = ESP_FAIL;
 	for( int i=0; i<4; i++ ){
@@ -111,6 +122,7 @@ bool    ABPMRR::selfTest( int& adval ){
 		return false;
 	else
 		return true;
+#endif
 }
 
 float ABPMRR::getPSI(void){             // returns the PSI of last measurement

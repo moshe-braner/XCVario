@@ -13,6 +13,9 @@ MCP4018::MCP4018()
 
 bool MCP4018::begin()
 {
+#if defined(NOSENSORS)
+	    return( false );
+#else
 	errorcount=0;
 	if( readWiper( wiper ) ) {
 		ESP_LOGI(FNAME,"MCP4018 wiper=%d", wiper );
@@ -22,6 +25,7 @@ bool MCP4018::begin()
 		ESP_LOGE(FNAME,"MCP4018 Error reading wiper!");
 	    return( false );
 	}
+#endif
 }
 
 //destroy instance
@@ -30,6 +34,9 @@ MCP4018::~MCP4018()
 }
 
 bool MCP4018::haveDevice() {
+#if defined(NOSENSORS)
+	return false;
+#else
 	  ESP_LOGI(FNAME,"MCP4018 haveDevice");
 	  esp_err_t err = bus->testConnection(MPC4018_I2C_ADDR);
 	  if( err == ESP_OK ) {
@@ -40,6 +47,7 @@ bool MCP4018::haveDevice() {
 		 ESP_LOGI(FNAME,"MCP4018 haveDevice: NONE");
 		 return false;
 	  }
+#endif
 }
 
 bool MCP4018::incWiper(){
@@ -56,6 +64,9 @@ bool MCP4018::decWiper(){
 
 
 bool MCP4018::readWiper( uint16_t &val ) {
+#if defined(NOSENSORS)
+	return false;
+#else
 	esp_err_t err = bus->read8bit(MPC4018_I2C_ADDR, &val );
 	if( err == ESP_OK ){
 		ESP_LOGI(FNAME,"MCP4018 read wiper val=%d  OK", val );
@@ -67,9 +78,13 @@ bool MCP4018::readWiper( uint16_t &val ) {
 		errorcount++;
 	    return false;
 	}
+#endif
 }
 
 bool MCP4018::writeWiper( uint16_t val ) {
+#if defined(NOSENSORS)
+	return false;
+#else
     // ESP_LOGI(FNAME,"MCP4018 write wiper %d", val );
 	esp_err_t err = bus->write8bit(MPC4018_I2C_ADDR, val );
 	if( err == ESP_OK ){
@@ -82,8 +97,5 @@ bool MCP4018::writeWiper( uint16_t val ) {
 		errorcount++;
 	    return false;
 	}
+#endif
 }
-
-
-
-

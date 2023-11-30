@@ -23,7 +23,15 @@ Version::Version() {
 	sscanf(tempo, "%d:%d:%d", &hora, &min, &seg);
 	mes=(strstr(nomes, omes)-nomes)/3+1;
 
+#if defined(NOSENSORS)
+#if defined(SUNTON28)
+	sprintf(_version,"%02d.%02d%02d%02dS", ano%100, mes, dia, hora );
+#else
+	sprintf(_version,"%02d.%02d%02d%02dB", ano%100, mes, dia, hora );
+#endif
+#else
 	sprintf(_version,"%02d.%02d%02d-%02d", ano%100, mes, dia, hora );
+#endif
 	program_version = _version;
 }
 

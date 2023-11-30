@@ -94,7 +94,7 @@ BMP:
 #define MGRPS 360
 
 MCP3221 *MCP=0;
-DS18B20  ds18b20( GPIO_NUM_23 );  // GPIO_NUM_23 standard, alternative  GPIO_NUM_17
+DS18B20  ds18b20( GPIO_NUM_23 );  // temp probe, GPIO 23 std, alt GPIO 17, dummy if NOSENSORS
 
 AirspeedSensor *asSensor=0;
 StraightWind theWind;
@@ -105,7 +105,11 @@ xSemaphoreHandle spiMutex=NULL;
 S2F Speed2Fly;
 Protocols OV( &Speed2Fly );
 
-AnalogInput Battery( (22.0+1.2)/1200, ADC_ATTEN_DB_0, ADC_CHANNEL_7, ADC_UNIT_1 );
+#if defined(SUNTON28)
+AnalogInput Battery( (13.0/4000.0), ADC_ATTEN_DB_0, ADC_CHANNEL_6, ADC_UNIT_1 ); // GPIO34 light sensor
+#else
+AnalogInput Battery( (22.0+1.2)/1200, ADC_ATTEN_DB_0, ADC_CHANNEL_7, ADC_UNIT_1 ); // GPIO35
+#endif
 
 TaskHandle_t apid = NULL;
 TaskHandle_t bpid = NULL;
@@ -151,7 +155,7 @@ static float baroP=0; // barometric pressure
 static float temperature=15.0;
 static float xcvTemp=15.0;
 
-static float battery=0.0;
+static float battery=12.0;
 static float dynamicP; // Pitot
 
 float slipAngle = 0.0;
@@ -430,6 +434,7 @@ void audioTask(void *pvParameters){
 
 static void grabMPU()
 {
+#if !defined(NOSENSORS)
 	mpud::raw_axes_t accelRaw;     // holds x, y, z axes as int16
 	mpud::raw_axes_t gyroRaw;      // holds x, y, z axes as int16
 	esp_err_t err = MPU.acceleration(&accelRaw);  // fetch raw data from the registers
@@ -507,6 +512,7 @@ static void grabMPU()
 	}
 	gyroDPS_Prev = gyroDPS;
 	accelG_Prev = accelG;
+#endif
 }
 
 static void toyFeed()
@@ -571,9 +577,11 @@ void clientLoop(void *pvParameters)
 			tas = Atmosphere::TAS2( ias.get(), altitude.get(), OAT.get() );
 			if( airspeed_mode.get() == MODE_CAS )
 				cas = Atmosphere::CAS( dynamicP );
+#if !defined(NOSENSORS)
 			if( gflags.haveMPU && HAS_MPU_TEMP_CONTROL ){
 				MPU.temp_control( ccount, xcvTemp );
 			}
+#endif
 			if( accelG[0] > gload_pos_max.get() ){
 				gload_pos_max.set( (float)accelG[0] );
 			}else if( accelG[0] < gload_neg_max.get() ){
@@ -657,7 +665,14 @@ void readSensors(void *pvParameters){
 		}
 		xSemaphoreTake(xMutex,portMAX_DELAY );
 
+#if defined(SUNTON28)
+		// simulate using the light sensor
+		static float te = 0;
+		if ( FLAP )    // not available unless flap_enable set to true
+			te = 0.95 * te + 0.05 * (0.002 * FLAP->getSensorRaw(16) - 1.0);
+#else
 		float te = bmpVario.readTE( tasraw );
+#endif
 		if( (int( te_vario.get()*20 +0.5 ) != int( te*20 +0.5)) || !(count%10) ){  // a bit more fine granular updates than 0.1 m/s as of sound
 			te_vario.set( te );  // max 10x per second
 		}
@@ -776,7 +791,9 @@ void readSensors(void *pvParameters){
 		}
 		if( gflags.haveMPU && HAS_MPU_TEMP_CONTROL ){
 			// ESP_LOGI(FNAME,"MPU temp control; T=%.2f", MPU.getTemperature() );
+#if !defined(NOSENSORS)
 			MPU.temp_control( count, xcvTemp );
+#endif
 		}
 		esp_task_wdt_reset();
 		if( uxTaskGetStackHighWaterMark( bpid ) < 512 )
@@ -793,11 +810,24 @@ void readTemp(void *pvParameters){
 	while (1) {
 		TickType_t xLastWakeTime = xTaskGetTickCount();
 		float t=15.0;
+
+#if defined(NOSENSORS)
+#if defined(SUNTON28)
+		// simulate using the light sensor
+		if ( FLAP )    // not available unless flap_enable set to true
+			battery = 0.8 * battery + 0.2 * (12.8 - 0.0007 * FLAP->getSensorRaw(16));
+		else
+			battery = 12.8;
+#else
+		battery = 12.8;
+#endif
+#else
 		battery = Battery.get();
-		// ESP_LOGI(FNAME,"Battery=%f V", battery );
+#endif
+		//ESP_LOGI(FNAME,"readTemp: Battery=%f V", battery );
 		if( !SetupCommon::isClient() ) {  // client Vario will get Temperature info from main Vario
 			t = ds18b20.getTemp();
-			// ESP_LOGI(FNAME,"Temp %f", t );
+			//ESP_LOGI(FNAME,"readTemp: Temp %f", t );
 			if( t ==  DEVICE_DISCONNECTED_C ) {
 				if( gflags.validTemperature == true ) {
 					ESP_LOGI(FNAME,"Temperatur Sensor disconnected");
@@ -821,6 +851,7 @@ void readTemp(void *pvParameters){
 			}
 			// ESP_LOGV(FNAME,"T=%f", temperature );
 			Flarm::tick();
+			//ESP_LOGV(FNAME,"readTemp: flarm tick done");
 			if( compass )
 				compass->tick();
 		}else{
@@ -830,6 +861,7 @@ void readTemp(void *pvParameters){
 		theWind.tick();
 		CircleWind::tick();
 		Flarm::progress();
+		//ESP_LOGV(FNAME,"readTemp: flarm progress done");
 		esp_task_wdt_reset();
 		if( (ttick++ % 50) == 0) {
 			ESP_LOGI(FNAME,"Free Heap: %d bytes", heap_caps_get_free_size(MALLOC_CAP_8BIT) );
@@ -839,6 +871,7 @@ void readTemp(void *pvParameters){
 				ESP_LOGW(FNAME,"Warning heap_caps_get_free_size getting low: %d", heap_caps_get_free_size(MALLOC_CAP_8BIT));
 		}
 		if( (ttick%5) == 0 ){
+			//ESP_LOGV(FNAME,"readTemp: commitDirty()...");
 			SetupCommon::commitDirty();
 		}
 		vTaskDelayUntil(&xLastWakeTime, 1000/portTICK_PERIOD_MS);
@@ -890,13 +923,17 @@ void system_startup(void *args){
 
 	bool selftestPassed=true;
 	int line = 1;
+#if !defined(NOSENSORS)
 	ESP_LOGI( FNAME, "Now setup I2C bus IO 21/22");
 	i2c.begin(GPIO_NUM_21, GPIO_NUM_22, 100000 );
+#endif
 	theWind.begin();
 
 	MCP = new MCP3221();
 	MCP->setBus( &i2c );
+#if !defined(NOSENSORS)
 	gpio_set_drive_capability(GPIO_NUM_23, GPIO_DRIVE_CAP_1);
+#endif
 
 	esp_wifi_set_mode(WIFI_MODE_NULL);
 	spiMutex = xSemaphoreCreateMutex();
@@ -921,6 +958,16 @@ void system_startup(void *args){
 		ESP_LOGI( FNAME, "Hardware Revision unknown, set revision 2 (XCV-20)");
 		hardwareRevision.set(XCVARIO_20);
 	}
+#if defined(SUNTON28)
+	else if( hardwareRevision.get() == XCVARIO_20 )
+		ESP_LOGI( FNAME, "Hardware Revision XCVARIO_20");
+	else if( hardwareRevision.get() == XCVARIO_21 )
+		ESP_LOGI( FNAME, "Hardware Revision XCVARIO_21");
+	else
+		ESP_LOGI( FNAME, "Hardware Revision > 21 ?");
+	hardwareRevision.set(XCVARIO_23);
+	ESP_LOGI( FNAME, "Hardware Revision set to XCVARIO_23");
+#endif
 
 	if( display_orientation.get() ){
 		ESP_LOGI( FNAME, "TopDown display mode flag set");
@@ -931,11 +978,17 @@ void system_startup(void *args){
 	AverageVario::begin();
 	stall_alarm_off_kmh = stall_speed.get()/3;
 
+#if !defined(NOSENSORS)
 	Battery.begin();  // for battery voltage
+#endif
 	xMutex=xSemaphoreCreateMutex();
 	xSemaphoreTake(spiMutex,portMAX_DELAY );
 	ccp = (int)(core_climb_period.get()*10);
+#if defined(NOSENSORS)
+	SPI.begin( SPI_SCLK, SPI_MISO, SPI_MOSI, CS_Display );
+#else
 	SPI.begin( SPI_SCLK, SPI_MISO, SPI_MOSI, CS_bme280BA );
+#endif
 	xSemaphoreGive(spiMutex);
 
 	egl = new AdaptUGC();
@@ -968,11 +1021,17 @@ void system_startup(void *args){
 	display->writeText(line++, ver.c_str() );
 	sleep(1);
 	bool doUpdate = software_update.get();
+#if defined(NOSENSORS)
+	Rotary.begin();
+	// - implemented using the touch screen
+	// - needed for Rotary.readSwitch() below to work
+#endif
 	if( Rotary.readSwitch() ){
 		doUpdate = true;
 		ESP_LOGI(FNAME,"Rotary pressed: Do Software Update");
 	}
 	if( doUpdate ) {
+#if !defined(NOSENSORS)
 		if( hardwareRevision.get() == XCVARIO_20) { // only XCV-20 uses this GPIO for Rotary
 			ESP_LOGI( FNAME,"Hardware Revision detected 2");
 			Rotary.begin( GPIO_NUM_4, GPIO_NUM_2, GPIO_NUM_0);
@@ -980,13 +1039,15 @@ void system_startup(void *args){
 		else  {
 			ESP_LOGI( FNAME,"Hardware Revision detected 3");
 			Rotary.begin( GPIO_NUM_36, GPIO_NUM_39, GPIO_NUM_0);
-
 		}
+#endif
 		ota = new OTA();
 		ota->begin();
 		ota->doSoftwareUpdate( display );
 	}
+
 	esp_err_t err=ESP_ERR_NOT_FOUND;
+#if !defined(NOSENSORS)
 	MPU.setBus(i2c);  // set communication bus, for SPI -> pass 'hspi'
 	MPU.setAddr(mpud::MPU_I2CADDRESS_AD0_LOW);  // set address or handle, for SPI -> pass 'mpu_spi_handle'
 	err = MPU.reset();
@@ -1048,6 +1109,8 @@ void system_startup(void *args){
 			logged_tests += "MPU6050 AHRS test: NOT FOUND\n";
 		}
 	}
+#endif // NOSENSORS
+
 	char id[16] = { 0 };
 	strcpy( id, custom_wireless_id.get().id );
 	ESP_LOGI(FNAME,"Custom Wirelss-ID from Flash: %s len: %d", id, strlen(id) );
@@ -1078,6 +1141,11 @@ void system_startup(void *args){
 			attitude_indicator.set(0);
 	}
 
+#if defined(NOSENSORS)
+	asSensor = 0;
+	airspeed_sensor_type.set( PS_NONE );
+
+#else
 	ESP_LOGI(FNAME,"Airspeed sensor init..  type configured: %d", airspeed_sensor_type.get() );
 	int offset;
 	bool found = false;
@@ -1198,7 +1266,9 @@ void system_startup(void *args){
 		selftestPassed = false;
 		asSensor = 0;
 	}
-	ESP_LOGI(FNAME,"Now start T sensor test");
+#endif  // NOSENSORS
+
+//	ESP_LOGI(FNAME,"Now start T sensor test");
 	// Temp Sensor test
 	if( !SetupCommon::isClient()  ) {
 		ESP_LOGI(FNAME,"Now start T sensor test");
@@ -1219,7 +1289,19 @@ void system_startup(void *args){
 
 		}
 	}
+
 	ESP_LOGI(FNAME,"Absolute pressure sensors init, detect type of sensor type..");
+
+#if defined(NOSENSORS)  // dummy sensors implemented in code
+
+		BME280_ESP32_SPI *bmpBA = new BME280_ESP32_SPI();
+		BME280_ESP32_SPI *bmpTE= new BME280_ESP32_SPI();
+		bmpTE->begin();
+		bmpBA->begin();
+		baroSensor = bmpBA;
+		teSensor = bmpTE;
+
+#else  // have actual sensors
 
 	float ba_t, ba_p, te_t, te_p;
 	SPL06_007 *splBA = new SPL06_007( SPL06_007_BARO );
@@ -1308,11 +1390,14 @@ void system_startup(void *args){
 	else
 		ESP_LOGI(FNAME,"Absolute pressure sensor TESTs failed");
 
+#endif  // NOSENSORS
+
 	bmpVario.begin( teSensor, baroSensor, &Speed2Fly );
 	bmpVario.setup();
 	esp_task_wdt_reset();
 	ESP_LOGI(FNAME,"Audio begin");
-	Audio::begin( DAC_CHANNEL_1 );
+	//Audio::begin( DAC_CHANNEL_1 );
+	Audio::begin( DAC_CHANNEL );
 	ESP_LOGI(FNAME,"Poti and Audio test");
 	if( !Audio::selfTest() ) {
 		ESP_LOGE(FNAME,"Error: Digital potentiomenter selftest failed");
@@ -1326,8 +1411,11 @@ void system_startup(void *args){
 		display->writeText( line++, "Digital Poti: OK");
 	}
 
-	// 2021 series 3, or 2022 model with new digital poti CAT5171 also features CAN bus
 	String resultCAN;
+
+#if !defined(NOSENSORS)
+
+	// 2021 series 3, or 2022 model with new digital poti CAT5171 also features CAN bus
 	if( Audio::haveCAT5171() ) // todo && CAN configured
 	{
 		CAN = new CANbus();
@@ -1357,7 +1445,13 @@ void system_startup(void *args){
 		}
 	}
 
+#endif  // NOSENSORS
+
+#if defined(NOSENSORS)
+	float bat = 12.8;
+#else
 	float bat = Battery.get(true);
+#endif
 	if( bat < 1 || bat > 28.0 ){
 		ESP_LOGE(FNAME,"Error: Battery voltage metering out of bounds, act value=%f", bat );
 		if( resultCAN.length() )
@@ -1379,20 +1473,35 @@ void system_startup(void *args){
 	Serial::begin();
 	// Factory test for serial interface plus cable
 	String result("Serial ");
-	if( Serial::selfTest( 1 ) )
+	if( Serial::selfTest( 1 ) ) {
 		result += "S1 OK";
-	else
+#if defined(SUNTON28)
+		ESP_LOGI(FNAME,"S1 OK");
+#endif
+	} else {
 		result += "S1 FAIL";
+#if defined(SUNTON28)
+		ESP_LOGI(FNAME,"S1 FAIL");
+#endif
+	}
+#if !defined(SUNTON28)
 	if( (hardwareRevision.get() >= XCVARIO_21) && serial2_speed.get() ){
 		if( Serial::selfTest( 2 ) )
 			result += ",S2 OK";
 		else
 			result += ",S2 FAIL";
 	}
+#endif
 	if( abs(factory_volt_adjust.get() - 0.00815) < 0.00001 ){
 		display->writeText( line++, result.c_str() );
 	}
+
 	Serial::taskStart();
+
+#if defined(SUNTON28)
+	gpio_set_direction(GPIO_NUM_16, GPIO_MODE_OUTPUT);  // blue LED == GPIO_TXD2
+	gpio_set_level(GPIO_NUM_16,1);                      // turn it off
+#endif
 
 	if( wireless == WL_BLUETOOTH ) {
 		if( btsender.selfTest() ){
@@ -1406,6 +1515,8 @@ void system_startup(void *args){
 	}else if ( wireless == WL_WLAN_MASTER || wireless == WL_WLAN_STANDALONE ){
 		WifiApp::wifi_init_softap();
 	}
+
+#if !defined(NOSENSORS)
 	// 2021 series 3, or 2022 model with new digital poti CAT5171 also features CAN bus
 	if(  can_speed.get() != CAN_SPEED_OFF && (resultCAN == "OK") && CAN )
 	{
@@ -1440,6 +1551,7 @@ void system_startup(void *args){
 		}
 		compass->start();  // start task
 	}
+#endif
 
 	Speed2Fly.begin();
 	Version myVersion;
@@ -1462,6 +1574,7 @@ void system_startup(void *args){
 	{
 		LeakTest::start( baroSensor, teSensor, asSensor );
 	}
+
 	Menu->begin( display, baroSensor, &Battery );
 
 	if ( wireless == WL_WLAN_CLIENT || the_can_mode == CAN_MODE_CLIENT ){
@@ -1502,12 +1615,16 @@ void system_startup(void *args){
 			QNH.set( qnh_best );
 		}
 		display->clear();
+#if !defined(NOSENSORS)
 		if( NEED_VOLTAGE_ADJUST ){
 			ESP_LOGI(FNAME,"Do Factory Voltmeter adj");
 			SetupMenuValFloat::showMenu( 0.0, SetupMenuValFloat::meter_adj_menu );
-		}else{
+		}else
+#endif
+		{
 			SetupMenuValFloat *qnh_menu = SetupMenu::createQNHMenu();
 			SetupMenuValFloat::showMenu( qnh_best, qnh_menu );
+			//ESP_LOGI(FNAME,"returned from showMenu(qnh_menu)");
 		}
 	}
 	else
@@ -1517,9 +1634,13 @@ void system_startup(void *args){
 	}
 
 	if ( flap_enable.get() ) {
+		ESP_LOGI(FNAME,"Flap::init()...");  // <<<
 		Flap::init(MYUCG);
 	}
 
+#if defined(NOSENSORS)
+	// Rotary.begin();  // already done above before software update check
+#else
 	if( hardwareRevision.get() == XCVARIO_20 ){
 		Rotary.begin( GPIO_NUM_4, GPIO_NUM_2, GPIO_NUM_0);  // XCV-20 uses GPIO_2 for Rotary
 	}
@@ -1531,6 +1652,8 @@ void system_startup(void *args){
 			gflags.mpu_pwm_initalized = true;
 		}
 	}
+#endif
+
 	delay( 100 );
 	if ( SetupCommon::isClient() ){
 		if( wireless == WL_WLAN_CLIENT ){
@@ -1583,6 +1706,8 @@ void system_startup(void *args){
 	if( screen_centeraid.get() ){
 		centeraid = new CenterAid( MYUCG );
 	}
+
+	ESP_LOGI(FNAME,"starting tasks...");
 	if( SetupCommon::isClient() ){
 		xTaskCreatePinnedToCore(&clientLoop, "clientLoop", 4096, NULL, 11, &bpid, 0);
 		xTaskCreatePinnedToCore(&audioTask, "audioTask", 4096, NULL, 11, &apid, 0);
@@ -1594,6 +1719,8 @@ void system_startup(void *args){
 	xTaskCreatePinnedToCore(&drawDisplay, "drawDisplay", 6144, NULL, 4, &dpid, 0); // increase stack by 1K
 
 	Audio::startAudio();
+
+	ESP_LOGI(FNAME,"system_startup done");
 }
 
 extern "C" void  app_main(void)
@@ -1601,7 +1728,9 @@ extern "C" void  app_main(void)
 	// Init timer infrastructure
 	Audio::shutdown();
 	esp_timer_init();
+#if !defined(NOSENSORS)
 	MPU.clearpwm();
+#endif
 	Router::begin();
 	ESP_LOGI(FNAME,"app_main" );
 	ESP_LOGI(FNAME,"Now init all Setup elements");

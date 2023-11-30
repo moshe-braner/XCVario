@@ -18,7 +18,6 @@
 #include "driver/pcnt.h"
 
 
-
 enum _event { NONE, PRESS, LONG_PRESS, RELEASE, UP, DOWN, ERROR, MAX_EVENT };
 
 class RotaryObserver;
@@ -26,7 +25,13 @@ class RotaryObserver;
 class ESPRotary {
 public:
     ESPRotary() {};
+#if defined(SUNTON28)
+    void begin();   // GPIO pins hardcoded for now
+    static int touch_state();
+    static bool touch_middle();
+#else
     void begin(gpio_num_t clk, gpio_num_t dt, gpio_num_t sw );
+#endif
     static void attach( RotaryObserver *obs);
     static void detach( RotaryObserver *obs);
     static void readPos( void * args );
@@ -42,11 +47,16 @@ public:
 
 private:
 	static std::list<RotaryObserver *> observers;
+#if defined(SUNTON28)
+    //static gpio_num_t cs, clk, mosi, miso;
+    static bool up, down;
+#else
     static gpio_num_t clk, dt, sw;
     static pcnt_config_t enc;
     static pcnt_config_t enc2;
     static int16_t r_enc_count;
     static int16_t r_enc2_count;
+#endif
     static int timer;
     static bool released;
     static bool longPressed;

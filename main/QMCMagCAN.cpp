@@ -45,6 +45,9 @@ QMCMagCAN::~QMCMagCAN()
 // check if messages arrive
 esp_err_t QMCMagCAN::selfTest()
 {
+#if defined(NOSENSORS)
+	return ESP_FAIL;
+#else
 	ESP_LOGI( FNAME, "QMCMagCAN selftest");
 	for( int i=0; i<300; i++ ){ // give 30 second's chance for module to send data with the corresponding CAN data rate
 		if( age < 5 ){          // CAN bus sensor probes next speed after 13 seconds and starts with new speed, so max 26 seconds all 3 speeds are probed
@@ -53,6 +56,7 @@ esp_err_t QMCMagCAN::selfTest()
 		delay(100);
 	}
 	return ESP_FAIL;
+#endif
 }
 
 void QMCMagCAN::fromCAN( const char * msg ){

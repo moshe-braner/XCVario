@@ -94,6 +94,9 @@ bool DallasRmt::validFamily(const uint8_t* deviceAddress)
 
 bool DallasRmt::getAddress(uint8_t index)
 {
+#if defined(NOSENSORS)
+	return false;
+#else
 	uint8_t depth = 0;
 	_ow->reset_search();
 	while (depth <= index && _ow->search(deviceAddress)) {
@@ -104,13 +107,18 @@ bool DallasRmt::getAddress(uint8_t index)
 	}
 	// ESP_LOGI(FNAME,"T Sensor device NOT found");
 	return false;
+#endif
 }
 
 // attempt to determine if the device at the given address is connected to the bus
 
 bool DallasRmt::isConnected(const uint8_t* deviceAddress)
 {
+#if defined(NOSENSORS)
+	return false;
+#else
 	return isConnected(deviceAddress, scratchPad);
+#endif
 }
 
 // attempt to determine if the device at the given address is connected to the bus
@@ -119,6 +127,11 @@ bool DallasRmt::isConnected(const uint8_t* deviceAddress)
 
 bool DallasRmt::isConnected(const uint8_t* deviceAddress, uint8_t* scratchPad)
 {
+#if defined(NOSENSORS)
+	_is_connected = false;
+	_devices = 0;
+	return false;
+#else
 	bool readok = readScratchPad(deviceAddress, scratchPad);
 	bool crc = true;
 	bool ret = true;
@@ -144,6 +157,7 @@ bool DallasRmt::isConnected(const uint8_t* deviceAddress, uint8_t* scratchPad)
 		}
 	}
 	return ret;
+#endif
 }
 
 bool DallasRmt::readScratchPad(const uint8_t* deviceAddress, uint8_t* scratchPad)
@@ -238,9 +252,11 @@ uint8_t DallasRmt::getResolution(const uint8_t* deviceAddress)
 
 void DallasRmt::setResolution(uint8_t newResolution)
 {
+#if !defined(NOSENSORS)
 	ESP_LOGI(FNAME, "setResolution: %d", newResolution);
 	_bitResolution = (newResolution < 9) ? 9 : (newResolution > 12 ? 12 : newResolution);
 	setResolution(deviceAddress, _bitResolution, true);
+#endif
 }
 
 // set resolution of a device to 9, 10, 11, or 12 bits
@@ -248,6 +264,7 @@ void DallasRmt::setResolution(uint8_t newResolution)
 
 bool DallasRmt::setResolution(const uint8_t* deviceAddress, uint8_t newResolution, bool skipGlobalBitResolutionCalculation)
 {
+#if !defined(NOSENSORS)
 	// ensure same behavior as setResolution(uint8_t newResolution)
 	ESP_LOGI(FNAME, "setResolution: %d", newResolution);
 	newResolution = (newResolution < 9) ? 9 : (newResolution > 12 ? 12 : newResolution);
@@ -285,6 +302,7 @@ bool DallasRmt::setResolution(const uint8_t* deviceAddress, uint8_t newResolutio
 		}
 		return true; // new value set
 	}
+#endif
 
 	return false;
 }
@@ -310,6 +328,9 @@ void DallasRmt::requestTemperatures()
 
 bool DallasRmt::requestTemperaturesByAddress(const uint8_t* deviceAddress)
 {
+#if defined(NOSENSORS)
+	return false;
+#else
 	uint8_t bitResolution = getResolution(deviceAddress);
 	if (bitResolution == 0) {
 		return false; //Device disconnected
@@ -323,6 +344,7 @@ bool DallasRmt::requestTemperaturesByAddress(const uint8_t* deviceAddress)
 	}
 	blockTillConversionComplete(bitResolution);
 	return true;
+#endif
 }
 
 
@@ -330,7 +352,11 @@ bool DallasRmt::requestTemperaturesByAddress(const uint8_t* deviceAddress)
 
 bool DallasRmt::requestTemperaturesByIndex(uint8_t deviceIndex)
 {
+#if defined(NOSENSORS)
+	return false;
+#else
 	return requestTemperaturesByAddress(deviceAddress);
+#endif
 }
 
 // returns temperature in 1/128 degrees C or DEVICE_DISCONNECTED_RAW if the
@@ -384,7 +410,11 @@ float DallasRmt::getTempFByIndex(uint8_t deviceIndex)
 
 bool DallasRmt::isConversionComplete()
 {
+#if defined(NOSENSORS)
+	return true;
+#else
 	return( _ow->read_bit() );
+#endif
 }
 
 // reads scratchpad and returns fixed-point temperature, scaling factor 2^-7

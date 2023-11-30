@@ -24,6 +24,9 @@ MCP3221::~MCP3221()
 
 // scan bus for I2C address
 esp_err_t MCP3221::selfTest(){
+#if defined(NOSENSORS)
+	return ESP_FAIL;
+#else
 	uint8_t data[2];
 	esp_err_t err = bus->readBytes(MCP3221_CONVERSE, 0, 2, data );
 	if( err != ESP_OK ){
@@ -32,6 +35,7 @@ esp_err_t MCP3221::selfTest(){
 	}
 	ESP_LOGI(FNAME,"MCP3221 selftest, scan for I2C address %02x PASSED",MCP3221_CONVERSE );
 	return ESP_OK;
+#endif
 }
 
 float MCP3221::readAVG( float alpha ) {
@@ -104,6 +108,10 @@ int  MCP3221::readVal(){
 
 esp_err_t MCP3221::readRaw(uint16_t &val)
 {
+#if defined(NOSENSORS)
+	val = 0;
+	return ESP_FAIL;
+#else
 	// esp_err_t ret=read16bit( MCP3221_CONVERSE, &val );
 	// uint8_t data[2];
 	uint16_t v;
@@ -114,8 +122,6 @@ esp_err_t MCP3221::readRaw(uint16_t &val)
 	else{
 		val = v;
 	}
-
 	return( err );
+#endif
 }
-
-

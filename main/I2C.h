@@ -1,6 +1,8 @@
 #ifndef I2C_h
 #define I2C_h
 
+// #include "sensor.h"   // for NOSENSORS & SUNTON28
+
 #include <inttypes.h>
 #include "esp_system.h"
 #include <driver/i2c.h>

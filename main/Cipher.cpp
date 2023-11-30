@@ -72,6 +72,7 @@ void Cipher::FormatKey(std::string& key, std::string plaintext) {
 	// append key length to plaintext's size
 	// note: key may end up larger than plaintext here, but will be trimmed in the next if statement
 	if (key.length() < plaintext.length()) {
+		if (key.length()==0)  key = "1";     // avoid infinite loop below
 		while (key.length() < plaintext.length())
 			key.append(key); // append key onto itself until >= plaintext.length()
 	}
@@ -96,7 +97,13 @@ void Cipher::begin()
 	_id = std::string( id );
 }
 
+#define BYPASS_KEY
+// - for testing builds from a fork lacking the secret key
+
 bool Cipher::init(){
+#if defined(BYPASS_KEY)
+	gflags.ahrsKeyValid = true;
+#else
 	std::string encid = Cipher::Encrypt(CIPHER_KEY, _id );
 	ESP_LOGI(FNAME,"init() Encrypted ID %s", encid.c_str() );
 	ahrs_licence_dig1.set( encid[0]-'0' );
@@ -106,6 +113,7 @@ bool Cipher::init(){
 	std::string decid = Cipher::Decrypt(CIPHER_KEY, encid );
 	gflags.ahrsKeyValid = (_id == decid);
 	ESP_LOGI(FNAME,"init() ID/DECID %s == %s returns %d", _id.c_str(), decid.c_str(), gflags.ahrsKeyValid );
+#endif
 	return gflags.ahrsKeyValid;
 }
 
@@ -114,7 +122,9 @@ const char * Cipher::id(){
 }
 
 bool Cipher::checkKeyAHRS(){
-
+#if defined(BYPASS_KEY)
+	gflags.ahrsKeyValid = true;
+#else
 	std::string key;
 	key += char(ahrs_licence_dig1.get()+'0');
 	key += char(ahrs_licence_dig2.get()+'0');
@@ -123,5 +133,6 @@ bool Cipher::checkKeyAHRS(){
 	std::string decid = Cipher::Decrypt(CIPHER_KEY, key );
 	gflags.ahrsKeyValid = (_id == decid);
 	ESP_LOGI(FNAME,"checkKeyAHRS() ID/KEY/DECID %s %s %s returns %d", _id.c_str(), key.c_str(), decid.c_str(), gflags.ahrsKeyValid );
+#endif
 	return gflags.ahrsKeyValid;
 }

@@ -18,13 +18,17 @@
 #include "soc/rtc_cntl_reg.h"
 #include "soc/sens_reg.h"
 #include "soc/rtc.h"
-#include <string>
 
+#include <string>
 #include "ESPAudio.h"
 #include "driver/dac.h"
 #include "sensor.h"
+#if defined(SUNTON28)
+#include "softPoti.h"
+#else
 #include "mcp4018.h"
 #include "cat5171.h"
+#endif
 #include <Arduino.h>
 #include <map>
 #include <logdef.h>
@@ -86,10 +90,10 @@ typedef struct volume {  uint16_t vol; uint8_t scale; uint8_t wiper; } t_scale_w
 #define FADING_STEPS 6  // steps used for fade in/out at chopping
 #define FADING_TIME  3  // factor for volume changes fade over smoothing
 
-Poti *DigitalPoti;
+Poti *DigitalPoti = nullptr;
 
 Audio::Audio( ) {
-	_ch = DAC_CHANNEL_1;
+	_ch = DAC_CHANNEL;
 	_te = 0.0;
 	_testmode = false;
 	_range = 5.0;
@@ -168,7 +172,9 @@ tk::spline *Audio::equalizerSpline = 0;
 void Audio::begin( dac_channel_t ch  )
 {
 	ESP_LOGI(FNAME,"Audio::begin");
-	Switch::begin( GPIO_NUM_12 );
+#if !defined(NOSENSORS)
+	Switch::begin( GPIO_NUM_12 );    // STF switch
+#endif
 	setup();
 	_ch = ch;
 	restart();
@@ -197,6 +203,10 @@ uint16_t Audio::equal_volume( uint16_t volume ){
 
 bool Audio::selfTest(){
 	ESP_LOGI(FNAME,"Audio::selfTest");
+#if defined(NOSENSORS)
+	DigitalPoti = new SoftPoti();
+	DigitalPoti->begin();
+#else
 	DigitalPoti = new MCP4018();
 	DigitalPoti->setBus( &i2c );
 	DigitalPoti->begin();
@@ -220,8 +230,10 @@ bool Audio::selfTest(){
 	{
 		ESP_LOGI(FNAME,"MCP4018 digital Poti found");
 	}
+#endif
 	_step = DigitalPoti->getStep();
-	uint16_t setwiper = ((default_volume.get() * 100.0) / DigitalPoti->getRange());
+	uint16_t setwiper = ( 0.01 * default_volume.get() * DigitalPoti->getRange());
+	// - it was incorrectly * 100 / getRange
 	p_wiper = &wiper;
 	wiper = wiper_s2f = setwiper;
 	ESP_LOGI(FNAME,"default volume/wiper: %d", (*p_wiper) );
@@ -436,39 +448,77 @@ void Audio::dac_invert_set(dac_channel_t channel, int invert)
 	}
 }
 
+// setVolumePct() now called upon volume change via rotary
 
 void Audio::setVolume( int vol ) {
 	if((p_wiper) == 0 )
 		return;
 	(*p_wiper) = vol;
+	volume_change = 100;
 };
 
+void Audio::setVolumePct( float pct ) {
+	if (pct < 0 || pct > 100)
+		return;
+	if (DigitalPoti == nullptr)  // at initial setup
+		return;
+	//uint16_t wiper;
+	//bool ret = DigitalPoti->readWiper( wiper );
+	//if( ret == false )
+	//	return;
+	float range = (float) DigitalPoti->getRange();
+	if (range <= 0)
+		return;
+	int newwiper = (int) (0.01 * pct * range);
+	static int oldwiper = 0;
+	if (newwiper != oldwiper) {
+		setVolume(newwiper);
+		  // what will actually be written later to poti
+		  //   in writeWiper() will vary due to equalization
+		ESP_LOGI(FNAME,"change_volume wiper %d -> %d", oldwiper, newwiper );
+		oldwiper = newwiper;
+	}
+}
+
+// decVolume() and incVolume() no longer used
+
+#if 0
 void Audio::decVolume( int steps ) {
 	if((p_wiper) == 0 )
 		return;
+	ESP_LOGI(FNAME,"dec volume, wiper: %d, steps: %d", (*p_wiper), steps );
+#if defined(NOSENSORS)
+	steps = DigitalPoti->getStep();   // ignore the change (in % volume?) in "steps"
+#else
 	steps = int( 1+ ( (float)(*p_wiper)/16.0 ))*steps;
+#endif
 	while( steps && ((*p_wiper) > 0) ){
 		(*p_wiper)--;
 		steps--;
 	}
+	ESP_LOGI(FNAME,"dec volume, *p_wiper: %d", (*p_wiper) );
 	volume_change = 100;
-	// ESP_LOGI(FNAME,"dec volume, *p_wiper: %d", (*p_wiper) );
 }
-
 
 void Audio::incVolume( int steps ) {
 	if((p_wiper) == 0 )
 		return;
+	ESP_LOGI(FNAME,"inc volume, wiper: %d, steps: %d", (*p_wiper), steps );
+#if defined(NOSENSORS)
+	steps = DigitalPoti->getStep();
+#else
 	steps = int( 1+ ( (float)(*p_wiper)/16.0 ))*steps;
+#endif
 	while( steps && ((*p_wiper) <  DigitalPoti->getRange()*(max_volume.get()/100)) ){
 		(*p_wiper)++;
 		steps--;
 	}
 	if( (*p_wiper) > DigitalPoti->getRange() )
 		(*p_wiper) =  DigitalPoti->getRange();
+	ESP_LOGI(FNAME,"inc volume, *p_wiper: %d", (*p_wiper) );
 	volume_change = 100;
-	// ESP_LOGI(FNAME,"inc volume, *p_wiper: %d", (*p_wiper) );
 }
+#endif
 
 void Audio::startAudio(){
 	ESP_LOGI(FNAME,"startAudio");
@@ -527,10 +577,14 @@ void  Audio::calculateFrequency(){
 
 void Audio::writeWiper( uint16_t volume ){
 	// ESP_LOGI(FNAME, "set volume: %d", volume);
+#if defined(NOSENSORS)
+	DigitalPoti->writeWiper( volume );  // equalization not useful without "poti" chip
+#else
 	if( _alarm_mode )
 		DigitalPoti->writeWiper( volume );  // max volume
 	else
 		DigitalPoti->writeWiper( equal_volume(volume) ); // take care frequency response
+#endif
 }
 
 void Audio::dactask(void* arg )
@@ -614,6 +668,7 @@ void Audio::dactask(void* arg )
 					// ESP_LOGI(FNAME, "volume change, new wiper: %d, cur_wiper %d", (*p_wiper), cur_wiper );
 					int delta = 1;
 					dacEnable();
+#if !defined(NOSENSORS)
 					if( (*p_wiper) > cur_wiper ){
 						for( int i=cur_wiper; i<(*p_wiper); i+=delta ) {
 							writeWiper( i );
@@ -629,6 +684,7 @@ void Audio::dactask(void* arg )
 							delay(1);
 						}
 					}
+#endif
 					writeWiper( *p_wiper );
 					cur_wiper = (*p_wiper);
 					if( cur_wiper == 0 )
@@ -644,6 +700,7 @@ void Audio::dactask(void* arg )
 						cur_wiper = (*p_wiper);
 					}
 					else{
+#if !defined(NOSENSORS)
 						float volume=3;
 						for( int i=0; i<FADING_STEPS && (int)volume <=(*p_wiper); i++ ) {
 							// ESP_LOGI(FNAME, "fade in sound, wiper: %3.1f", volume );
@@ -652,6 +709,7 @@ void Audio::dactask(void* arg )
 							volume = volume*1.75;
 							delay(1);
 						}
+#endif
 						if(  cur_wiper != (*p_wiper) ){
 							// ESP_LOGI(FNAME, "fade in sound, wiper: %d", (*p_wiper)  );
 							writeWiper( *p_wiper );
@@ -670,6 +728,7 @@ void Audio::dactask(void* arg )
 						writeWiper( 0 );
 						cur_wiper = 0;
 					}else{
+#if !defined(NOSENSORS)
 						float volume = (float)(*p_wiper);
 						for( int i=0; i<FADING_STEPS && (int)volume >=0; i++ ) {
 							//ESP_LOGI(FNAME, "fade out sound, wiper: %3.1f", volume );
@@ -677,6 +736,7 @@ void Audio::dactask(void* arg )
 							volume = volume*0.75;
 						}
 						delay(1);
+#endif
 						writeWiper( 0 );
 						// ESP_LOGI(FNAME, "fade out sound, final wiper: 0" );
 						cur_wiper = 0;
@@ -760,22 +820,24 @@ void Audio::setup()
 	minf = center_freq.get() / tone_var.get();
 }
 
-void Audio::restart()
+void Audio::restart(int scale)
 {
 	ESP_LOGD(FNAME,"Audio::restart");
 	dacDisable();
 	dac_cosine_enable(_ch);
 	dac_offset_set(_ch, 0 );
 	dac_invert_set(_ch, 2 );    // invert MSB to get sine waveform
-	dac_scale_set(_ch, 2 );
+	dac_scale_set(_ch, scale );
 	enableAmplifier( true );
 	dacEnable();
 }
 
 void Audio::shutdown(){
 	dacDisable();
+#if !defined(NOSENSORS)
 	gpio_set_direction(GPIO_NUM_19, GPIO_MODE_OUTPUT );   // use pullup 1 == SOUND 0 == SILENCE
 	gpio_set_level(GPIO_NUM_19, 0 );
+#endif
 	if( p_wiper != 0)
 		(*p_wiper) = 0;
 	ESP_LOGI(FNAME,"shutdown alarm volume set 0");
@@ -793,9 +855,11 @@ void Audio::enableAmplifier( bool enable )
 	{
 		if( !amplifier_enable ){
 			dacEnable();
+#if !defined(NOSENSORS)
 			ESP_LOGI(FNAME,"Audio::enableAmplifier");
 			gpio_set_direction(GPIO_NUM_19, GPIO_MODE_OUTPUT );   // use pullup 1 == SOUND 0 == SILENCE
 			gpio_set_level(GPIO_NUM_19, 1 );
+#endif
 			amplifier_enable = true;
 			delay(180);  // amplifier startup time ~175mS according to datasheet Fig. 21
 		}
@@ -803,9 +867,11 @@ void Audio::enableAmplifier( bool enable )
 	else {
 		if( amplifier_enable ){
 			if( amplifier_shutdown.get() ){
+#if !defined(NOSENSORS)
 				ESP_LOGI(FNAME,"Audio::disableAmplifier");
 				gpio_set_direction(GPIO_NUM_19, GPIO_MODE_OUTPUT );   // use pullup 1 == SOUND 0 == SILENCE
 				gpio_set_level(GPIO_NUM_19, 0 );
+#endif
 				amplifier_enable = false;
 				dacDisable();
 			}

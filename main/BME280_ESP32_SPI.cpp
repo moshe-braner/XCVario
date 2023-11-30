@@ -71,6 +71,7 @@ BME280_ESP32_SPI::BME280_ESP32_SPI()
 
 //****************BME280_ESP32_SPI*************************************************
 bool BME280_ESP32_SPI::begin(){
+#if !defined(NOSENSORS)
 	pinMode(_cs, GPIO_MODE_OUTPUT);
 	digitalWrite(_cs, HIGH);
 	spis = SPISettings( _freq, SPI_MSBFIRST, SPI_MODE3 );
@@ -114,11 +115,13 @@ bool BME280_ESP32_SPI::begin(){
 		ESP_LOGE(FNAME,"BMP280 Calibration Data Error  CS: %d !", _cs);
 		init_err = true;
 	}
+#endif
 	return init_err;
 }
 
 //***************BME280 ****************************
 void BME280_ESP32_SPI::WriteRegister(uint8_t reg_address, uint8_t data) {
+#if !defined(NOSENSORS)
 	xSemaphoreTake(spiMutex,portMAX_DELAY );
 	SPI.beginTransaction( spis );
 	digitalWrite(_cs, LOW);
@@ -127,10 +130,12 @@ void BME280_ESP32_SPI::WriteRegister(uint8_t reg_address, uint8_t data) {
 	digitalWrite(_cs, HIGH);
 	SPI.endTransaction();
 	xSemaphoreGive(spiMutex);
+#endif
 }
 
 //*******************************************************
 void BME280_ESP32_SPI::readCalibration(void) {
+#if !defined(NOSENSORS)
 	// ESP_LOGI(FNAME,"BME280_ESP32_SPI::readCalibration");
 	_dig_T1 = read16bit(0x88);
 
@@ -157,10 +162,15 @@ void BME280_ESP32_SPI::readCalibration(void) {
 	_dig_H5 = (int16_t)((read8bit(0xE6) << 4) | (read8bit(0xE5) >> 4));
 	_dig_H6 = (int8_t)read8bit(0xE7);
 	*/
+#endif
 }
 
 //***************BME280 ****************************
 double BME280_ESP32_SPI::readTemperature( bool& success ){
+#if defined(NOSENSORS)
+	success = true;
+	return 0.0;
+#else
 	// ESP_LOGI(FNAME, "++BPM280 read Temp cs:%d ", _cs);
 	uint8_t tx[4];
 	uint8_t rx[4];
@@ -189,12 +199,16 @@ double BME280_ESP32_SPI::readTemperature( bool& success ){
 	double t=compensate_T((int32_t)adc_T) / 100.0;
 	// ESP_LOGI(FNAME, "--BMP280 read Temp=%0.1f  CS=%d", t, _cs );
 	// ESP_LOGI(FNAME,"   Calibration  CS %d  T1 %d T2 %02x T3 %02x", _cs, _dig_T1, _dig_T2, _dig_T3);
-
 	return t;
+#endif
 }
 
 //***************BME280 ****************************
 double BME280_ESP32_SPI::readPressure(bool &ok){
+#if defined(NOSENSORS)
+	ok = true;
+	return 1000.0;
+#else
 	if( init_err ){
 		ok=false;
 		return 0.0;
@@ -234,10 +248,14 @@ double BME280_ESP32_SPI::readPressure(bool &ok){
 	uint32_t adc_P = (rx[0] << 12) | (rx[1] << 4) | (rx[2] >> 4); //0xF7, msb+lsb+xlsb=19bit
     // ESP_LOGI(FNAME,"--BMP280 readPressure");
 	return compensate_P((int32_t)adc_P) / 100.0;
+#endif
 }
 
 //***************BME280****************************
 double BME280_ESP32_SPI::readHumidity(){
+#if defined(NOSENSORS)
+	return 0.5;
+#else
 	// ESP_LOGI(FNAME,"++BMP280 readHumidity");
 	uint32_t data[2];
 	bool success;
@@ -254,6 +272,7 @@ double BME280_ESP32_SPI::readHumidity(){
 
 	uint32_t adc_H = (data[0] << 8) | data[1];  //0xFD, msb+lsb=19bit(16:0)
 	return compensate_H((int32_t)adc_H) / 1024.0;
+#endif
 }
 
 //*******************************************
@@ -351,6 +370,11 @@ double BME280_ESP32_SPI::calcAVGAltitudeSTD( double pressure ) {
 }
 
 bool BME280_ESP32_SPI::selfTest( float& t, float &p ) {
+#if defined(NOSENSORS)
+	t=0;
+	p=1000;
+	return true;
+#else
 	uint8_t id = readID();
 	if( id != 0x58 ) {
 		ESP_LOGE(FNAME,"BMP280 Error, Chip ID reading failed BMP280 chip select pin %d read 0x%.2X (instead 0x58) ", _cs, id  );
@@ -382,14 +406,17 @@ bool BME280_ESP32_SPI::selfTest( float& t, float &p ) {
 		delay(100);
 	}
 	p=p/10;
-
     return( true );
+#endif
 }
 
 
 
 uint8_t BME280_ESP32_SPI::readID()
 {
+#if defined(NOSENSORS)
+	return 0;
+#else
 	xSemaphoreTake(spiMutex,portMAX_DELAY );
 	SPI.beginTransaction( spis );
 	digitalWrite(_cs, LOW);
@@ -401,10 +428,14 @@ uint8_t BME280_ESP32_SPI::readID()
 	xSemaphoreGive(spiMutex);
 	ESP_LOGI(FNAME,"BMP280 Chip ID: %02x, cs=%d", id, _cs );
 	return id;
+#endif
 }
 
 //***************BME280****************************
 uint16_t BME280_ESP32_SPI::read16bit(uint8_t reg) {
+#if defined(NOSENSORS)
+	return 0;
+#else
 	uint16_t data;   //0xFD Humidity msb read =bit 7 high
 	uint8_t d1,d2;
 	xSemaphoreTake(spiMutex,portMAX_DELAY );
@@ -419,10 +450,14 @@ uint16_t BME280_ESP32_SPI::read16bit(uint8_t reg) {
 	xSemaphoreGive(spiMutex);
 	ESP_LOGV(FNAME,"read 16bit: %04x", data );
 	return data;
+#endif
 }
 
 //***************BME280****************************
 uint8_t BME280_ESP32_SPI::read8bit(uint8_t reg) {
+#if defined(NOSENSORS)
+	return 0;
+#else
 	uint8_t data;
 	xSemaphoreTake(spiMutex,portMAX_DELAY );
 	SPI.beginTransaction( spis );
@@ -434,6 +469,7 @@ uint8_t BME280_ESP32_SPI::read8bit(uint8_t reg) {
 	xSemaphoreGive(spiMutex);
 	ESP_LOGI(FNAME,"read 8bit: %02x", data );
 	return data;
+#endif
 }
 
 double BME280_ESP32_SPI::readPressureAVG( float alpha ){

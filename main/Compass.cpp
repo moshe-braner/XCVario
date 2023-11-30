@@ -163,6 +163,7 @@ void Compass:: progress(){
 void Compass::begin(){
 	Deviation::begin();
 	loadCalibration();
+#if !defined(NOSENSORS)
 	if( compass_enable.get() == CS_I2C ){
 		i2c_0.begin(GPIO_NUM_4, GPIO_NUM_18, GPIO_PULLUP_DISABLE, GPIO_PULLUP_DISABLE, (int)(compass_i2c_cl.get()*1000) );
 		if( serial2_speed.get() )
@@ -170,6 +171,7 @@ void Compass::begin(){
 	}
 	mag_hdm.set( -1 );
 	mag_hdt.set( -1 );
+#endif
 }
 
 void Compass::start(){

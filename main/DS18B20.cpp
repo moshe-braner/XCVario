@@ -13,6 +13,8 @@
 #include <stdio.h>
 #include <logdef.h>
 
+// #include "sensor.h"   // for NOSENSORS & SUNTON28
+
 // OnewireRmt owInst( GPIO_NUM_23, 0, 1);
 // DallasRmt dallasInst;
 
@@ -24,8 +26,12 @@ DS18B20::DS18B20(gpio_num_t pin, uint8_t res, int max_dev ) {
 }
 
 bool DS18B20::begin(){
+#if defined(NOSENSORS)
+	return false;
+#else
 	ESP_LOGI(FNAME,"DS18B20::begin");
 	gpio_set_pull_mode(_pin, GPIO_PULLUP_ONLY);
+	// >>>bug?  why is the GPIO pin number hardwired below?
 	ow = new OnewireRmt( GPIO_NUM_23, RMT_CHANNEL_0, RMT_CHANNEL_1);
 	dallas = new DallasRmt( ow );
 	dallas->begin();
@@ -35,13 +41,18 @@ bool DS18B20::begin(){
 		return true;
 	else
 		return false;
+#endif
 }
 
 float DS18B20::getTemp(){
+#if defined(NOSENSORS)
+	return 0.0;
+#else
 	 float temp = 0;
 	 dallas->requestTemperatures();
 	 temp = dallas->getTempCByIndex(0);
 	 return temp;
+#endif
 }
 
 DS18B20::~DS18B20() {

@@ -20,6 +20,30 @@
 #include "HardwareSerial.h"
 #include "DataLink.h"
 
+#if defined(SUNTON28)
+#define GPIO_RXD1 GPIO_NUM_35
+  // - in expansion connector - should add pull-up?  Can do that in software?
+#define GPIO_TXD1 GPIO_NUM_22
+  // in expansion connector next to GPIO35 (if not using I2C)
+//#define GPIO_TXD1 GPIO_NUM_27
+  // alternative: temp probe connector
+  //   - same connector also has +3.3V for MAX232 (but can do without that!)
+#define GPIO_RXD2 GPIO_NUM_0
+  // - only connected to "boot" switch (and USB-serial RTS)
+  //    (boot switch also used for alternative "rotary" pusbutton)
+  // - or use GPIO 19, also used for SD card (VSPI) MISO
+#define GPIO_TXD2 GPIO_NUM_16     // connected to the blue LED
+#define GPIO_NOTX1 GPIO_NUM_4     // green LED
+#define GPIO_NOTX2 GPIO_NUM_16    // blue LED
+#else
+#define GPIO_RXD1 GPIO_NUM_16
+#define GPIO_TXD1 GPIO_NUM_17
+#define GPIO_RXD2 GPIO_NUM_4
+#define GPIO_TXD2 GPIO_NUM_18
+#define GPIO_NOTX1 GPIO_NUM_36
+#define GPIO_NOTX2 GPIO_NUM_36
+#endif
+
 #define SERIAL_STRLEN SSTRLEN
 
 // Event mask definitions

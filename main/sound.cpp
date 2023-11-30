@@ -23,7 +23,11 @@
 
 int Sound::pos = 40;
 bool Sound::ready=false;
+#if defined(NOSENSORS)
+SoftPoti *Sound::_poti;
+#else
 MCP4018 *Sound::_poti;
+#endif
 e_sound Sound::sound;
 intr_handle_t s_timer_handle;
 
@@ -42,9 +46,9 @@ void Sound::timer_isr(void* arg)
 		len = hi_wav_len;
 	if( pos < len ) {
 		if( sound == DING )
-			dac_output_voltage(DAC_CHANNEL_1,ding_co_wav[pos++]);
+			dac_output_voltage(DAC_CHANNEL,ding_co_wav[pos++]);
 		else if( sound == HI )
-			dac_output_voltage(DAC_CHANNEL_1,hi_wav[pos++]);
+			dac_output_voltage(DAC_CHANNEL,hi_wav[pos++]);
 	}
 	else
 		ready = true;
@@ -80,8 +84,8 @@ void Sound::playSound( e_sound a_sound, bool end ){
 	uint16_t volume;
 	_poti->readWiper( volume );
 	_poti->writeWiper( 50 );
-	dac_output_enable(DAC_CHANNEL_1);
-	dac_output_voltage(DAC_CHANNEL_1,127);
+	dac_output_enable(DAC_CHANNEL);
+	dac_output_voltage(DAC_CHANNEL,127);
 	sleep(0.05);
 	timerInitialise(15);
 	while( !ready ) {

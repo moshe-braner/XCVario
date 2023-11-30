@@ -39,6 +39,12 @@ int MS4525DO::measure()
 
 char MS4525DO::fetch_pressure(uint16_t &P_dat, uint16_t &T_dat)
 {
+#if defined(NOSENSORS)
+	P_dat = 0;
+	T_dat = 0;
+	return 0;
+
+#else
 	// ESP_LOGI(FNAME,"MS4525DO::fetch_pressure");
 	char _status;
 	char Press_H;
@@ -67,6 +73,7 @@ char MS4525DO::fetch_pressure(uint16_t &P_dat, uint16_t &T_dat)
 	T_dat = (((uint16_t)Temp_H) << 3) | Temp_L;
 
 	return _status;
+#endif
 }
 
 float   MS4525DO::readPascal( float minimum, bool &ok ){
@@ -92,6 +99,10 @@ float   MS4525DO::readPascal( float minimum, bool &ok ){
 }
 
 bool    MS4525DO::selfTest( int& adval ){
+#if defined(NOSENSORS)
+	adval = 0;
+	return true;
+#else
 	uint8_t data[4];
 	esp_err_t err = ESP_FAIL;
 	for( int i=0; i<4; i++ ){
@@ -110,6 +121,7 @@ bool    MS4525DO::selfTest( int& adval ){
 		return false;
 	else
 		return true;
+#endif
 }
 
 float MS4525DO::getPSI(void){             // returns the PSI of last measurement

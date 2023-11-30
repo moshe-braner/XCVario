@@ -175,6 +175,9 @@ void MenuEntry::showhelp( int y ){
 			xSemaphoreGive(spiMutex );
 			x+=len+5;
 		}
+#if defined(SUNTON28)
+		delay(100);
+#endif
 		free( buf );
 	}
 }
@@ -190,6 +193,9 @@ void MenuEntry::clear()
 	ucg->setPrintPos( 1, 30 );
 	ucg->setColor(COLOR_WHITE);
 	xSemaphoreGive(spiMutex );
+#if defined(SUNTON28)
+	delay(100);
+#endif
 }
 
 void MenuEntry::semaphoreTake()

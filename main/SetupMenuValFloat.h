@@ -28,7 +28,7 @@ public:
 	void setPrecision( int prec );
 	const char *value();
 	static void showMenu( float val, SetupMenuValFloat *menu  );
-	void up( int count );  // step up to parent
+	void up( int count );
 	void down( int count );
 	void press();
 	void longPress();

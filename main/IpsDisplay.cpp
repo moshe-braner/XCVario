@@ -411,6 +411,9 @@ void IpsDisplay::clear(){
 	ucg->drawBox( 0,0,240,320 );
 	screens_init = INIT_DISPLAY_NULL;
 	xSemaphoreGive(spiMutex);
+#if defined(SUNTON28)
+	vTaskDelay(100 / portTICK_PERIOD_MS);
+#endif
 	redrawValues();
 }
 
@@ -419,10 +422,14 @@ void IpsDisplay::bootDisplay() {
 		return;
 	// ESP_LOGI(FNAME,"IpsDisplay::bootDisplay()");
 	setup();
+#if defined(SUNTON28)
+	ucg->invertDisplay( true );    // it is an ILI9341
+#else
 	if( display_type.get() == ST7789_2INCH_12P )
 		ucg->setRedBlueTwist( true );
 	if( display_type.get() == ILI9341_TFT_18P )
 		ucg->invertDisplay( true );
+#endif
 	// ESP_LOGI(FNAME,"clear boot");
 	clear();
 	ucg->setColor(1, COLOR_BLACK );
@@ -539,6 +546,11 @@ void IpsDisplay::drawThermometer( int x, int y) {
 
 void IpsDisplay::begin() {
 	ESP_LOGI(FNAME,"IpsDisplay::begin");
+#if defined(SUNTON28)
+	// for this board need to turn on the backlight via software
+	gpio_set_direction(GPIO_NUM_21, GPIO_MODE_OUTPUT);
+	gpio_set_level(GPIO_NUM_21, 1);
+#endif
 	ucg->begin();
 	setup();
 }

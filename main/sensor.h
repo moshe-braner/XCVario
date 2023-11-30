@@ -1,6 +1,19 @@
 #ifndef _SENSOR_H_
 #define _SENSOR_H_
 
+//#define NOSENSORS         // compile for no-sensors board
+//#ifdef NOSENSORS
+//#define SUNTON28          // the specific no-sensors board to be compiled for
+//#endif
+
+// check that we got the definitions via the component.mk or CMakeLists.txt file
+#if !defined(NOSENSORS)
+#error NOSENSORS PP symbol not defined
+#endif
+#if !defined(SUNTON28)
+#error SUNTON28 PP symbol not defined
+#endif
+
 #include "MPU.hpp"        // main file, provides the class itself
 #include "AnalogInput.h"
 #include "Protocols.h"
@@ -22,12 +35,21 @@
 #include "AirspeedSensor.h"
 
 // Display 4 Wire SPI and Display CS
+#ifdef SUNTON28
+#define RESET_Display  GPIO_NUM_MAX  // is this ((gpio_num_t) 255)? // no display reset on Sunton board
+#define CS_Display     GPIO_NUM_15
+#define SPI_SCLK       GPIO_NUM_14
+#define SPI_DC         GPIO_NUM_2
+#define SPI_MOSI       GPIO_NUM_13
+#define SPI_MISO       GPIO_NUM_12
+#else
 #define RESET_Display  GPIO_NUM_5       // Reset pin for Display
 #define CS_Display     GPIO_NUM_13      // CS pin 13 is for Display
 #define SPI_SCLK       GPIO_NUM_14      // SPI Clock pin 14
 #define SPI_DC         GPIO_NUM_15      // SPI Data/Command pin 15
 #define SPI_MOSI       GPIO_NUM_27      // SPI SDO Master Out Slave In pin
 #define SPI_MISO       GPIO_NUM_32      // SPI SDI Master In Slave Out
+#endif
 
 typedef struct global_flags{
 	bool inSetup :1;
@@ -111,6 +133,10 @@ extern float mpu_target_temp;
 extern MPU_t MPU;
 
 // There is no temperature control for XCV hardware < 23, GPIO Pin there is wired to CAN slope control
+#ifdef SUNTON28
+#define HAS_MPU_TEMP_CONTROL (false)
+#else
 #define HAS_MPU_TEMP_CONTROL (CAN && !CAN->hasSlopeSupport())
+#endif
 
 #endif

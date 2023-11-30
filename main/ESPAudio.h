@@ -19,22 +19,29 @@ typedef enum e_audio_alarm_type { AUDIO_ALARM_OFF, AUDIO_ALARM_STALL, AUDIO_ALAR
 
 extern Poti *DigitalPoti;
 
+#if defined(SUNTON28)
+#define DAC_CHANNEL DAC_CHANNEL_2  // GPIO 26
+#else
+#define DAC_CHANNEL DAC_CHANNEL_1  // GPIO 25
+#endif
+
 class Audio {
 public:
 	Audio();
 	virtual ~Audio(){};
 
-	static void begin( dac_channel_t ch=DAC_CHANNEL_1 );
-	static void restart();
+	static void begin( dac_channel_t ch=DAC_CHANNEL );
+	static void restart(int scale=2);
 	static void startAudio();
 
 	static void setValues( float te, float s2fd );
 	static void setFrequency( float f );
 
 	static void setup();
-	static void incVolume( int steps );
-	static void decVolume( int steps );
+	//static void incVolume( int steps );
+	//static void decVolume( int steps );
 	static void setVolume( int vol );
+	static void setVolumePct( float pct );
 
 	static void alarm( bool enable, int volume=100, e_audio_alarm_type_t alarmType=AUDIO_ALARM_STALL );
 	static bool selfTest();

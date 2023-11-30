@@ -67,7 +67,6 @@ unsigned int AnalogInput::getRaw( int loops ) {
 		else if( _unit == ADC_UNIT_2 )
 			adc2_get_raw((adc2_channel_t)_adc_ch, ADC_WIDTH_BIT_12, &raw );
 		adc += raw;
-		// ESP_LOGI(FNAME,"ADC raw :%d ch :%d", raw, _adc_ch );
 		if( loops > 1)
 			delay(1);
 	}

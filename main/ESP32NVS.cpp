@@ -111,10 +111,12 @@ bool ESP32NVS::getBlob(const char * key, void *blob, size_t *length){
 		return false;
 	esp_err_t err = nvs_get_blob(h, key, blob, length);
 	if( err != ESP_OK ){
-		ESP_LOGE(FNAME,"Error getting blob!");
+		//ESP_LOGE(FNAME,"Error getting blob!");
+		ESP_LOGE(FNAME,"Error getting blob! %s", key);  // <<<
 		ret = false;
 	}
 	close(h);
 	xSemaphoreGive(nvMutex);
+	//ESP_LOGI(FNAME,"getBlob() returning");  // <<<
 	return ret;
 }

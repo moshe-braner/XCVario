@@ -107,12 +107,14 @@ void SetupMenuValFloat::display( int mode ){
 
 void SetupMenuValFloat::displayVal()
 {
-	ESP_LOGI(FNAME,"displayVal %s", value() );
+	const char *val_str = value();
+	ESP_LOGI(FNAME,"displayVal %s", val_str );
 	xSemaphoreTake(spiMutex,portMAX_DELAY );
 	ucg->setPrintPos( 1, 70 );
 	ucg->setFont(ucg_font_fub25_hf, true);
-	ucg->print( value() );
+	ucg->print( val_str );
 	xSemaphoreGive(spiMutex );
+	vTaskDelay(80 / portTICK_PERIOD_MS);  // added since font sometimes changed mid-print
 	ucg->setFont(ucg_font_ncenR14_hr);
 }
 
@@ -128,18 +130,19 @@ float SetupMenuValFloat::step( float instep ){
 	return step;
 }
 
+// >>> up and down are reversed somehow
+
 void SetupMenuValFloat::down( int count ){
 	if( (selected != this) || !gflags.inSetup )
 		return;
-	// ESP_LOGI(FNAME,"val down %d times ", count );
+	// ESP_LOGI(FNAME,"val up %d times ", count );
 	_value = _nvs->get();
-	while( (_value > _min) && count ) {
-
-		_value -= step( _step );
-		count --;
+	while( (_value < _max) && count > 0 ) {
+		_value += step( _step );
+		count--;
 	}
-	if( _value < _min )
-		_value = _min;
+	if( _value > _max )
+		_value = _max;
 	_nvs->set(_value );
 	displayVal();
 	if( _action != 0 )
@@ -149,14 +152,14 @@ void SetupMenuValFloat::down( int count ){
 void SetupMenuValFloat::up( int count ){
 	if( (selected != this) || !gflags.inSetup )
 		return;
-	// ESP_LOGI(FNAME,"val up %d times ", count );
+	// ESP_LOGI(FNAME,"val down %d times ", count );
 	_value = _nvs->get();
-	while( (_value < _max) && count ) {
-		_value += step( _step );
+	while( (_value > _min) && count > 0 ) {
+		_value -= step( _step );
 		count--;
 	}
-	if( _value > _max )
-		_value = _max;
+	if( _value < _min )
+		_value = _min;
 	_nvs->set(_value );
 	displayVal();
 	if( _action != 0 )

@@ -2,9 +2,14 @@
 #include "driver/gpio.h"
 #include "driver/twai.h"
 
-
+#ifdef SUNTON28
+// possible additional I/O bus on the Sunton board
+#define CAN_BUS_TX_PIN GPIO_NUM_27    // temp probe connector - or use for ???
+#define CAN_BUS_RX_PIN GPIO_NUM_35    // in expansion connector - or use for Vbat
+#else
 #define CAN_BUS_TX_PIN GPIO_NUM_26
 #define CAN_BUS_RX_PIN GPIO_NUM_33
+#endif
 
 class SString;
 

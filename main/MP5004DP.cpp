@@ -44,13 +44,18 @@ void MP5004DP::changeConfig(){
 }
 
 void MP5004DP::setBus( I2C_t *_theBus ){
+#if !defined(NOSENSORS)
 	bool ret = MCP->begin();
 	if ( ret == false )
 		ESP_LOGE(FNAME,"MP5004DP: Error MCP init");
+#endif
 }
 
 bool MP5004DP::selfTest(int& val)
 {
+#if defined(NOSENSORS)
+	return false;
+#else
 	if( MCP->selfTest() != ESP_OK ){
 		return false;
 	}
@@ -60,6 +65,7 @@ bool MP5004DP::selfTest(int& val)
 	}
 	else
 		return(false);
+#endif
 }
 
 /*
