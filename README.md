@@ -31,3 +31,4 @@ New features implemented so far (that can be also used on the actual XCvario):
 
 * Keep audio_volume (NG, float, percent of full volume) in sync with "wiper"
    - this is complicated by the allowance of separate volumes for cruise and climb modes
+* Optional audio chopping style similar to the old RICO VACS (very short beeps)

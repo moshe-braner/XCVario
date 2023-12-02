@@ -126,12 +126,14 @@ int speedcal_change(SetupMenuValFloat * p)
 
 gpio_num_t SetupMenu::getGearWarningIO(){
 	gpio_num_t io = GPIO_NUM_0;
+#if !defined(NOSENSORS)
 	if( gear_warning.get() == GW_FLAP_SENSOR || gear_warning.get() == GW_FLAP_SENSOR_INV ){
 		io = GPIO_NUM_34;
 	}
 	else if( gear_warning.get() == GW_S2_RS232_RX || gear_warning.get() == GW_S2_RS232_RX_INV ){
 		io = GPIO_NUM_18;
 	}
+#endif
 	return io;
 }
 
@@ -457,9 +459,15 @@ void SetupMenu::catchFocus( bool activate ){
 void SetupMenu::display( int mode ){
 	if( (selected != this) || !gflags.inSetup || focus )
 		return;
-	xSemaphoreTake(display_mutex,portMAX_DELAY);
+#if defined(SUNTON28)
+	ESP_LOGI(FNAME,"SetupMenu::display %s", _title );
+#endif
 	// ESP_LOGI(FNAME,"SetupMenu display( %s)", _title );
+	xSemaphoreTake(display_mutex,portMAX_DELAY);
 	clear();
+#if defined(SUNTON28)
+	delay(100);
+#endif
 	int y=25;
 	// ESP_LOGI(FNAME,"Title: %s y=%d child size:%d", selected->_title,y, _childs.size()  );
 	xSemaphoreTake(spiMutex,portMAX_DELAY );
@@ -503,17 +511,21 @@ void SetupMenu::down(int count){
 			MC.set( mc );
 		}
 		else{  // Volume
-			// >>> MB: Revised to make wiper always reflect volume percent.
-			// Change the volume by the same % as the wiper step is of wiper range.
-			// Up/down is reversed so increase volume here and decrease in up().
+			// >>> MB: corrected to make wiper reflect volume percent:
+			//     change the volume by the same % as the wiper step
+			// up/down is reversed so here increase volume
 			float vol_pct = audio_volume.get();
 			float step = 2;
 			if (DigitalPoti != nullptr)  // only after audio init
 				step = 100 * (float) DigitalPoti->getStep() / (float) DigitalPoti->getRange();
+#if defined(SUNTON28)
+			vol_pct += step;
+#else
 			vol_pct += count * step;
+#endif
 			if (vol_pct > 100)  vol_pct = 100;
 			audio_volume.set( vol_pct );
-			//ESP_LOGI(FNAME,"down: volume pct UP to %f", vol_pct );
+			ESP_LOGI(FNAME,"down: volume pct UP to %f", vol_pct );
 		}
 	}
 	if( (selected != this) || !gflags.inSetup )
@@ -553,10 +565,14 @@ void SetupMenu::up(int count){
 			float step = 2;
 			if (DigitalPoti != nullptr)  // only after audio init
 				step = 100 * (float) DigitalPoti->getStep() / (float) DigitalPoti->getRange();
+#if defined(SUNTON28)
+			vol_pct -= step;
+#else
 			vol_pct -= 2 * count * step;
+#endif
 			if (vol_pct < 0)  vol_pct = 0;
 			audio_volume.set( vol_pct );
-			//ESP_LOGI(FNAME,"up: volume pct DOWN to %f", vol_pct );
+			ESP_LOGI(FNAME,"up: volume pct DOWN to %f", vol_pct );
 		}
 	}
 	if( (selected != this) || !gflags.inSetup )
@@ -585,6 +601,9 @@ void SetupMenu::showMenu(){
 	if( pressed )
 	{
 		if( highlight == -1 ) {
+#if defined(SUNTON28)
+			ESP_LOGI(FNAME,"SetupMenu to parent");
+#endif
 			// ESP_LOGI(FNAME,"SetupMenu to parent");
 			if( _parent != 0 ){
 				selected = _parent;
@@ -594,6 +613,9 @@ void SetupMenu::showMenu(){
 			}
 		}
 		else {
+#if defined(SUNTON28)
+			ESP_LOGI(FNAME,"SetupMenu to child");
+#endif
 			// ESP_LOGI(FNAME,"SetupMenu to child");
 			if( (highlight >=0) && (highlight < (int)(_childs.size()) ) ){
 				selected = _childs[highlight];
@@ -866,8 +888,8 @@ void SetupMenu::audio_menu_create_tonestyles( MenuEntry *top ){
 	cf->setHelp(PROGMEM"Center frequency for Audio at zero Vario or zero S2F delta");
 	top->addEntry( cf );
 
-	SetupMenuValFloat * oc = new SetupMenuValFloat( "Octaves", "fold", 1.5, 4, 0.1, 0, false, &tone_var );
-	oc->setHelp(PROGMEM"Maximum tone frequency variation");
+	SetupMenuValFloat * oc = new SetupMenuValFloat( "Octaves", "fold", 1.1, 4, 0.1, 0, false, &tone_var, RST_ON_EXIT );
+	oc->setHelp(PROGMEM"Maximum tone frequency variation (reboots)");
 	top->addEntry( oc );
 
 	SetupMenuSelect * dt = new SetupMenuSelect( PROGMEM"Dual Tone", RST_ON_EXIT, 0 , true, &dual_tone );
@@ -886,6 +908,7 @@ void SetupMenu::audio_menu_create_tonestyles( MenuEntry *top ){
 	tch->addEntry( PROGMEM"Vario only");           // 1
 	tch->addEntry( PROGMEM"S2F only");             // 2
 	tch->addEntry( PROGMEM"Vario and S2F");        // 3  default
+	tch->addEntry( PROGMEM"RICO style");           // 4
 	top->addEntry( tch );
 
 	SetupMenuSelect * tchs = new SetupMenuSelect( PROGMEM"Chopping Style", RST_NONE, 0 , true, &chopping_style );
@@ -1581,7 +1604,11 @@ void SetupMenu::system_menu_create_hardware_type( MenuEntry *top ){
 	// Orientation   _display_orientation
 	SetupMenuSelect * diso = new SetupMenuSelect( PROGMEM"Orientation", RST_ON_EXIT, 0, true, &display_orientation );
 	top->addEntry( diso );
+#if defined(SUNTON28)
+	diso->setHelp( PROGMEM"Display Orientation NORMAL means USB jack on the bottom, TOPDOWN means USB jack at the top (reboots)");
+#else
 	diso->setHelp( PROGMEM"Display Orientation either NORMAL means Rotary is right, or TOPDOWN means Rotary is left  (reboots)");
+#endif
 	diso->addEntry( PROGMEM"NORMAL");
 	diso->addEntry( PROGMEM"TOPDOWN");
 
@@ -1776,6 +1803,9 @@ void SetupMenu::system_menu_create_hardware( MenuEntry *top ){
 	pstype->addEntry( PROGMEM"MP5004");
 	pstype->addEntry( PROGMEM"Autodetect");
 
+#if defined(NOSENSORS)
+	ESP_LOGI(FNAME,"create meter_adj in hw_menu");
+#endif
 	SetupMenuValFloat * met_adj = new SetupMenuValFloat( PROGMEM"Voltmeter Adjust", "%",	-25.0, 25.0, 0.01, factv_adj, false, &factory_volt_adjust,  RST_NONE, false, true);
 	met_adj->setHelp(PROGMEM"Option to fine factory adjust voltmeter");
 	top->addEntry( met_adj );
