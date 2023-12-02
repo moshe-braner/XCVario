@@ -12,15 +12,22 @@ This branch is for running on the Sunton ESP32-2432S028 board, which:
 
 Implemented use of the touch screen in lieu of the missing rotary switch:  Touch near the middle of the screen to mimic the rotary pushbutton.  Touch near the top or the bottom of the screen to navigate through menu items or to change values.
 
+Serial communications ("S1", TTL level) possible on the Sunton board via GPIO pins 35 & 22 which are accessible in the board's expansion connector.  Or use WiFi instead.
+
 The purpose of compiling for this hardware is:
-* to test UI features developed for XCvario
+* to test UI features developed for XCvario, without access to an actual XCvario
 * possibly to use as a slave XCvario in a 2-seater
-
-In the source code, parts to be skipped are enclosed in #if !defined(NOSENSORS).  Parts that are specific to the Sunton board are enclosed in #ifdef SUNTON28 (since there are other board models from the same and other brands).
-
-Serial communications ("S1", TTL level) possible via GPIO pins 35 & 22 which are accessible in the board's expansion connector.  Or use WiFi instead.
 
 Possible future features for use in a 2-seater include:
 * Split audio volume of master and slave devices
 * Get pitch and bank synced from master XCvario
 * Use the SD card slot to record IGC flight logs
+
+In the source code, parts to be skipped are enclosed in #if !defined(NOSENSORS).  Parts that are specific to the Sunton board are enclosed in #ifdef SUNTON28 (since there are other board models from the same and other brands).
+
+To compile this version for use on an actual XCvario, remove the definitions of NOSENSORS and SUNTON28 from the file main/CMakeLists.txt (not the CMakeLists.txt in the root folder of the repo).
+
+New features implemented so far (that can be also used on the actual XCvario):
+
+* Keep audio_volume (NG, float, percent of full volume) in sync with "wiper"
+   - this is complicated by the allowance of separate volumes for cruise and climb modes
