@@ -57,6 +57,7 @@ bool  Audio::_s2f_mode = false;
 bool  Audio::sound=false;
 bool  Audio::_testmode=false;
 bool  Audio::deadband_active = false;
+bool  Audio::disable_amp = false;
 bool  Audio::hightone = false;
 int   Audio::_delay=100;
 int   Audio::mtick = 0;
@@ -70,7 +71,7 @@ float Audio::maxf;
 float Audio::minf;
 float Audio::current_frequency;
 float Audio::_te = 0;
-float Audio::exponent_max = 2;
+float Audio::inv_exp_max = 0.5;
 float Audio::prev_aud_fact = 0;
 
 int   Audio::prev_div = 0;
@@ -78,6 +79,7 @@ int   Audio::prev_step = 0;
 int   Audio::scale = 0;
 int   Audio::prev_scale = -1;
 int   Audio::_tonemode_back = 0;
+int   Audio::_chopping_style_back = 0;
 int   Audio::tick = 0;
 int   Audio::volume_change=0;
 int   Audio::_step = 2;
@@ -177,9 +179,9 @@ void Audio::begin( dac_channel_t ch  )
 {
 	ESP_LOGI(FNAME,"Audio::begin");
 	Switch::begin( GPIO_NUM_12 );    // STF switch - if NOSENSORS the GPIO is ignored
+	_ch = ch;   // moved to before setup() which now calls restart() which needs _ch
 	setup();
-	_ch = ch;
-	restart();
+	//restart();
 	_testmode = true;
 	if( audio_equalizer.get() == AUDIO_EQ_LS4 )
 		equalizerSpline  = new tk::spline(F1,VOL1, tk::spline::cspline_hermite );
@@ -235,7 +237,6 @@ bool Audio::selfTest(){
 #endif
 	_step = DigitalPoti->getStep();
 	uint16_t setwiper = ( 0.01 * default_volume.get() * DigitalPoti->getRange());
-	// - it was incorrectly * 100 / getRange
 	p_wiper = &wiper;
 	p_oldwiper = &oldwiper;
 	wiper = wiper_s2f = setwiper;
@@ -260,6 +261,7 @@ bool Audio::selfTest(){
 	_alarm_mode = false;
 	//	while(1){    // uncomment for continuous self test
 	ESP_LOGI(FNAME,"Min F %f, Max F %f", minf, maxf );
+	dacEnable();
 	for( float f=minf; f<maxf*1.25; f=f*1.03){
 		ESP_LOGV(FNAME,"f=%f",f);
 		setFrequency( f );
@@ -361,6 +363,8 @@ void Audio::alarm( bool enable, int volume, e_audio_alarm_type_t style ){  // no
 		_s2f_mode_back = _s2f_mode;
 		_s2f_mode = false;
 		_tonemode_back = _tonemode;
+		_chopping_style_back = chopping_style.get();
+		chopping_style.set( _chopping_style_back & 1 );  // turn off RICO style
 		_alarm_mode=true;
 		enableAmplifier( true );
 	}
@@ -369,6 +373,7 @@ void Audio::alarm( bool enable, int volume, e_audio_alarm_type_t style ){  // no
 		wiper_s2f = _vol_back_s2f;
 		_s2f_mode = _s2f_mode_back;
 		_tonemode = _tonemode_back;
+		chopping_style.set( _chopping_style_back );
 		_alarm_mode=false;
 		if( _s2f_mode )
 			writeWiper( wiper_s2f );
@@ -463,6 +468,8 @@ void Audio::setVolume( int vol ) {
 void Audio::setVolumePct( float pct ) {
 	if (pct < 0 || pct > 100)
 		return;
+	if (pct > max_volume.get())
+		pct = max_volume.get();
 	if (DigitalPoti == nullptr)  // at initial setup
 		return;
 	float range = (float) DigitalPoti->getRange();
@@ -548,8 +555,9 @@ bool Audio::calcS2Fmode(){
 }
 
 void  Audio::evaluateChopping(){
+	// re-coded for clarity:
 	int chop_mode = chopping_mode.get();
-	_chopping = true;   // default, including BOTH_CHOP and RICO_CHOP
+	_chopping = true;   // default, includes RICO style
 	if( chop_mode == VARIO_CHOP ) {
 		if( _s2f_mode && cruise_audio_mode.get() != AUDIO_VARIO )
 			_chopping = false;
@@ -563,26 +571,25 @@ void  Audio::evaluateChopping(){
 }
 
 void  Audio::calculateFrequency(){
-	float max = minf;
+	float max_var;
 	if ( _te > 0 )
-		max = maxf;
+		max_var = (maxf - center_freq.get()) * 2;
+	else
+		max_var = center_freq.get() - minf;
 	float range = _range;
 	if( _s2f_mode && (cruise_audio_mode.get() == AUDIO_S2F) )
 		range = 5.0;
 	float mult = std::pow( (abs(_te)/range)+1, audio_factor.get());
 	if( audio_factor.get() != prev_aud_fact ) {
-		exponent_max  = std::pow( 2, audio_factor.get());
+		inv_exp_max  = 1.0/std::pow( 2, audio_factor.get());
 		prev_aud_fact = audio_factor.get();
 	}
-	float f = center_freq.get() + ((mult*_te)/range )  * (max/exponent_max);
-	if( (int)(f/10.0) != int(current_frequency/10.0) ){
-		current_frequency = center_freq.get() + ((mult*_te)/range )  * (max/exponent_max);
-	}
+	current_frequency = center_freq.get() + ((mult*_te)/range )  * (max_var*inv_exp_max);
 	if( hightone && (_tonemode == ATM_DUAL_TONE ) )
 		setFrequency( current_frequency*_high_tone_var );
 	else
 		setFrequency( current_frequency );
-	// ESP_LOGI(FNAME, "New Freq: (%0.1f) TE:%0.2f exp_fac:%0.1f multi:%0.3f  wiper:%d", f, _te, audio_factor.get(), mult, cur_wiper );
+	// ESP_LOGI(FNAME, "New Freq: (%0.1f) TE:%0.2f exp_fac:%0.1f", current_frequency, _te, mult );
 }
 
 void Audio::writeWiper( uint16_t volume ){
@@ -599,51 +606,62 @@ void Audio::writeWiper( uint16_t volume ){
 
 void Audio::dactask(void* arg )
 {
+	int old_tick = 0;
+	int silent_ticks = 0;   // keep track of how long in sink or deadband
 	while(1){
 		TickType_t xLastWakeTime = xTaskGetTickCount();
 		tick++;
 		Switch::tick();    // we hook switch sceduling here to save extra task
 		// Chopping or dual tone modulation
+		int chop_style = chopping_style.get();
+		bool long_silence = false;
+		bool scheduled = false;   // if (millis() <= next_scedule) this will be changed
 		if( millis() > next_scedule ){
+			scheduled = true;
 			if ( _te > 0 ){
 				mtick++;
-				if ( (mtick & 1) == 1 )
+				if ( (mtick & 1) )    // always true right after mtick==0
 					hightone = true;
 				else
 					hightone = false;
-				float f, g;
-				if ( chopping_mode.get() == RICO_CHOP )
-					g = 7.0;
-				else
-					g = 9.0;
+				float f = _range;
 				if( _s2f_mode && (cruise_audio_mode.get() == AUDIO_S2F) )
-					// f = 1+9*(_te/5.0);
-					f = 5.0/((5.0+g*_te));
-				else
+					f = 5.0;
+				if ( chop_style >= RICO_CHOP_SOFT ) {
+					f = f / (4.0*f/(3.0+audio_factor.get()) + 6.0*_te);
+					  // lower exponent results in more frequent ticks in weak lift
+				} else {
 					// f = 1+9*(_te/_range);
-					f = _range/((_range+g*_te));
-				// float period_ms = 1000.0/f;
+					// Mathematically equivalent: (since used below to multiply not divide)
+					f = f / (f + 9.0*_te);
+				}
 				float period_ms = 1000.0 * f;
 				if ( hightone ){  // duration of break (or second tone)
-					if ( chopping_mode.get() == RICO_CHOP )
-						_delay = int(period_ms * 0.7)-20;   // 1Hz: 680 mS; 10Hz: 67 mS
+					if ( chop_style >= RICO_CHOP_SOFT )
+						_delay = int(period_ms * 0.7);   // roughly 500 - 100 mS
 					else
 						_delay = int(period_ms * 0.1)+40;   // 1Hz: 140 mS; 10Hz: 50 mS
-					// ESP_LOGI(FNAME, "Break: %d period:%4.2f %4.1f", _delay, period_ms, f );
+					//ESP_LOGI(FNAME, "dactask: te: %4.2f break: %d  period: %d", _te, _delay, (int)period_ms);
 				}
 				else{
-					if ( chopping_mode.get() == RICO_CHOP )
-						_delay = 18;  // mS duration of RICO "tick" - actually 20 ?
+					if ( chop_style >= RICO_CHOP_SOFT )
+						_delay = 18;  // somewhat less than two periods of this task
+						  // duration of RICO "tick" 20 ms, minus 10ms cut-in if "hard"
 					else
 						_delay = int(period_ms * 0.9)-40;
 						  // duration of main tone 1Hz: 860 mS; 10Hz: 50 mS
-					// ESP_LOGI(FNAME, "Tone: %d period:%4.2f %4.1f", _delay, period_ms, f );
+					//ESP_LOGI(FNAME, "dactask: te: %4.2f tone: %d  period: %d", _te, _delay, (int)period_ms);
 				}
-			}
-			else{
+				//if (mtick < 5)
+				//	ESP_LOGI(FNAME, "scheduled: _delay=%d hightone=%d mtick=%d", _delay, hightone, mtick);
+
+			} else {  // _te < 0
 				_delay = 100;
-				hightone = false;
+				hightone = false;    // possible continous tone
+				//if (chop_style >= RICO_CHOP_SOFT)
+				mtick = 0;           // first chopping will be to hightone (silence)
 			}
+
 			// Frequency Control
 			if( !audio_variable_frequency.get() )
 				calculateFrequency();
@@ -651,10 +669,17 @@ void Audio::dactask(void* arg )
 		}
 		if( audio_variable_frequency.get() )
 			calculateFrequency();
+
 		// Amplifier and Volume control
-		if( !_testmode && !(tick%2) ) {
+		//   If RICO, audio ticks are too short to wait until a later task tick,
+		//   so always process after delays scheduled above,
+		//   otherwise process every fourth tick:
+		if( !_testmode && ( !(tick&0x3) || scheduled ) ) {
 			// ESP_LOGI(FNAME, "sound dactask tick:%d wiper:%d  te:%f db:%d", tick, (*p_wiper), _te, inDeadBand(_te) );
-			if( !(tick%10) ){
+			int ticks = tick - old_tick;
+			old_tick = tick;
+
+			if( !(tick&0x1F) ){
 				bool mode = calcS2Fmode();
 				if( _s2f_mode != mode ){
 					calculateFrequency();
@@ -662,35 +687,58 @@ void Audio::dactask(void* arg )
 				}
 			}
 
-			if( inDeadBand(_te) && !volume_change ){
+			//if( inDeadBand(_te) && ( !volume_change || chop_style >= RICO_CHOP_SOFT ) ) {
+			if( inDeadBand(_te) ) {
 				deadband_active = true;
 				sound = false;
-				// ESP_LOGI(FNAME,"Audio in DeadBand true");
+				mtick = 0;  // (even if _te>0) - first chopping will be to hightone (silence)
 			}
 			else{
 				deadband_active = false;
 				sound = true;
-				if( _tonemode == ATM_SINGLE_TONE ){
+				disable_amp = false;
+				if(chop_style >= RICO_CHOP_SOFT || (_chopping && _tonemode == ATM_SINGLE_TONE)){
 					if( hightone )
-						if( _chopping )
-							sound = false;
+						sound = false;
 				}
-				// ESP_LOGI(FNAME,"Audio in DeadBand false");
 			}
-			// Optionally disable Sound when in Menu
-			if( audio_disable.get() && gflags.inSetup )
+			if( audio_disable.get() && gflags.inSetup ) {
+				// Optionally disable Sound when in Menu
 				sound = false;
+			} else if( amplifier_shutdown.get() == 2 && _te < 0 ) {
+				// Optionally disable Sound when in sink
+				sound = false;
+			} else if( amplifier_shutdown.get() == 3 ) {
+				// Optionally disable Sound altogether
+				sound = false;
+				disable_amp = true;
+			}
 			//ESP_LOGI(FNAME, "sound %d, ht %d, te %2.1f vc:%d cw:%d ", sound, hightone, _te, volume_change, cur_wiper );
+
 			if( sound ){
-				if( !deadband_active ){
-					enableAmplifier( true );
+				if (scheduled && mtick > 0)
+					ESP_LOGI(FNAME, "sound, mtick %d, te %2.1f", mtick, _te );
+				long_silence = false;
+				silent_ticks = 0;
+				if( chop_style == RICO_CHOP_HARD && scheduled && mtick != 0 ) {
+					// delay 10 ms to shorten the beep further
+					//int back = cur_wiper;
+					//writeWiper( 0 );
+					delay(10);
+					//writeWiper( back );
 				}
+				// In lift, amplifier usually enabled during silence before tick.
+				// But below the deadband need to enable here for continuous tone.
+				// Also in 2-tone mode need to enable the amplifier here - if mtick
+				// is odd then amplifier will be enabled later on the next mtick.
+				if ( (mtick & 1) == 0 )   // but sound - including mtick==0
+					enableAmplifier( true );
 				// Blend over gracefully volume changes
-				if(  (cur_wiper != (*p_wiper)) && volume_change ){
+				if( (cur_wiper != (*p_wiper)) && volume_change ){
 					// ESP_LOGI(FNAME, "volume change, new wiper: %d, cur_wiper %d", (*p_wiper), cur_wiper );
-					int delta = 1;
-					dacEnable();
 #if !defined(NOSENSORS)
+					dacEnable();
+					int delta = 1;
 					if( (*p_wiper) > cur_wiper ){
 						for( int i=cur_wiper; i<(*p_wiper); i+=delta ) {
 							writeWiper( i );
@@ -706,23 +754,28 @@ void Audio::dactask(void* arg )
 							delay(1);
 						}
 					}
-#endif
 					writeWiper( *p_wiper );
 					cur_wiper = (*p_wiper);
-					if( cur_wiper == 0 )
-						dacDisable();
 					// ESP_LOGI(FNAME, "volume change, new wiper: %d", cur_wiper );
 					// ESP_LOGI(FNAME, "have sound");
+					if( cur_wiper == 0 )
+						dacDisable();
+#else
+					writeWiper( *p_wiper );
+					cur_wiper = (*p_wiper);
+					dacEnable();
+#endif
 				}
 				// Fade in volume
-				if(  cur_wiper != (*p_wiper) ){
-					dacEnable();
-					if( chopping_style.get() == AUDIO_CHOP_HARD ){
+				if( cur_wiper != (*p_wiper) ){
+					if( chop_style == AUDIO_CHOP_HARD || chop_style == RICO_CHOP_HARD ){
 						writeWiper( *p_wiper );
 						cur_wiper = (*p_wiper);
+						dacEnable();
 					}
-					else{
+					else{  // soft chopping
 #if !defined(NOSENSORS)
+						dacEnable();
 						float volume=3;
 						for( int i=0; i<FADING_STEPS && (int)volume <=(*p_wiper); i++ ) {
 							// ESP_LOGI(FNAME, "fade in sound, wiper: %3.1f", volume );
@@ -733,23 +786,32 @@ void Audio::dactask(void* arg )
 						}
 #endif
 						if(  cur_wiper != (*p_wiper) ){
-							// ESP_LOGI(FNAME, "fade in sound, wiper: %d", (*p_wiper)  );
+							//ESP_LOGI(FNAME, "fade in sound, wiper: %d", (*p_wiper)  );
 							writeWiper( *p_wiper );
 							cur_wiper = (*p_wiper);
 						}
+#if defined(NOSENSORS)
+						dacEnable();
+#endif
 					}
 				}
-				if( !(tick%10) ){
-					writeWiper( *p_wiper );
-				}
+//				if (cur_wiper != 0)
+//					dacEnable();
+//				if( !(tick&0x3F) ){
+//					writeWiper( *p_wiper );   // <<< why is this needed?
+//				}
 			}
-			else{
-				// Fade out volume
+			else{  // if not sound
+				if (scheduled && mtick > 0)
+					ESP_LOGI(FNAME, "no sound, mtick %d, te %2.1f", mtick, _te );
+				silent_ticks += ticks;
+				if (silent_ticks > 500)      // silence has lasted 5 sec
+					long_silence = true;
+				if (long_silence)
+					disable_amp = true;
 				if( cur_wiper != 0 ){
-					if( chopping_style.get() == AUDIO_CHOP_HARD ){
-						writeWiper( 0 );
-						cur_wiper = 0;
-					}else{
+					// Fade out volume
+					if( chop_style == AUDIO_CHOP_SOFT || chop_style == RICO_CHOP_SOFT ){
 #if !defined(NOSENSORS)
 						float volume = (float)(*p_wiper);
 						for( int i=0; i<FADING_STEPS && (int)volume >=0; i++ ) {
@@ -759,13 +821,19 @@ void Audio::dactask(void* arg )
 						}
 						delay(1);
 #endif
-						writeWiper( 0 );
-						// ESP_LOGI(FNAME, "fade out sound, final wiper: 0" );
-						cur_wiper = 0;
 					}
-					dacDisable();
+					writeWiper( 0 );
+					cur_wiper = 0;
+					// ESP_LOGI(FNAME, "fade out sound, final wiper: 0" );
 				}
-				if( deadband_active )
+				dacDisable();
+				// Avoid first RICO tick after long silence becoming a beep during the
+				// delay(180), by turning the amplifier on in the preceding silent period.
+				// Also in non-RICO style try and turn on the amplifier ahead of time.
+				// If we are here (no sound) that means mode is not two-tone.
+				if ( mtick == 1 )
+					enableAmplifier( true );
+				else if( disable_amp )
 					enableAmplifier( false );
 			}
 		}
@@ -791,10 +859,10 @@ bool Audio::inDeadBand( float te )
 		dbp = deadband.get();
 		dbn = deadband_neg.get();
 	}
-	if( ((int)( dbp*100 ) == 0) && ((int)( dbn*100 ) == 0)  ){
-		return false;
-	}
-
+//	if( ((int)( dbp*100 ) == 0) && ((int)( dbn*100 ) == 0)  ){
+//		return false;
+//	}
+// - not needed, since the same happens within the checks below:
 	if( te > 0 ) {
 		if( te < dbp )
 			return true;
@@ -840,6 +908,8 @@ void Audio::setup()
 
 	maxf = center_freq.get() * tone_var.get();
 	minf = center_freq.get() / tone_var.get();
+
+	restart();
 }
 
 void Audio::restart(int scale)
@@ -850,6 +920,9 @@ void Audio::restart(int scale)
 	dac_offset_set(_ch, 0 );
 	dac_invert_set(_ch, 2 );    // invert MSB to get sine waveform
 	dac_scale_set(_ch, scale );
+#if defined(NOSENSORS)
+	setVolumePct( audio_volume.get() );  // to set the DAC scale correctly
+#endif
 	enableAmplifier( true );
 	dacEnable();
 }
@@ -857,6 +930,7 @@ void Audio::restart(int scale)
 void Audio::shutdown(){
 	dacDisable();
 #if !defined(NOSENSORS)
+	// shut down amplifier chip
 	gpio_set_direction(GPIO_NUM_19, GPIO_MODE_OUTPUT );   // use pullup 1 == SOUND 0 == SILENCE
 	gpio_set_level(GPIO_NUM_19, 0 );
 #endif
@@ -876,41 +950,53 @@ void Audio::enableAmplifier( bool enable )
 	if( enable )
 	{
 		if( !amplifier_enable ){
-			dacEnable();
 #if !defined(NOSENSORS)
-			ESP_LOGI(FNAME,"Audio::enableAmplifier");
-			gpio_set_direction(GPIO_NUM_19, GPIO_MODE_OUTPUT );   // use pullup 1 == SOUND 0 == SILENCE
-			gpio_set_level(GPIO_NUM_19, 1 );
+			gpio_set_direction(GPIO_NUM_19, GPIO_MODE_OUTPUT );
+			gpio_set_level(GPIO_NUM_19, 1 );    // use pullup 1 == SOUND 0 == SILENCE
 #endif
+			// In the silence before first beep or tick (mtick==1),
+			// no delay needed, amplifier will be ready for the first tick.
+			// But if in sink falling below the deadband, need the delay.
+			if ( (mtick & 1) == 0 ) {   // 0 or any even (non-hightone)
+				delay(180);  // amplifier startup time ~175mS according to datasheet Fig. 21
+				ESP_LOGI(FNAME,"180 ms delay...");
+			}
+			// note: do NOT call dacEnable() here - allow doing this in silence.
 			amplifier_enable = true;
-			delay(180);  // amplifier startup time ~175mS according to datasheet Fig. 21
+			ESP_LOGI(FNAME,"enabled Amplifier");
 		}
 	}
 	else {
 		if( amplifier_enable ){
-			if( amplifier_shutdown.get() ){
+			if( amplifier_shutdown.get() > 0 ){
 #if !defined(NOSENSORS)
-				ESP_LOGI(FNAME,"Audio::disableAmplifier");
 				gpio_set_direction(GPIO_NUM_19, GPIO_MODE_OUTPUT );   // use pullup 1 == SOUND 0 == SILENCE
 				gpio_set_level(GPIO_NUM_19, 0 );
 #endif
-				amplifier_enable = false;
 				dacDisable();
+				amplifier_enable = false;
+				ESP_LOGI(FNAME,"disabled Amplifier");
 			}
 		}
 	}
 }
 
 void Audio::dacEnable(){
+#if defined(NOSENSORS)
+	if (cur_wiper == 0) {
+		dac_output_disable(_ch);   // only way to actually silence the audio without a poti
+		return;
+	}
+#endif
 	if( !dac_enable ){
-		// ESP_LOGI(FNAME,"Audio::dacEnable");
+		//ESP_LOGI(FNAME,"Audio::dacEnable");
 		dac_output_enable(_ch);
 		dac_enable = true;
 	}
 }
 void Audio::dacDisable(){
 	if( dac_enable ){
-		// ESP_LOGI(FNAME,"Audio::dacDisable");
+		//ESP_LOGI(FNAME,"Audio::dacDisable");
 		dac_output_disable(_ch);
 		dac_enable = false;
 	}

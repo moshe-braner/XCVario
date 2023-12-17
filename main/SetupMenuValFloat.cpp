@@ -130,11 +130,10 @@ float SetupMenuValFloat::step( float instep ){
 	return step;
 }
 
-// >>> up and down are reversed somehow
-
 void SetupMenuValFloat::down( int count ){
 	if( (selected != this) || !gflags.inSetup )
 		return;
+// somehow this is still reversed, so do "up" here:
 	// ESP_LOGI(FNAME,"val up %d times ", count );
 	_value = _nvs->get();
 	while( (_value < _max) && count > 0 ) {

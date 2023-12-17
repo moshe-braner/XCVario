@@ -25,12 +25,15 @@ Version::Version() {
 
 #if defined(NOSENSORS)
 #if defined(SUNTON28)
+// flag Sunton version with 'S' at end of version date
 	sprintf(_version,"%02d.%02d%02d%02dS", ano%100, mes, dia, hora );
 #else
+// flag other no-sensors version with 'B' at end of version date
 	sprintf(_version,"%02d.%02d%02d%02dB", ano%100, mes, dia, hora );
 #endif
 #else
-	sprintf(_version,"%02d.%02d%02d-%02d", ano%100, mes, dia, hora );
+// flag private version for XCvario with 'M' at end of version date
+	sprintf(_version,"%02d.%02d%02d%02dM", ano%100, mes, dia, hora );
 #endif
 	program_version = _version;
 }

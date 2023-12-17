@@ -55,11 +55,11 @@ bool SoftPoti::readWiper( uint16_t &val ) {
 bool SoftPoti::writeWiper( uint16_t val ) {
     wiper = val;
     static int prev_scale = -1;
-    if (wiper == 0) {
-        Audio::dacDisable();
-        // prev_scale = -1;
-        return true;
-    }
+    //if (wiper == 0) {
+    //    Audio::dacDisable();
+    //    // prev_scale = -1;
+    //    return true;
+    //}
     int scale;
     if (wiper < 33)  // ==32
         scale = 3;         // 1/8 amplitude

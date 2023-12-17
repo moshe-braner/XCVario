@@ -239,7 +239,7 @@ void Serial::begin(){
 			gpio_pullup_en( GPIO_TXD1 );
 			ESP_LOGI(FNAME,"Serial Interface ttyS1 enabled with serial speed: %d baud: %d tx_inv: %d rx_inv: %d",  serial1_speed.get(), baud[serial1_speed.get()], serial1_tx_inverted.get(), serial1_rx_inverted.get() );
 #if !defined(SUNTON28)
-// GPIO_NUM_35 is input-only, so cannot "twist"
+// GPIO_NUM_35 is input-only, so cannot "twist" on Sunton board
 			if( serial1_pins_twisted.get() ){
 				if( serial1_tx_enable.get() ){
 					Serial1.begin(baudrate,SERIAL_8N1,GPIO_TXD1,GPIO_RXD1,

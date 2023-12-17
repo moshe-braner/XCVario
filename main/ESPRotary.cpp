@@ -50,6 +50,7 @@ int ESPRotary::touch_state()
     } else {
         int16_t x, y;
         if (getTouch(x,y) != false) {
+            //ESP_LOGI(FNAME,"getTouch() returned %d, %d", x, y); 
             // Touching logical top of screen should send "up"
             // (touch screen is not inverted even when display is)
             if (y < MAX_UP) {
@@ -273,6 +274,14 @@ void ESPRotary::informObservers( void * args )
 #if defined(SUNTON28)
 
 		int touch = touch_state();
+
+		if (touch == TOUCH_UP) {
+			if( rotary_dir_21.get() )
+				touch = TOUCH_DOWN;
+		} else if (touch == TOUCH_DOWN) {
+			if( rotary_dir_21.get() )
+				touch = TOUCH_UP;
+		}
 
 		if( touch == TOUCH_MIDDLE ){  // pressed
 			timer++;

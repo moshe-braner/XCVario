@@ -23,11 +23,39 @@
 #if defined(SUNTON28)
 #define GPIO_RXD1 GPIO_NUM_35
   // - in expansion connector - should add pull-up?  Can do that in software?
-#define GPIO_TXD1 GPIO_NUM_22
-  // in expansion connector next to GPIO35 (if not using I2C)
-//#define GPIO_TXD1 GPIO_NUM_27
-  // alternative: temp probe connector
-  //   - same connector also has +3.3V for MAX232 (but can do without that!)
+  //    - can use just RX, and skip S1 TX, if want to use 22,27 for I2C
+  //    - note that on the ESP32 GPIO35 is input-only
+#define GPIO_TXD1 GPIO_NUM_21
+  // - in expansion connector along with GPIO35
+  //   (if not using I2C where it's SDA by default)
+  // GPIO21 also needs to be high to activate TFT backlight
+  // but the serial output is usually high, TFT will be "OK".
+  // If not using TX then set GPIO_TXD1 to GPIO_NUM_4, green LED
+  // Or perhaps can use GPIO21 for I2C in parallel with the TFT backlight:
+  //    - in I2C "both SCL and SDA are high in idle state"
+  // Another alternative is gpio27: temp probe connector
+  //    - same connector also has +3.3V for MAX232 (but can do without that!)
+  //
+  // The options:
+  //              serial      I2C
+  //            RXD1  TXD1  SCL  SDA
+  //             35    22   --   --  (should add pull-up to 35?  Can do in software?)
+  //             35    21   --   --  (21 shared with TFT backlight)
+  //             35    27   --   --  (note that on the ESP32 GPIO35 is input-only)
+  //             35    22   21   27  (use 21 for SCL since SCL is output-only, but:)
+  //             35    27   21   22  (note: BMP module has pull-up resistor on SCL)
+  //             35    --   21   22  (this pinout opposite the default I2C pinout)
+  //            (35    27   22   21  DON'T DO THIS, SINCE WE *OUTPUT* HIGH TO GPIO21)
+  //             35    21   27   22  (this may cause less (or more) TFT blink?)
+  //             35    21   22   27  (asks peripheral to pull down against the resistor on 27)
+  // Conclusion:
+  //  use this:  35    21   27   22  (but carefully protect 35,21 from high outside voltages)
+  //   or this:  35    27   21   22  (whichever one causes less TFT blink)
+  // Note:
+  //   S1 is separate from the USB/serial debug port!
+  //   S1 output will be busy unless set to no-TX or S1 routing turned off
+  //   I2C (if connected to baro sensor) will be used 10 episodes per second?
+  //
 #define GPIO_RXD2 GPIO_NUM_0
   // - only connected to "boot" switch (and USB-serial RTS)
   //    (boot switch also used for alternative "rotary" pusbutton)
@@ -36,6 +64,7 @@
 #define GPIO_NOTX1 GPIO_NUM_4     // green LED
 #define GPIO_NOTX2 GPIO_NUM_16    // blue LED
 #else
+// these are the pins used in the XCvario:
 #define GPIO_RXD1 GPIO_NUM_16
 #define GPIO_TXD1 GPIO_NUM_17
 #define GPIO_RXD2 GPIO_NUM_4

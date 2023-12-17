@@ -12,6 +12,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <logdef.h>
+//#include <esp_log.h>
 
 #include "XPT2046.h"
 
@@ -22,9 +24,11 @@ void XPT2046_init()
     pinMode(TOUCH_CS, OUTPUT);
     digitalWrite(TOUCH_CS, HIGH);
     pinMode(TOUCH_CLK, OUTPUT);
+    //digitalWrite(TOUCH_CLK, LOW);  // <<< added
     pinMode(TOUCH_MOSI, OUTPUT);
     pinMode(TOUCH_MISO, INPUT_PULLUP);
     inited = true;
+    ESP_LOGI(FNAME,"init() done"); 
 }
 
 static void transfer(uint8_t* read_data, const uint8_t* write_data, size_t len)
@@ -138,8 +142,11 @@ bool getTouch(int16_t &rx, int16_t &ry)
 
     // require at least 5 (of possible 7) so that
     //    after dropping 4 outliers at least 1 is left
-    if (ix < 5 || iy < 5 || iz < 5)
-      return false;
+    if (ix < 5 || iy < 5 || iz < 5) {
+        if (iz > 0 && (ix > 0 || iy > 0))
+            ESP_LOGI(FNAME,"weak touch %d, %d, %d", ix, iy, iz); 
+        return false;
+    }
 
     // instead of sorting to get the median,
     //    drop outliers and average the rest

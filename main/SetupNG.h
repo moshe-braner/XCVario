@@ -46,7 +46,7 @@
 
 
 typedef enum display_type { UNIVERSAL, RAYSTAR_RFJ240L_40P, ST7789_2INCH_12P, ILI9341_TFT_18P } xcv_display_t;
-typedef enum chopping_mode { NO_CHOP, VARIO_CHOP, S2F_CHOP, BOTH_CHOP, RICO_CHOP } chopping_mode_t;
+typedef enum chopping_mode { NO_CHOP, VARIO_CHOP, S2F_CHOP, BOTH_CHOP } chopping_mode_t;
 typedef enum rs232linemode { RS232_NORMAL, RS232_INVERTED } rs232lm_t;
 typedef enum nmea_protocol  { OPENVARIO, BORGELT, CAMBRIDGE, XCVARIO, NMEA_OFF } nmea_proto_t;
 typedef enum airspeed_mode  { MODE_IAS, MODE_TAS, MODE_CAS, MODE_SLIP } airspeed_mode_t;
@@ -58,7 +58,7 @@ typedef enum e_serial_route_type { RT_XCVARIO, RT_WIRELESS, RT_S1, RT_S2, RT_CAN
 typedef enum e_wireless_type { WL_DISABLE, WL_BLUETOOTH, WL_WLAN_MASTER, WL_WLAN_CLIENT, WL_WLAN_STANDALONE, WL_BLUETOOTH_LE } e_wireless_t;
 typedef enum e_audiomode_type { AM_VARIO, AM_S2F, AM_SWITCH, AM_AUTOSPEED, AM_EXTERNAL, AM_FLAP, AM_AHRS } e_audiomode_t;
 typedef enum e_audio_tone_mode { ATM_SINGLE_TONE, ATM_DUAL_TONE } e_audio_tone_mode_t;
-typedef enum e_audio_chopping_style { AUDIO_CHOP_SOFT, AUDIO_CHOP_HARD } e_audio_chopping_style_t;
+typedef enum e_audio_chopping_style { AUDIO_CHOP_SOFT, AUDIO_CHOP_HARD, RICO_CHOP_SOFT, RICO_CHOP_HARD } e_audio_chopping_style_t;
 typedef enum e_audio_range { AUDIO_RANGE_5_MS, AUDIO_RANGE_10_MS, AUDIO_RANGE_VARIABLE } e_audio_range_t;
 typedef enum e_flap_sensor { FLAP_SENSOR_DISABLE, FLAP_SENSOR_GPIO_2, FLAP_SENSOR_GPIO_34, FLAP_SENSOR_GPIO_26 } e_flap_sensor_t;
 typedef enum e_cruise_audio { AUDIO_S2F, AUDIO_VARIO } e_cruise_audio_2;
@@ -392,6 +392,7 @@ public:
 
 	inline T getDefault() const { return _default; }
 	inline uint8_t getSync() { return flags._sync; }
+	inline void setSync( e_sync_t sync ) { flags._sync = sync; }
 
 private:
 	T _value;
@@ -468,6 +469,7 @@ extern SetupNG<int>  		audio_split_vol;
 extern SetupNG<float>  		default_volume;
 extern SetupNG<float>  		frequency_response;
 extern SetupNG<float>  		max_volume;
+extern SetupNG<int>  		sync_volume;
 extern SetupNG<float>  		s2f_deadband;
 extern SetupNG<float>  		s2f_deadband_neg;
 extern SetupNG<float>  		s2f_delay;

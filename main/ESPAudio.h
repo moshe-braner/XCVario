@@ -89,7 +89,8 @@ private:
     static int prev_div;
     static int prev_step;
     static bool deadband_active;
-    static float exponent_max;
+    static bool disable_amp;
+    static float inv_exp_max;
     static float prev_aud_fact;
     static int scale;
     static int prev_scale;
@@ -100,6 +101,7 @@ private:
     static uint16_t _vol_back_s2f;
     static bool  _s2f_mode_back;
     static int   _tonemode_back;
+    static int   _chopping_style_back;
     static int tick;
     static int tickmod;
     static int volume_change;
