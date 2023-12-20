@@ -24,16 +24,19 @@ public:
   /*  Destroys instance  */
   ~SoftPoti();
 
-  bool readWiper( uint16_t& val );
-  bool writeWiper( uint16_t val );
-  bool incWiper();
-  bool decWiper();
+  bool readVolume( float& val );
+  bool writeVolume( float val );
   bool haveDevice();
-  inline int  getRange() { return 127; };  // 7 bit 0..127
-  inline int  getStep() { return 32; };
 
 private:
-  uint16_t wiper;  // only bit 0..7 supported
+  bool readWiper( int& val );
+  bool writeWiper( int val );
+#define SOFTPOTIRANGE 127
+  inline int  getRange() { return SOFTPOTIRANGE; };
+  inline float getInvRange() { return (1.0/SOFTPOTIRANGE); };
+  inline int  getStep() { return 32; };
+
+  int wiper;  // only bit 0..7 supported
 };
 
 #endif

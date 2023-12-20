@@ -377,15 +377,7 @@ int bug_adj( SetupMenuValFloat * p ){
 }
 
 int vol_adj( SetupMenuValFloat * p ){
-	float pct = audio_volume.get();
-	//float max = max_volume.get();
-	//if (pct > max)
-	//	pct = max;      // no need, since this is also done within setVolumePct()
-	Audio::setVolumePct( pct );
-	//p->setMax(max);
-	  // Not workable: after increasing max_volume still cannot adjust volume higher.
-	  // Because this happens *after* we used this menu, but how to do it before?
-	  // - add a pre-menu-display action function?
+	// do nothing, actually - change_volume() already called Audio::setVolume()
 	return 0;
 }
 
@@ -393,18 +385,6 @@ int cur_vol_dflt( SetupMenuSelect *p ){
 	if( p->getSelect() != 0 )  // "set"
 		default_volume.set( audio_volume.get() );
 	p->setSelect( 0 );   // return to "cancel"
-	return 0;
-}
-
-int max_vol_adj( SetupMenuValFloat * p ){
-	float pct = max_volume.get();
-	if (pct < audio_volume.get())
-		audio_volume.set(pct);     // invokes setupNG.cpp action change_volume()
-	if (pct < volume_vario)
-		volume_vario = pct;
-	if (pct < volume_s2f)
-		volume_s2f = pct;
-	// audio_volume menu ->setMax(pct);  tbd: ideally should do this here?
 	return 0;
 }
 
@@ -481,10 +461,7 @@ void SetupMenu::begin( IpsDisplay* display, PressureSensor * bmp, AnalogInput *a
 	ucg = display->getDisplay();
 	_adc = adc;
 	setup();
-	float pct = default_volume.get();
-	audio_volume.set( pct );
-	volume_s2f = pct;
-	volume_vario = pct;
+	audio_volume.set( default_volume.get() );
 	init_routing();
 	init_screens();
 	initGearWarning();
@@ -549,23 +526,18 @@ void SetupMenu::down(int count){
 			MC.set( mc );
 		}
 		else{  // Volume
-			// >>> MB: corrected to make wiper reflect volume percent:
-			//     change the volume by the same % as the wiper step
-			float vol_pct = audio_volume.get();
-			// up/down still reversed, so move volume up here
-			float step = 2;
-			if (DigitalPoti != nullptr)  // only after audio init
-				step = 100 * (float) DigitalPoti->getStep() / (float) DigitalPoti->getRange();
-			if (step < 2)  step = 2;
 #if defined(SUNTON28)
-			vol_pct += step;
-#else
-			vol_pct += count * step;
+			count = 1;
 #endif
-			if (vol_pct > 100)  vol_pct = 100;
-			if (vol_pct > max_volume.get())  vol_pct = max_volume.get();
-			audio_volume.set( vol_pct );
-			ESP_LOGI(FNAME,"down: volume pct up to %f", vol_pct );
+			float vol = audio_volume.get();
+			if( vol<3.0 )
+				vol=3.0;
+			for( int i=0; i<count; i++ )
+				vol = vol * 1.17;
+			if( vol > max_volume.get() )
+				vol = max_volume.get();
+			audio_volume.set( vol );
+			ESP_LOGI(FNAME,"down: volume pct up to %f", vol );
 		}
 	}
 	if( (selected != this) || !gflags.inSetup )
@@ -601,19 +573,16 @@ void SetupMenu::up(int count){
 			MC.set( mc );
 		}
 		else{  // Volume
-			float vol_pct = audio_volume.get();
-			float step = 2;
-			if (DigitalPoti != nullptr)  // only after audio init
-				step = 100 * (float) DigitalPoti->getStep() / (float) DigitalPoti->getRange();
-			if (step < 4)  step = 4;   // go down faster than up
 #if defined(SUNTON28)
-			vol_pct -= step;
-#else
-			vol_pct -= 2 * count * step;
+			count = 1;
 #endif
-			if (vol_pct < 0)  vol_pct = 0;
-			audio_volume.set( vol_pct );
-			ESP_LOGI(FNAME,"up: volume pct down to %f", vol_pct );
+			float vol = audio_volume.get();
+			for( int i=0; i<count; i++ )
+				vol = vol * 0.83;
+			if( vol<3.0 )
+				vol=0;
+			audio_volume.set( vol );
+			ESP_LOGI(FNAME,"up: volume pct down to %f", vol );
 		}
 	}
 	if( (selected != this) || !gflags.inSetup )
@@ -1012,7 +981,7 @@ void SetupMenu::audio_menu_create_volume( MenuEntry *top ){
 	top->addEntry( dv );
 
 	SetupMenuValFloat * mv = new SetupMenuValFloat( PROGMEM"Max Volume", "%",
-		    0.0, 100.0, 4.0, max_vol_adj, false, &max_volume );
+		    0.0, 100.0, 4.0, 0, false, &max_volume );
 	mv->setHelp(PROGMEM"Maximum audio volume setting allowed. Set to 0% to mute audio entirely.");
 	top->addEntry( mv );
 
@@ -1034,11 +1003,43 @@ void SetupMenu::audio_menu_create_volume( MenuEntry *top ){
 	top->addEntry( sv );
 }
 
+void SetupMenu::audio_menu_create_mute( MenuEntry *top ){
+	SetupMenuSelect * asida = new SetupMenuSelect( PROGMEM"In Sink", RST_NONE, 0 , true, &audio_mute_sink );
+	asida->setHelp(PROGMEM"Select whether vario audio will be muted while in sink");
+	asida->addEntry( PROGMEM"Stay On");  // 0
+	asida->addEntry( PROGMEM"Mute");     // 1
+	top->addEntry( asida );
+
+	SetupMenuSelect * ameda = new SetupMenuSelect( PROGMEM"In Setup", RST_NONE, 0 , true, &audio_mute_menu );
+	ameda->setHelp(PROGMEM"Select whether vario audio will be muted while Setup Menu is open");
+	ameda->addEntry( PROGMEM"Stay On");  // 0
+	ameda->addEntry( PROGMEM"Mute");     // 1
+	top->addEntry( ameda );
+
+	SetupMenuSelect * ageda = new SetupMenuSelect( PROGMEM"Generally", RST_NONE, 0 , true, &audio_mute_gen );
+	ageda->setHelp(PROGMEM"Select audio on, or vario audio muted, or all audio muted including alarms");
+	ageda->addEntry( PROGMEM"Audio On");      // 0
+	ageda->addEntry( PROGMEM"Alarms On");     // 1
+	ageda->addEntry( PROGMEM"Audio Off");     // 2
+	top->addEntry( ageda );
+
+	SetupMenuSelect * amps = new SetupMenuSelect( PROGMEM"Amplifier", RST_NONE, 0 , true, &amplifier_shutdown );
+	amps->setHelp(PROGMEM"Select whether amplifier is shutdown during long silences, or always stays on");
+	amps->addEntry( PROGMEM"Stay On");   // 0
+	amps->addEntry( PROGMEM"Shutdown");  // 1
+	top->addEntry( amps );
+}
+
 void SetupMenu::audio_menu_create( MenuEntry *audio ){
 	SetupMenu * volumes = new SetupMenu( PROGMEM"Volume options" );
 	audio->addEntry( volumes );
 	volumes->setHelp( PROGMEM "Configure audio volume options", 240);
 	volumes->addCreator(audio_menu_create_volume);
+
+	SetupMenu * mutes = new SetupMenu( PROGMEM"Mute Audio" );
+	audio->addEntry( mutes );
+	mutes->setHelp( PROGMEM "Configure audio muting options", 240);
+	mutes->addCreator(audio_menu_create_mute);
 
 	SetupMenuSelect * abnm = new SetupMenuSelect( PROGMEM"Cruise Audio", RST_NONE, 0 , true, &cruise_audio_mode );
 	abnm->setHelp(PROGMEM"Select either S2F command or Variometer (Netto/Brutto as selected) as audio source while cruising");
@@ -1079,21 +1080,6 @@ void SetupMenu::audio_menu_create( MenuEntry *audio ){
 	audio->addEntry( db );
 	db->setHelp(PROGMEM"Dead band limits within which audio remains silent.  1 m/s equals roughly 200 fpm or 2 knots");
 	db->addCreator(audio_menu_create_deadbands);
-
-	SetupMenuSelect * amps = new SetupMenuSelect( PROGMEM"Amplifier", RST_NONE, audio_setup_s, true, &amplifier_shutdown );
-//	amps->setHelp(PROGMEM"Select if Audio Amplifier is totally shutdown while in deadband (saves energy), or stays on");
-	amps->setHelp(PROGMEM"Option to shut down amplifier while in deadband, in sink, or always (alarms still sound)");
-	amps->addEntry( PROGMEM"Always On");         // 0
-	amps->addEntry( PROGMEM"Off in deadband");   // 1  "Shutdown"
-	amps->addEntry( PROGMEM"Off in sink & db");  // 2
-	amps->addEntry( PROGMEM"Always Off");        // 3
-	audio->addEntry( amps );
-
-	SetupMenuSelect * ameda = new SetupMenuSelect( PROGMEM"Audio in Setup", RST_NONE, 0 , true, &audio_disable );
-	ameda->setHelp(PROGMEM"Select whether Audio will get muted while Setup Menu is open, or stays on");
-	ameda->addEntry( PROGMEM"Stay On");      // 0
-	ameda->addEntry( PROGMEM"Silent");       // 1
-	audio->addEntry( ameda );
 }
 
 void SetupMenu::glider_menu_create_polarpoints( MenuEntry *top ){
@@ -2006,6 +1992,15 @@ void SetupMenu::system_menu_create_interfaceS1( MenuEntry *top ){
 	stxdis1->setHelp( PROGMEM"Option to switch off RS232 TX line in case active sending is not required, e.g. for multiple devices connected to one device  (reboots)");
 	stxdis1->addEntry( PROGMEM"Disable");
 	stxdis1->addEntry( PROGMEM"Enable");
+
+#if defined(SUNTON28)
+	SetupMenuSelect * i2cpins = new SetupMenuSelect( PROGMEM"Pins", RST_ON_EXIT, 0, true, &i2c_pins );
+	top->addEntry( i2cpins );
+	i2cpins->setHelp( PROGMEM"S1 RX=35; I2C SDA=22; SCL=27 disables S1 TX, SCL=21 blinks TFT (reboots)");
+	i2cpins->addEntry( PROGMEM"TX=22, No I2C");    // 0
+	i2cpins->addEntry( PROGMEM"No TX, SCL=27");    // 1
+	i2cpins->addEntry( PROGMEM"TX=27, SCL=21");    // 2
+#endif
 }
 
 void SetupMenu::system_menu_create_interfaceS2_routing( MenuEntry *top ){

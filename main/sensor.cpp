@@ -365,7 +365,7 @@ void drawDisplay(void *pvParameters){
 			if( gload_mode.get() != GLOAD_OFF  ){
 				if( (float)accelG[0] > gload_pos_limit.get() || (float)accelG[0] < gload_neg_limit.get()  ){
 					if( !gflags.gload_alarm ) {
-						Audio::alarm( true, DigitalPoti->getRange()*(gload_alarm_volume.get()/100) );
+						Audio::alarm( true, gload_alarm_volume.get() );
 						gflags.gload_alarm = true;
 					}
 				}else
@@ -1470,6 +1470,18 @@ void system_startup(void *args){
 		logged_tests += "Battery Voltage Sensor: PASSED\n";
 	}
 
+#if defined(SUNTON28)
+	gpio_set_direction(GPIO_NUM_4, GPIO_MODE_OUTPUT);   // red (?) LED
+	gpio_set_level(GPIO_NUM_4,1);                       // turn it off
+	gpio_set_direction(GPIO_NUM_16, GPIO_MODE_OUTPUT);  // blue (?) LED
+	gpio_set_level(GPIO_NUM_16,1);                      // turn it off
+	if ( !serial1_tx_enable.get()           // tx redirected to LED pin
+	    || i2c_pins.get()==I2C_27 ) {       // ditto, no real S1 output
+		gpio_set_direction(GPIO_NUM_17, GPIO_MODE_OUTPUT);  // green (?) LED
+		gpio_set_level(GPIO_NUM_17,1);                      // turn it off
+	}
+#endif
+
 	Serial::begin();
 	// Factory test for serial interface plus cable
 	String result("Serial ");
@@ -1491,17 +1503,14 @@ void system_startup(void *args){
 		else
 			result += ",S2 FAIL";
 	}
-#endif
 	if( abs(factory_volt_adjust.get() - 0.00815) < 0.00001 ){
 		display->writeText( line++, result.c_str() );
 	}
+#else
+		display->writeText( line++, result.c_str() );
+#endif
 
 	Serial::taskStart();
-
-#if defined(SUNTON28)
-	gpio_set_direction(GPIO_NUM_16, GPIO_MODE_OUTPUT);  // blue LED == GPIO_TXD2
-	gpio_set_level(GPIO_NUM_16,1);                      // turn it off
-#endif
 
 	if( wireless == WL_BLUETOOTH ) {
 		if( btsender.selfTest() ){

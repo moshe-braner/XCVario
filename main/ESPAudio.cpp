@@ -41,13 +41,10 @@
 static TaskHandle_t dactid = NULL;
 
 uint8_t Audio::_tonemode;
-uint16_t *Audio::p_wiper = 0;
-uint16_t *Audio::p_oldwiper = 0;
-uint16_t Audio::wiper;
-uint16_t Audio::oldwiper = 0;
-uint16_t Audio::wiper_s2f;
-uint16_t Audio::oldwiper_s2f = 0;
-uint16_t Audio::cur_wiper;
+float Audio::vario_mode_volume;
+float Audio::s2f_mode_volume;
+float Audio::speaker_volume;
+float Audio::current_volume;
 dac_channel_t Audio::_ch;
 
 bool  Audio::_chopping = false;
@@ -65,8 +62,8 @@ bool  Audio::_alarm_mode=false;
 bool  Audio::_s2f_mode_back = false;
 unsigned long Audio::next_scedule=0;
 
-uint16_t Audio::_vol_back = 0;
-uint16_t Audio::_vol_back_s2f = 0;
+float Audio::_vol_back_vario = 0;
+float Audio::_vol_back_s2f = 0;
 float Audio::maxf;
 float Audio::minf;
 float Audio::current_frequency;
@@ -82,7 +79,6 @@ int   Audio::_tonemode_back = 0;
 int   Audio::_chopping_style_back = 0;
 int   Audio::tick = 0;
 int   Audio::volume_change=0;
-int   Audio::_step = 2;
 bool  Audio::dac_enable=false;
 bool  Audio::amplifier_enable=false;
 bool  Audio::_haveCAT5171=false;
@@ -90,7 +86,7 @@ bool  Audio::_haveCAT5171=false;
 const int clk_8m_div = 7;    // RTC 8M clock divider (division is by clk_8m_div+1, i.e. 0 means 8MHz frequency)
 const float freq_step = RTC_FAST_CLK_FREQ_APPROX / (65536 * 8 );  // div = 0x07
 typedef struct lookup {  uint8_t div; uint8_t step; } t_lookup_entry;
-typedef struct volume {  uint16_t vol; uint8_t scale; uint8_t wiper; } t_scale_wip;
+//typedef struct volume {  uint16_t vol; uint8_t scale; uint8_t wiper; } t_scale_wip;
 
 #define FADING_STEPS 6  // steps used for fade in/out at chopping
 #define FADING_TIME  3  // factor for volume changes fade over smoothing
@@ -103,11 +99,10 @@ Audio::Audio( ) {
 	_testmode = false;
 	_range = 5.0;
 	_s2f_mode = false;
-	wiper = 63;
-	wiper_s2f = 63;
-	cur_wiper = 63;
-	p_wiper = 0;
-	p_oldwiper = 0;
+	vario_mode_volume = 63;
+	s2f_mode_volume = 63;
+	current_volume = 63;
+	speaker_volume = 63;
 }
 
 PROGMEM std::map<uint16_t, t_lookup_entry> lftab{
@@ -192,17 +187,17 @@ void Audio::begin( dac_channel_t ch  )
 	delay(10);
 }
 
-uint16_t Audio::equal_volume( uint16_t volume ){
+float Audio::equal_volume( float volume ){
 	float freq_resp = ( 1 - (((current_frequency-minf) / (maxf-minf)) * (frequency_response.get()/100.0) ) );
 	float new_vol = volume * freq_resp;
 	if( equalizerSpline )
 		new_vol = new_vol * (float)(*equalizerSpline)( (double)current_frequency );
-	if( new_vol >=  DigitalPoti->getRange()*(max_volume.get()/100) )
-		new_vol =  DigitalPoti->getRange()*(max_volume.get()/100);
+	if( new_vol >= max_volume.get() )
+		new_vol = max_volume.get();
 	if( new_vol <= 0 )
 		new_vol = 0;
 	// ESP_LOGI(FNAME,"Vol: %d Scaled: %f  F: %.0f spline: %.3f", volume, new_vol, current_frequency, (float)(*equalizerSpline)( (double)current_frequency ));
-	return (uint16_t)new_vol;
+	return new_vol;
 }
 
 bool Audio::selfTest(){
@@ -235,24 +230,21 @@ bool Audio::selfTest(){
 		ESP_LOGI(FNAME,"MCP4018 digital Poti found");
 	}
 #endif
-	_step = DigitalPoti->getStep();
-	uint16_t setwiper = ( 0.01 * default_volume.get() * DigitalPoti->getRange());
-	p_wiper = &wiper;
-	p_oldwiper = &oldwiper;
-	wiper = wiper_s2f = setwiper;
-	ESP_LOGI(FNAME,"default volume/wiper: %d", (*p_wiper) );
-	ESP_LOGI(FNAME, "selfTest wiper: %d", wiper );
+	float setvolume = default_volume.get();
+	speaker_volume = vario_mode_volume = s2f_mode_volume = setvolume;
+	ESP_LOGI(FNAME,"default volume: %f", speaker_volume );
 	_alarm_mode = true;
-	writeWiper( 1 );
-	uint16_t getwiper;
-	bool ret = DigitalPoti->readWiper( getwiper );
+	writeVolume( 50.0 );
+	float getvolume;
+	bool ret = DigitalPoti->readVolume( getvolume );  // gets 49.8049...
+	ESP_LOGI(FNAME,"writeVolume(50) then readvolume() got: %f", getvolume );
 	if( ret == false ) {
 		ESP_LOGI(FNAME,"readWiper returned error");
 		return false;
 	}
-	if( getwiper != 1 )
+	if( (int)getvolume != 49 )
 	{
-		ESP_LOGI(FNAME,"readWiper returned wrong setting set=%d get=%d", setwiper, getwiper );
+		ESP_LOGI(FNAME,"readWiper returned wrong setting set=%f get=%f", setvolume, getvolume );
 		ret = false;
 	}
 	else
@@ -267,22 +259,22 @@ bool Audio::selfTest(){
 		setFrequency( f );
 		current_frequency = f;
 		if( !fadein ){
-			int volume = 3;
-			for( int i=0; i<FADING_STEPS && volume <= (int)setwiper; i++ ) {
-				writeWiper( volume );
+			float volume = 3;
+			for( int i=0; i<FADING_STEPS && volume <= setvolume; i++ ) {
+				writeVolume( volume );
 				volume = volume*1.75;
 				delay(1);
 				fadein = true;
 			}
 		}
-		writeWiper( setwiper );
+		writeVolume( setvolume );
 		delay(20);
 		esp_task_wdt_reset();
 	}
 	//	}
 	delay(200);
 	ESP_LOGI(FNAME, "selfTest wiper: %d", 0 );
-	writeWiper( 0 );
+	writeVolume( 0 );
 	dacDisable();
 	_testmode=true;
 	return ret;
@@ -356,10 +348,10 @@ void Audio::dac_scale_set(dac_channel_t channel, int scale)
 	}
 }
 
-void Audio::alarm( bool enable, int volume, e_audio_alarm_type_t style ){  // non blocking
+void Audio::alarm( bool enable, float volume, e_audio_alarm_type_t style ){  // non blocking
 	if( enable && !_alarm_mode ){ // Begin of alarm
-		_vol_back_s2f = wiper_s2f;
-		_vol_back = wiper;
+		_vol_back_s2f = s2f_mode_volume;
+		_vol_back_vario = vario_mode_volume;
 		_s2f_mode_back = _s2f_mode;
 		_s2f_mode = false;
 		_tonemode_back = _tonemode;
@@ -369,19 +361,20 @@ void Audio::alarm( bool enable, int volume, e_audio_alarm_type_t style ){  // no
 		enableAmplifier( true );
 	}
 	if( !enable && _alarm_mode ){ // End of alarm
-		wiper = _vol_back;
-		wiper_s2f = _vol_back_s2f;
+		vario_mode_volume = _vol_back_vario;
+		s2f_mode_volume = _vol_back_s2f;
 		_s2f_mode = _s2f_mode_back;
 		_tonemode = _tonemode_back;
 		chopping_style.set( _chopping_style_back );
 		_alarm_mode=false;
 		if( _s2f_mode )
-			writeWiper( wiper_s2f );
+			writeVolume( s2f_mode_volume );
 		else
-			writeWiper( wiper );
+			writeVolume( vario_mode_volume );
+		// speaker_volume = current_volume;  // this will happen in dactask
 	}
 	if( enable ) {  // tune alarm
-		// ESP_LOGI(FNAME,"Alarm sound enable volume: %d style: %d", volume, style );
+		// ESP_LOGI(FNAME,"Alarm sound enable volume: %f style: %d", volume, style );
 		if( style == AUDIO_ALARM_STALL ){
 			_te = 3.0;
 			_tonemode = ATM_DUAL_TONE;
@@ -408,7 +401,7 @@ void Audio::alarm( bool enable, int volume, e_audio_alarm_type_t style ){  // no
 		else
 			ESP_LOGE(FNAME,"Error, wrong alarm style %d", style );
 		calculateFrequency();
-		(*p_wiper) = volume;
+		speaker_volume = volume;
 	}
 }
 
@@ -456,102 +449,59 @@ void Audio::dac_invert_set(dac_channel_t channel, int invert)
 	}
 }
 
-// setVolumePct() now called upon volume change via rotary
-
-void Audio::setVolume( int vol ) {
-	if((p_wiper) == 0 )
-		return;
-	(*p_wiper) = vol;
-	volume_change = 100;
-};
-
-void Audio::setVolumePct( float pct ) {
-	if (pct < 0 || pct > 100)
-		return;
-	if (pct > max_volume.get())
-		pct = max_volume.get();
-	if (DigitalPoti == nullptr)  // at initial setup
-		return;
-	float range = (float) DigitalPoti->getRange();
-	if (range <= 0)
-		return;
-	int newwiper = (int) (0.01 * pct * range);
-	if(p_oldwiper == 0 )
-		return;
-	if (newwiper == (*p_oldwiper))  // no change
-		return;
-	setVolume(newwiper);
-	  // what will actually be written later to poti
-	  //   in writeWiper() will vary due to equalization
-	ESP_LOGI(FNAME,"setVolumePct wiper %d -> %d", (*p_oldwiper), newwiper );
-	(*p_oldwiper) = newwiper;
-}
-
-// decVolume() and incVolume() no longer used
-
-#if 0
-void Audio::decVolume( int steps ) {
-	if((p_wiper) == 0 )
-		return;
-	ESP_LOGI(FNAME,"dec volume, wiper: %d, steps: %d", (*p_wiper), steps );
-#if defined(NOSENSORS)
-	steps = DigitalPoti->getStep();   // ignore the change (in % volume?) in "steps"
-#else
-	steps = int( 1+ ( (float)(*p_wiper)/16.0 ))*steps;
-#endif
-	while( steps && ((*p_wiper) > 0) ){
-		(*p_wiper)--;
-		steps--;
+void Audio::setVolume( float vol ) {
+	volume_change = (vol != speaker_volume) ? 100 : 0;
+	speaker_volume = vol;
+	// also copy the new volume into the cruise-mode specific variables so that
+	// calcS2Fmode() will later restore the correct volume when mode changes:
+	if( audio_split_vol.get() ) {
+		if( _s2f_mode )
+			s2f_mode_volume = speaker_volume;
+		else
+			vario_mode_volume = speaker_volume;
+		ESP_LOGI(FNAME, "setvolume() to %f, _s2f_mode %d", speaker_volume, _s2f_mode );
+	} else {
+		// copy to both variables in case audio_split_vol enabled later
+		s2f_mode_volume = speaker_volume;
+		vario_mode_volume = speaker_volume;
+		ESP_LOGI(FNAME, "setvolume() to %f, mono mode", speaker_volume );
 	}
-	ESP_LOGI(FNAME,"dec volume, *p_wiper: %d", (*p_wiper) );
-	volume_change = 100;
 }
-
-void Audio::incVolume( int steps ) {
-	if((p_wiper) == 0 )
-		return;
-	ESP_LOGI(FNAME,"inc volume, wiper: %d, steps: %d", (*p_wiper), steps );
-#if defined(NOSENSORS)
-	steps = DigitalPoti->getStep();
-#else
-	steps = int( 1+ ( (float)(*p_wiper)/16.0 ))*steps;
-#endif
-	while( steps && ((*p_wiper) <  DigitalPoti->getRange()*(max_volume.get()/100)) ){
-		(*p_wiper)++;
-		steps--;
-	}
-	if( (*p_wiper) > DigitalPoti->getRange() )
-		(*p_wiper) =  DigitalPoti->getRange();
-	ESP_LOGI(FNAME,"inc volume, *p_wiper: %d", (*p_wiper) );
-	volume_change = 100;
-}
-#endif
 
 void Audio::startAudio(){
 	ESP_LOGI(FNAME,"startAudio");
 	_testmode = false;
 	evaluateChopping();
-	p_wiper = &wiper;
+	speaker_volume = vario_mode_volume;
 	xTaskCreatePinnedToCore(&dactask, "dactask", 2400, NULL, 16, &dactid, 0);
 }
 
-bool Audio::calcS2Fmode(){
-	bool mode = false;
-	if( !_alarm_mode ) {
-		mode =  Switch::getCruiseState();
-		if( mode && audio_split_vol.get() ) {
-			p_wiper = &wiper_s2f;
-			p_oldwiper = &oldwiper_s2f;
-			if ( audio_volume.get() != volume_s2f )
-				audio_volume.set( volume_s2f );
-		} else {
-			p_wiper = &wiper;
-			p_oldwiper = &oldwiper;
-			if ( audio_split_vol.get() && audio_volume.get() != volume_vario )
-				audio_volume.set( volume_vario );
+void Audio::calcS2Fmode(){
+	if( _alarm_mode )
+		return;
+	bool mode = Switch::getCruiseState();
+	// >>> temporary for testing: use "Variable Tone" setting as a S2F switch <<<
+	// bool mode = audio_variable_frequency.get();
+	if( mode != _s2f_mode ){
+		ESP_LOGI(FNAME, "S2Fmode changed to %d", mode );
+		_s2f_mode = mode;             // do this first, as...
+		calculateFrequency();         // this needs the new _stf_mode
+		if( _s2f_mode )
+			speaker_volume = s2f_mode_volume;
+		else
+			speaker_volume = vario_mode_volume;
+		if ( speaker_volume != audio_volume.get() ) {  // due to audio_split_vol
+			ESP_LOGI(FNAME, "... changing volume %f -> %f",
+			     audio_volume.get(), speaker_volume );
+			audio_volume.set( speaker_volume );  // this too needs _stf_mode
+			// this is to keep the current volume shown (or implied) in the menus
+			// in step with the actual speaker volume, in case volume is changed
+			// after the CruiseState has changed.  Calling audio_volume.set() here
+			// will call the action change_volume() which calls Audio::setVolume()
+			// which will write it back into speaker_volume and the mode-specific
+			// variable, and will also set volume_change=100, but all that is OK.
 		}
 	}
-	return mode;
 }
 
 void  Audio::evaluateChopping(){
@@ -592,16 +542,13 @@ void  Audio::calculateFrequency(){
 	// ESP_LOGI(FNAME, "New Freq: (%0.1f) TE:%0.2f exp_fac:%0.1f", current_frequency, _te, mult );
 }
 
-void Audio::writeWiper( uint16_t volume ){
-	// ESP_LOGI(FNAME, "set volume: %d", volume);
-#if defined(NOSENSORS)
-	DigitalPoti->writeWiper( volume );  // equalization not useful without "poti" chip
-#else
+void Audio::writeVolume( float volume ){
+	// ESP_LOGI(FNAME, "set volume: %f", volume);
 	if( _alarm_mode )
-		DigitalPoti->writeWiper( volume );  // max volume
+		DigitalPoti->writeVolume( volume );  // max volume
 	else
-		DigitalPoti->writeWiper( equal_volume(volume) ); // take care frequency response
-#endif
+		DigitalPoti->writeVolume( equal_volume(volume) ); // take care frequency response
+	current_volume = volume;
 }
 
 void Audio::dactask(void* arg )
@@ -667,8 +614,8 @@ void Audio::dactask(void* arg )
 				calculateFrequency();
 			next_scedule = millis()+_delay;
 		}
-		if( audio_variable_frequency.get() )
-			calculateFrequency();
+//		if( audio_variable_frequency.get() )
+//			calculateFrequency();
 
 		// Amplifier and Volume control
 		//   If RICO, audio ticks are too short to wait until a later task tick,
@@ -679,15 +626,14 @@ void Audio::dactask(void* arg )
 			int ticks = tick - old_tick;
 			old_tick = tick;
 
-			if( !(tick&0x1F) ){
-				bool mode = calcS2Fmode();
-				if( _s2f_mode != mode ){
-					calculateFrequency();
-					_s2f_mode = mode;
-				}
+			// moved here to call calculateFrequency() less often (every 40 ms is enough):
+			if( audio_variable_frequency.get() )
+				calculateFrequency();
+
+			if( !(tick&0x1F) ){     // every 320 ms
+				calcS2Fmode();      // if mode changed, affects volume and frequency
 			}
 
-			//if( inDeadBand(_te) && ( !volume_change || chop_style >= RICO_CHOP_SOFT ) ) {
 			if( inDeadBand(_te) ) {
 				deadband_active = true;
 				sound = false;
@@ -702,16 +648,20 @@ void Audio::dactask(void* arg )
 						sound = false;
 				}
 			}
-			if( audio_disable.get() && gflags.inSetup ) {
-				// Optionally disable Sound when in Menu
-				sound = false;
-			} else if( amplifier_shutdown.get() == 2 && _te < 0 ) {
-				// Optionally disable Sound when in sink
-				sound = false;
-			} else if( amplifier_shutdown.get() == 3 ) {
-				// Optionally disable Sound altogether
-				sound = false;
-				disable_amp = true;
+			if( sound ) {
+				if( !_alarm_mode ) {
+					// Optionally disable vario audio when in Sink
+					if( audio_mute_sink.get() && _te < 0 )
+						sound = false;
+					// Optionally disable vario audio when in setup menu
+					else if( audio_mute_menu.get() && gflags.inSetup )
+						sound = false;
+					// Optionally disable vario audio generally
+					else if( audio_mute_gen.get() == 1 )
+						sound = false;
+				} else if( audio_mute_gen.get() == 2 ) {    // mute alarms too
+					sound = false;
+				}
 			}
 			//ESP_LOGI(FNAME, "sound %d, ht %d, te %2.1f vc:%d cw:%d ", sound, hightone, _te, volume_change, cur_wiper );
 
@@ -720,87 +670,75 @@ void Audio::dactask(void* arg )
 					ESP_LOGI(FNAME, "sound, mtick %d, te %2.1f", mtick, _te );
 				long_silence = false;
 				silent_ticks = 0;
-				if( chop_style == RICO_CHOP_HARD && scheduled && mtick != 0 ) {
-					// delay 10 ms to shorten the beep further
-					//int back = cur_wiper;
-					//writeWiper( 0 );
-					delay(10);
-					//writeWiper( back );
-				}
+				if( chop_style == RICO_CHOP_HARD && scheduled && mtick != 0 )
+					delay(10);   // to shorten the beep further
 				// In lift, amplifier usually enabled during silence before tick.
 				// But below the deadband need to enable here for continuous tone.
 				// Also in 2-tone mode need to enable the amplifier here - if mtick
 				// is odd then amplifier will be enabled later on the next mtick.
 				if ( (mtick & 1) == 0 )   // but sound - including mtick==0
 					enableAmplifier( true );
+
 				// Blend over gracefully volume changes
-				if( (cur_wiper != (*p_wiper)) && volume_change ){
-					// ESP_LOGI(FNAME, "volume change, new wiper: %d, cur_wiper %d", (*p_wiper), cur_wiper );
-#if !defined(NOSENSORS)
+				if( (current_volume != speaker_volume) && volume_change ){
+					// ESP_LOGI(FNAME, "volume change, new volume: %f, current_volume %f", speaker_volume, current_volume );
+//#if !defined(NOSENSORS)
+					// change volume logarithmically
+					if (current_volume < 3.0)
+						current_volume = 3.0;   // avoid division by zero
+					float g = speaker_volume / current_volume;
+					if (g < 0.25)
+						g = 0.25;
+					g = 1.0 + (g-1.0) / (g + (float)FADING_TIME);
+					// This works for decreasing volume too, e.g.:
+					// if decreasing by 50%, g = 1+(0.5-1)/(0.5+3) = 0.857
+					// This formula is specifically fitted to FADING_TIME=3 though.
+					float f = current_volume;
 					dacEnable();
-					int delta = 1;
-					if( (*p_wiper) > cur_wiper ){
-						for( int i=cur_wiper; i<(*p_wiper); i+=delta ) {
-							writeWiper( i );
-							delta = _step+i/FADING_TIME;
-							// ESP_LOGI(FNAME, "volume inc, new wiper: %d", i );
-							delay(1);
-						}}
-					else{
-						for( int i=cur_wiper; i>(*p_wiper); i-=delta ) {
-							writeWiper( i );
-							// ESP_LOGI(FNAME, "volume dec, new wiper: %d", i );
-							delta = _step+i/FADING_TIME;
-							delay(1);
-						}
+					for( int i=0; i<FADING_TIME; i++ ) {
+						f = f * g;
+						if (f > max_volume.get())  f = max_volume.get();
+						writeVolume( f );
+						// ESP_LOGI(FNAME, "new volume: %f", f );
+						delay(1);
 					}
-					writeWiper( *p_wiper );
-					cur_wiper = (*p_wiper);
-					// ESP_LOGI(FNAME, "volume change, new wiper: %d", cur_wiper );
-					// ESP_LOGI(FNAME, "have sound");
-					if( cur_wiper == 0 )
+					writeVolume( speaker_volume );
+					if( speaker_volume == 0 )
 						dacDisable();
-#else
-					writeWiper( *p_wiper );
-					cur_wiper = (*p_wiper);
-					dacEnable();
-#endif
+					// ESP_LOGI(FNAME, "volume change, new volume: %d", current_volume );
+					// ESP_LOGI(FNAME, "have sound");
+//#else
+//					writeVolume( speaker_volume );
+//					if( speaker_volume > 0 )
+//						dacEnable();
+//#endif
 				}
 				// Fade in volume
-				if( cur_wiper != (*p_wiper) ){
+				if( current_volume != speaker_volume ){
 					if( chop_style == AUDIO_CHOP_HARD || chop_style == RICO_CHOP_HARD ){
-						writeWiper( *p_wiper );
-						cur_wiper = (*p_wiper);
+						writeVolume( speaker_volume );
 						dacEnable();
 					}
-					else{  // soft chopping
-#if !defined(NOSENSORS)
+					else{
+//#if !defined(NOSENSORS)
 						dacEnable();
 						float volume=3;
-						for( int i=0; i<FADING_STEPS && (int)volume <=(*p_wiper); i++ ) {
-							// ESP_LOGI(FNAME, "fade in sound, wiper: %3.1f", volume );
-							writeWiper( volume );
-							cur_wiper = volume;
+						for( int i=0; i<FADING_STEPS && volume <=speaker_volume; i++ ) {
+							// ESP_LOGI(FNAME, "fade in sound, volume: %3.1f", volume );
+							writeVolume( volume );
 							volume = volume*1.75;
 							delay(1);
 						}
-#endif
-						if(  cur_wiper != (*p_wiper) ){
-							//ESP_LOGI(FNAME, "fade in sound, wiper: %d", (*p_wiper)  );
-							writeWiper( *p_wiper );
-							cur_wiper = (*p_wiper);
-						}
-#if defined(NOSENSORS)
-						dacEnable();
-#endif
+						// ESP_LOGI(FNAME, "fade in sound, volume: %d", speaker_volume );
+//#endif
+						writeVolume( speaker_volume );
+//#if defined(NOSENSORS)
+//						dacEnable();
+//#endif
 					}
 				}
-//				if (cur_wiper != 0)
-//					dacEnable();
-//				if( !(tick&0x3F) ){
-//					writeWiper( *p_wiper );   // <<< why is this needed?
-//				}
 			}
+
 			else{  // if not sound
 				if (scheduled && mtick > 0)
 					ESP_LOGI(FNAME, "no sound, mtick %d, te %2.1f", mtick, _te );
@@ -809,22 +747,24 @@ void Audio::dactask(void* arg )
 					long_silence = true;
 				if (long_silence)
 					disable_amp = true;
-				if( cur_wiper != 0 ){
+
+				if( current_volume != 0 ){
 					// Fade out volume
 					if( chop_style == AUDIO_CHOP_SOFT || chop_style == RICO_CHOP_SOFT ){
-#if !defined(NOSENSORS)
-						float volume = (float)(*p_wiper);
-						for( int i=0; i<FADING_STEPS && (int)volume >=0; i++ ) {
-							//ESP_LOGI(FNAME, "fade out sound, wiper: %3.1f", volume );
-							writeWiper( volume );
+//#if !defined(NOSENSORS)
+						float volume = current_volume;
+						for( int i=0; i<FADING_STEPS && volume > 0; i++ ) {
+							//ESP_LOGI(FNAME, "fade out sound, volume: %3.1f", volume );
 							volume = volume*0.75;
+							writeVolume( volume );
+							if (volume < 3.0)
+								volume = 0;
 						}
 						delay(1);
-#endif
+						// ESP_LOGI(FNAME, "fade out sound, final volume: 0" );
+//#endif
 					}
-					writeWiper( 0 );
-					cur_wiper = 0;
-					// ESP_LOGI(FNAME, "fade out sound, final wiper: 0" );
+					writeVolume( 0 );
 				}
 				dacDisable();
 				// Avoid first RICO tick after long silence becoming a beep during the
@@ -850,6 +790,8 @@ void Audio::dactask(void* arg )
 
 bool Audio::inDeadBand( float te )
 {
+	if( _alarm_mode )
+		return false;
 	float dbp=0.0;
 	float dbn=0.0;
 	if( _s2f_mode && (cruise_audio_mode.get() == AUDIO_S2F)) {
@@ -908,23 +850,35 @@ void Audio::setup()
 
 	maxf = center_freq.get() * tone_var.get();
 	minf = center_freq.get() / tone_var.get();
-
 	restart();
+#if defined(NOSENSORS)
+	setVolume( audio_volume.get() );  // calls rescale() via SoftPoti
+#endif
 }
 
-void Audio::restart(int scale)
+void Audio::restart()
 {
-	ESP_LOGD(FNAME,"Audio::restart");
+	//ESP_LOGD(FNAME,"Audio::restart");
+	ESP_LOGI(FNAME,"Audio::restart");
 	dacDisable();
 	dac_cosine_enable(_ch);
 	dac_offset_set(_ch, 0 );
 	dac_invert_set(_ch, 2 );    // invert MSB to get sine waveform
-	dac_scale_set(_ch, scale );
-#if defined(NOSENSORS)
-	setVolumePct( audio_volume.get() );  // to set the DAC scale correctly
-#endif
+	dac_scale_set(_ch, 2 );
 	enableAmplifier( true );
 	dacEnable();
+}
+
+void Audio::rescale(int scale)
+{
+	ESP_LOGI(FNAME,"Audio::rescale");
+	//dacDisable();
+	//dac_cosine_enable(_ch);
+	//dac_offset_set(_ch, 0 );
+	//dac_invert_set(_ch, 2 );    // invert MSB to get sine waveform
+	dac_scale_set(_ch, scale );
+	// >>> does not call enableAmplifier( true );
+	//dacEnable();
 }
 
 void Audio::shutdown(){
@@ -934,8 +888,8 @@ void Audio::shutdown(){
 	gpio_set_direction(GPIO_NUM_19, GPIO_MODE_OUTPUT );   // use pullup 1 == SOUND 0 == SILENCE
 	gpio_set_level(GPIO_NUM_19, 0 );
 #endif
-	if( p_wiper != 0)
-		(*p_wiper) = 0;
+	speaker_volume = 0;
+	audio_volume.set( 0 );
 	ESP_LOGI(FNAME,"shutdown alarm volume set 0");
 }
 
@@ -982,12 +936,13 @@ void Audio::enableAmplifier( bool enable )
 }
 
 void Audio::dacEnable(){
-#if defined(NOSENSORS)
-	if (cur_wiper == 0) {
-		dac_output_disable(_ch);   // only way to actually silence the audio without a poti
-		return;
-	}
-#endif
+//    dacDisable() is now called within SoftPoti upon writeWiper(0)
+//#if defined(NOSENSORS)
+//	if (current_volume == 0) {
+//		dac_output_disable(_ch);   // only way to actually silence the audio without a poti
+//		return;
+//	}
+//#endif
 	if( !dac_enable ){
 		//ESP_LOGI(FNAME,"Audio::dacEnable");
 		dac_output_enable(_ch);

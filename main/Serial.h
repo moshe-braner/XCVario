@@ -21,20 +21,17 @@
 #include "DataLink.h"
 
 #if defined(SUNTON28)
-#define GPIO_RXD1 GPIO_NUM_35
-  // - in expansion connector - should add pull-up?  Can do that in software?
-  //    - can use just RX, and skip S1 TX, if want to use 22,27 for I2C
-  //    - note that on the ESP32 GPIO35 is input-only
-#define GPIO_TXD1 GPIO_NUM_21
+//#define GPIO_TXD1 GPIO_NUM_21
   // - in expansion connector along with GPIO35
   //   (if not using I2C where it's SDA by default)
   // GPIO21 also needs to be high to activate TFT backlight
-  // but the serial output is usually high, TFT will be "OK".
-  // If not using TX then set GPIO_TXD1 to GPIO_NUM_4, green LED
+  // but the serial output is usually high, TFT will be "OK"?
+// - appears that using gpio 21 makes the display blink badly
+  // If not using TX then set GPIO_TXD1 to green or blue LED
   // Or perhaps can use GPIO21 for I2C in parallel with the TFT backlight:
   //    - in I2C "both SCL and SDA are high in idle state"
   // Another alternative is gpio27: temp probe connector
-  //    - same connector also has +3.3V for MAX232 (but can do without that!)
+  //    - same connector also has +3.3V
   //
   // The options:
   //              serial      I2C
@@ -49,20 +46,34 @@
   //             35    21   27   22  (this may cause less (or more) TFT blink?)
   //             35    21   22   27  (asks peripheral to pull down against the resistor on 27)
   // Conclusion:
-  //  use this:  35    21   27   22  (but carefully protect 35,21 from high outside voltages)
-  //   or this:  35    27   21   22  (whichever one causes less TFT blink)
+  //  try this:  35    21   27   22  (but carefully protect 35,21 from high outside voltages)
+  //        - but it appears that using gpio 21 makes the display blink badly,
+  //            & tx-off makes the display black, so:
+  //  use this:  35    --   27   22  (serial output not available, use wireless)
+  //   or this:  35    22   --   --  (I2C not available)
+  //   or this:  35    27   21   22  (if I2C does not affect display too much)
+  //  (or this:  35    22   21   27) (ditto, but pull-up on 27 may stress the BMP?)
   // Note:
   //   S1 is separate from the USB/serial debug port!
   //   S1 output will be busy unless set to no-TX or S1 routing turned off
   //   I2C (if connected to baro sensor) will be used 10 episodes per second?
   //
+#define GPIO_RXD1 GPIO_NUM_35
+  // - in expansion connector - should add pull-up?  Can do that in software?
+  //    - can use just RX, and skip S1 TX, if want to use 22,27 for I2C
+  //    - note that on the ESP32 GPIO35 is input-only
+#define GPIO_TXD1_I2C21 GPIO_NUM_27
+#define GPIO_TXD1_I2C27 GPIO_NUM_17
+#define GPIO_TXD1_NO_I2C GPIO_NUM_22
+#define GPIO_TXD1 (gpio_txd1())
+#define GPIO_NOTX1 GPIO_NUM_17   // connected to the ____ LED
+//  (GPIO 4 seems to be the *red* LED which is also always on dimly)
 #define GPIO_RXD2 GPIO_NUM_0
   // - only connected to "boot" switch (and USB-serial RTS)
   //    (boot switch also used for alternative "rotary" pusbutton)
   // - or use GPIO 19, also used for SD card (VSPI) MISO
-#define GPIO_TXD2 GPIO_NUM_16     // connected to the blue LED
-#define GPIO_NOTX1 GPIO_NUM_4     // green LED
-#define GPIO_NOTX2 GPIO_NUM_16    // blue LED
+#define GPIO_TXD2 GPIO_NUM_16     // connected to the ____ LED
+#define GPIO_NOTX2 GPIO_NUM_16
 #else
 // these are the pins used in the XCvario:
 #define GPIO_RXD1 GPIO_NUM_16
@@ -154,7 +165,6 @@ public:
 	{
 		return cfg->route_disable;
 	};
-
 
 private:
 	static bool _selfTest;

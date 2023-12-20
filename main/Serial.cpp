@@ -214,6 +214,17 @@ bool Serial::selfTest(int num){
 	return false;
 }
 
+#if defined(SUNTON28)
+// this function is called via the macro GPIO_TXD1
+static gpio_num_t gpio_txd1()
+{
+	gpio_num_t pin = GPIO_TXD1_NO_I2C;
+	if (i2c_pins.get() == I2C_27)  pin = GPIO_TXD1_I2C27;
+	if (i2c_pins.get() == I2C_21)  pin = GPIO_TXD1_I2C21;
+	return pin;
+}
+#endif
+
 void Serial::begin(){
 	ESP_LOGI(FNAME,"Serial::begin()" );
 	// Initialize static configuration

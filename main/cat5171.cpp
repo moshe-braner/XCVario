@@ -7,24 +7,25 @@ CAT5171::CAT5171()
 {
 	errorcount=0;
 	_noDevice = false;
-	wiper = 63;
+	wiper = CAT5171RANGE/2;
 	bus = 0;
 }
 
 bool CAT5171::begin()
 {
 #if defined(NOSENSORS)
-	    return( false );
+	return( false );
 #else
 	errorcount=0;
-	if( readWiper( wiper ) ) {
+	int local_wiper;
+	if( readWiper( local_wiper ) ) {
+		wiper = local_wiper;
 		ESP_LOGI(FNAME,"CAT5171 wiper=%d", wiper );
 		return(true);
 	}
-	else {
-		ESP_LOGE(FNAME,"CAT5171 Error reading wiper!");
-	    return( false );
-	}
+	// else
+	ESP_LOGE(FNAME,"CAT5171 Error reading wiper!");
+	return( false );
 #endif
 }
 
@@ -37,51 +38,37 @@ bool CAT5171::haveDevice() {
 #if defined(NOSENSORS)
 	    return( false );
 #else
-	  ESP_LOGI(FNAME,"CAT5171 haveDevice");
-	  esp_err_t err = bus->testConnection(CAT5171_I2C_ADDR);
-	  if( err == ESP_OK ) {
-		 ESP_LOGI(FNAME,"CAT5171 haveDevice: OK");
-	     return true;
-	  }
-	  else{
-		 ESP_LOGI(FNAME,"CAT5171 haveDevice: NONE");
-		 return false;
-	  }
+	ESP_LOGI(FNAME,"CAT5171 haveDevice");
+	esp_err_t err = bus->testConnection(CAT5171_I2C_ADDR);
+	if( err == ESP_OK ) {
+		ESP_LOGI(FNAME,"CAT5171 haveDevice: OK");
+		return true;
+	}
+	// else
+	ESP_LOGI(FNAME,"CAT5171 haveDevice: NONE");
+	return false;
 #endif
 }
 
-bool CAT5171::incWiper(){
-	if( wiper <getRange() )
-		wiper++;
-	return( writeWiper(wiper) );
-}
-
-bool CAT5171::decWiper(){
-	if( wiper >1 )
-		wiper--;
-	return( writeWiper(wiper) );
-}
-
-
-bool CAT5171::readWiper( uint16_t &val ) {
+bool CAT5171::readWiper( int &val ) {
 #if defined(NOSENSORS)
 	return false;
 #else
-	esp_err_t err = bus->read8bit(CAT5171_I2C_ADDR, &val );
+	uint16_t i16val;
+	esp_err_t err = bus->read8bit(CAT5171_I2C_ADDR, &i16val );
 	if( err == ESP_OK ){
-		// ESP_LOGI(FNAME,"CAT5171 read wiper val=%d  OK", val );
+		// ESP_LOGI(FNAME,"CAT5171 read wiper val=%d  OK", i16val );
+		val = i16val;
 		return true;
 	}
-	else
-	{
-		ESP_LOGE(FNAME,"CAT5171 Error reading wiper, error count %d", errorcount);
-		errorcount++;
-	    return false;
-	}
+	// else
+	ESP_LOGE(FNAME,"CAT5171 Error reading wiper, error count %d", errorcount);
+	errorcount++;
+	return false;
 #endif
 }
 
-bool CAT5171::writeWiper( uint16_t val ) {
+bool CAT5171::writeWiper( int val ) {
 #if defined(NOSENSORS)
 	return false;
 #else
@@ -93,10 +80,10 @@ bool CAT5171::writeWiper( uint16_t val ) {
 		errorcount++;
 		return false;
 	}
-	uint16_t b;
+	int b;
 	bool ret=readWiper( b );
 
-	if( (b != (uint8_t)val) || !ret ){
+	if( (b != val) || !ret ){
 		ESP_LOGE(FNAME,"CAT5171 Error writing wiper, error count %d, write %d != read %d", errorcount, val, b );
 	}
 
@@ -105,6 +92,20 @@ bool CAT5171::writeWiper( uint16_t val ) {
 #endif
 }
 
+bool CAT5171::readVolume( float &val ) {
+	int ival;
+	if ( readWiper( ival ) ) {
+		val = (float)(100 * ival) * getInvRange();
+		return true;
+	}
+	return false;
+}
+
+bool CAT5171::writeVolume( float val ) {
+	int ival = (int)(val * getRange());
+	ival /= 100;
+	return writeWiper( ival );
+}
 
 bool CAT5171::reset() {
 #if defined(NOSENSORS)

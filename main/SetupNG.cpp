@@ -90,15 +90,14 @@ void resetCWindAge() {
 }
 
 void change_volume() {
-	if (DigitalPoti == nullptr)  // do not set volume until poti set up
+	float vol = audio_volume.get();
+	float max = max_volume.get();
+	if (vol > max) {
+		audio_volume.set( max );  // will call this function again!
 		return;
-	float pct = audio_volume.get();
-	if (Switch::getCruiseState())
-		volume_s2f = pct;
-	else
-		volume_vario = pct;
-	Audio::setVolumePct( pct );
-	ESP_LOGI(FNAME,"change_volume -> %f", pct );
+	}
+	Audio::setVolume( vol );
+	ESP_LOGI(FNAME,"change_volume -> %f", audio_volume.get() );
 }
 
 void set_volume_sync() {
@@ -251,18 +250,26 @@ SetupNG<int>  			rt_s1_xcv( "S2_TX_XCV", 1, RST_NONE, SYNC_NONE, VOLATILE  );
 SetupNG<int>  			rt_s1_wl( "S2_TX_WL", 1, RST_NONE, SYNC_NONE, VOLATILE );
 SetupNG<int>  			rt_s1_s2( "S2_TX_S2", 0, RST_NONE, SYNC_NONE, VOLATILE );
 SetupNG<int>  			rt_s1_can( "S2_TX_CAN", 0, RST_NONE, SYNC_NONE, VOLATILE );
+#if defined(SUNTON28)
+SetupNG<int>  			serial1_tx_inverted( "SERIAL2_TX_INV", RS232_NORMAL );  // LED lit when tx
+SetupNG<int>  			serial1_tx_enable( "SER1_TX_ENA", 0 );                  // LED dark by default
+SetupNG<int>  			i2c_pins( "I2C_ENA", 0 );  // if 1 (I2C_27), S1 TX not available (see serial.h)
+SetupNG<int>  			serial2_tx_inverted( "SERIAL1_TX_INV", RS232_NORMAL );
+SetupNG<int>  			serial2_tx_enable( "SER2_TX_ENA", 0 );
+#else
 SetupNG<int>  			serial1_tx_inverted( "SERIAL2_TX_INV", RS232_INVERTED );
-SetupNG<int>  			serial1_rx_inverted( "SERIAL2_RX_INV", RS232_INVERTED );
 SetupNG<int>  			serial1_tx_enable( "SER1_TX_ENA", 1 );
+SetupNG<int>  			serial2_tx_inverted( "SERIAL1_TX_INV", RS232_INVERTED );
+SetupNG<int>  			serial2_tx_enable( "SER2_TX_ENA", 1 );
+#endif
+SetupNG<int>  			serial1_rx_inverted( "SERIAL2_RX_INV", RS232_INVERTED );
 SetupNG<int>  			serial2_speed( "SERIAL1_SPEED", 3 );
 SetupNG<int>  			serial2_pins_twisted( "SERIAL1_PINS", 0 );
 SetupNG<int>  			serial2_tx( "SERIAL1_TX", (1UL << RT_XCVARIO) | (1UL << RT_WIRELESS) );     //  BT device and XCVario, Serial2 is foreseen for Protocols or Kobo
 SetupNG<int>  			rt_s2_xcv( "S1_TX_XCV", 1, RST_NONE, SYNC_NONE, VOLATILE );
 SetupNG<int>  			rt_s2_wl( "S1_TX_WL", 0, RST_NONE, SYNC_NONE, VOLATILE );
 SetupNG<int>  			rt_s2_can( "S1_TX_CAN", 0,RST_NONE, SYNC_NONE, VOLATILE );
-SetupNG<int>  			serial2_tx_inverted( "SERIAL1_TX_INV", RS232_INVERTED );
 SetupNG<int>  			serial2_rx_inverted( "SERIAL1_RX_INV", RS232_INVERTED );
-SetupNG<int>  			serial2_tx_enable( "SER2_TX_ENA", 1 );
 SetupNG<int>  			software_update( "SOFTWARE_UPDATE", 0 );
 SetupNG<int>  			battery_display( "BAT_DISPLAY", 0 );
 SetupNG<int>  			airspeed_mode( "AIRSPEED_MODE", MODE_IAS );
@@ -359,7 +366,9 @@ SetupNG<int> 			wk_label_minus_1( "WKLM1", 8,  true, SYNC_FROM_MASTER, PERSISTEN
 SetupNG<int> 			wk_label_minus_2( "WKLM2", 7,  true, SYNC_FROM_MASTER, PERSISTENT, flap_act);  // -2
 SetupNG<int> 			wk_label_minus_3( "WKLM3", 42,  true, SYNC_FROM_MASTER, PERSISTENT, flap_act); //  S
 SetupNG<float>       	flap_takeoff("FLAPTO", 1,  true, SYNC_FROM_MASTER);
-SetupNG<int> 			audio_disable( "AUDIS", 0 );
+SetupNG<int> 			audio_mute_menu( "AUDIS", 0 );
+SetupNG<int> 			audio_mute_sink( "AUDISS", 0 );
+SetupNG<int> 			audio_mute_gen( "AUDISG", 0 );
 SetupNG<int>			vario_mode("VAMOD", CRUISE_NETTO );  // switch to netto mode when cruising
 SetupNG<int>			airspeed_sensor_type("PTYPE", PS_NONE, RST_NONE);
 SetupNG<int>			cruise_audio_mode("CAUDIO", 0 );
@@ -407,6 +416,4 @@ SetupNG<mpud::raw_axes_t>	gyro_bias("GYRO_BIAS", zero_bias );
 SetupNG<mpud::raw_axes_t>	accl_bias("ACCL_BIAS", zero_bias );
 SetupNG<float>              mpu_temperature("MPUTEMP", 45.0, true, SYNC_FROM_MASTER, PERSISTENT, chg_mpu_target );    // default for AHRS chip temperature (XCV 2023)
 
-float volume_vario = 0;
-float volume_s2f = 0;
 

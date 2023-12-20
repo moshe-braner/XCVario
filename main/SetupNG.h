@@ -103,6 +103,9 @@ typedef enum e_hardware_rev { 	HW_UNKNOWN=0,
 } e_hardware_rev_t;        // XCVario-Num = hardware revision + 18
 typedef enum e_drawing_prio { DP_NEEDLE, DP_BACKGROUND } e_drawing_prio_t;
 typedef enum e_equalizer_type {  AUDIO_EQ_DISABLE, AUDIO_EQ_LS4, AUDIO_EQ_LS8, AUDIO_EQ_LSEXT } e_equalizer_type_t;
+#if defined(SUNTON28)
+typedef enum e_i2c_pins { I2C_NONE, I2C_27, I2C_21 } e_i2c_pins_t;
+#endif
 
 const int baud[] = { 0, 4800, 9600, 19200, 38400, 57600, 115200 };
 void change_bal();
@@ -521,6 +524,9 @@ extern SetupNG<int>			serial1_pins_twisted;
 extern SetupNG<int>  		serial1_tx_inverted;
 extern SetupNG<int>  		serial1_rx_inverted;
 extern SetupNG<int>  		serial1_tx_enable;
+#if defined(SUNTON28)
+extern SetupNG<int>  		i2c_pins;
+#endif
 extern SetupNG<int>  		serial2_speed;
 extern SetupNG<int>  		serial2_tx;
 extern SetupNG<int>  		rt_s2_xcv;
@@ -617,7 +623,9 @@ extern SetupNG<int> 		wk_label_minus_1;
 extern SetupNG<int> 		wk_label_minus_2;
 extern SetupNG<int> 		wk_label_minus_3;
 extern SetupNG<float>       flap_takeoff;
-extern SetupNG<int> 		audio_disable;
+extern SetupNG<int> 		audio_mute_menu;  // replaced audio_disable (same key)
+extern SetupNG<int> 		audio_mute_sink;
+extern SetupNG<int> 		audio_mute_gen;
 extern SetupNG<int>			vario_mode;
 extern SetupNG<int>			airspeed_sensor_type;
 extern SetupNG<int>			cruise_audio_mode;
