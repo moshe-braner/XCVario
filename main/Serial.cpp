@@ -218,9 +218,9 @@ bool Serial::selfTest(int num){
 // this function is called via the macro GPIO_TXD1
 static gpio_num_t gpio_txd1()
 {
-	gpio_num_t pin = GPIO_TXD1_NO_I2C;
-	if (i2c_pins.get() == I2C_27)  pin = GPIO_TXD1_I2C27;
-	if (i2c_pins.get() == I2C_21)  pin = GPIO_TXD1_I2C21;
+	gpio_num_t pin = GPIO_TXD1_NO_I2C;                     // GPIO_NUM_22
+	if (i2c_pins.get() == I2C_27)  pin = GPIO_NOTX1;       // green LED
+	if (i2c_pins.get() == I2C_21)  pin = GPIO_TXD1_I2C21;  // GPIO_NUM_27
 	return pin;
 }
 #endif

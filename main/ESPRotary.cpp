@@ -69,7 +69,7 @@ int ESPRotary::touch_state()
         }
     }
     if (new_state != old_state) {
-        ESP_LOGI(FNAME,"touch_state -> %d", new_state );  // 0=release, 2=middle
+        //ESP_LOGI(FNAME,"touch_state -> %d", new_state );  // 0=release, 2=middle
         old_state = new_state;
         next_time = new_time + 120;
     }

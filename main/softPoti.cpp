@@ -48,7 +48,7 @@ bool SoftPoti::writeWiper( int val ) {
     //else
     //    scale = 0;         // full amplitude
     if( scale != prev_scale ) {
-        ESP_LOGI(FNAME,"writeWiper: scale -> %d", scale );
+        //ESP_LOGI(FNAME,"writeWiper: scale -> %d", scale );
         Audio::rescale(scale);
         prev_scale = scale;
     }

@@ -63,17 +63,17 @@
   //    - can use just RX, and skip S1 TX, if want to use 22,27 for I2C
   //    - note that on the ESP32 GPIO35 is input-only
 #define GPIO_TXD1_I2C21 GPIO_NUM_27
-#define GPIO_TXD1_I2C27 GPIO_NUM_17
+#define GPIO_TXD1_I2C27 GPIO_NUM_16
 #define GPIO_TXD1_NO_I2C GPIO_NUM_22
-#define GPIO_TXD1 (gpio_txd1())
-#define GPIO_NOTX1 GPIO_NUM_17   // connected to the ____ LED
-//  (GPIO 4 seems to be the *red* LED which is also always on dimly)
+#define GPIO_TXD1 (gpio_txd1())  // selected from above based on i2c_pins setting
+#define GPIO_NOTX1 GPIO_NUM_16   // connected to the green LED
+//  (GPIO 4 seems to be the *red* LED, which is also always on dimly?)
 #define GPIO_RXD2 GPIO_NUM_0
   // - only connected to "boot" switch (and USB-serial RTS)
   //    (boot switch also used for alternative "rotary" pusbutton)
   // - or use GPIO 19, also used for SD card (VSPI) MISO
-#define GPIO_TXD2 GPIO_NUM_16     // connected to the ____ LED
-#define GPIO_NOTX2 GPIO_NUM_16
+#define GPIO_TXD2 GPIO_NUM_17     // connected to the blue LED
+#define GPIO_NOTX2 GPIO_NUM_17
 #else
 // these are the pins used in the XCvario:
 #define GPIO_RXD1 GPIO_NUM_16

@@ -358,20 +358,16 @@ void Audio::alarm( bool enable, float volume, e_audio_alarm_type_t style ){  // 
 		_chopping_style_back = chopping_style.get();
 		chopping_style.set( _chopping_style_back & 1 );  // turn off RICO style
 		_alarm_mode=true;
-		enableAmplifier( true );
+		enableAmplifier( true, true );
 	}
 	if( !enable && _alarm_mode ){ // End of alarm
+		_alarm_mode = false;
 		vario_mode_volume = _vol_back_vario;
 		s2f_mode_volume = _vol_back_s2f;
-		_s2f_mode = _s2f_mode_back;
 		_tonemode = _tonemode_back;
-		chopping_style.set( _chopping_style_back );
-		_alarm_mode=false;
-		if( _s2f_mode )
-			writeVolume( s2f_mode_volume );
-		else
-			writeVolume( vario_mode_volume );
-		// speaker_volume = current_volume;  // this will happen in dactask
+		_s2f_mode = _s2f_mode_back;    // S2F mode from before the alarm
+		calcS2Fmode(true);             // may update the S2F mode
+		writeVolume( speaker_volume );
 	}
 	if( enable ) {  // tune alarm
 		// ESP_LOGI(FNAME,"Alarm sound enable volume: %f style: %d", volume, style );
@@ -476,15 +472,16 @@ void Audio::startAudio(){
 	xTaskCreatePinnedToCore(&dactask, "dactask", 2400, NULL, 16, &dactid, 0);
 }
 
-void Audio::calcS2Fmode(){
+void Audio::calcS2Fmode( bool recalc ){
 	if( _alarm_mode )
 		return;
 	bool mode = Switch::getCruiseState();
-	// >>> temporary for testing: use "Variable Tone" setting as a S2F switch <<<
-	// bool mode = audio_variable_frequency.get();
 	if( mode != _s2f_mode ){
 		ESP_LOGI(FNAME, "S2Fmode changed to %d", mode );
 		_s2f_mode = mode;             // do this first, as...
+		recalc = true;
+	}
+	if( recalc ){
 		calculateFrequency();         // this needs the new _stf_mode
 		if( _s2f_mode )
 			speaker_volume = s2f_mode_volume;
@@ -631,7 +628,7 @@ void Audio::dactask(void* arg )
 				calculateFrequency();
 
 			if( !(tick&0x1F) ){     // every 320 ms
-				calcS2Fmode();      // if mode changed, affects volume and frequency
+				calcS2Fmode(false);     // if mode changed, affects volume and frequency
 			}
 
 			if( inDeadBand(_te) ) {
@@ -657,27 +654,32 @@ void Audio::dactask(void* arg )
 					else if( audio_mute_menu.get() && gflags.inSetup )
 						sound = false;
 					// Optionally disable vario audio generally
-					else if( audio_mute_gen.get() == 1 )
+					else if( audio_mute_gen.get() != 0 )  // == 1 or 2
 						sound = false;
-				} else if( audio_mute_gen.get() == 2 ) {    // mute alarms too
+				} else if( audio_mute_gen.get() == 2 ) {
+					// Optionally mute alarms too
 					sound = false;
 				}
 			}
 			//ESP_LOGI(FNAME, "sound %d, ht %d, te %2.1f vc:%d cw:%d ", sound, hightone, _te, volume_change, cur_wiper );
 
 			if( sound ){
-				if (scheduled && mtick > 0)
+				if (scheduled && mtick > 0 && mtick < 5)
 					ESP_LOGI(FNAME, "sound, mtick %d, te %2.1f", mtick, _te );
 				long_silence = false;
 				silent_ticks = 0;
 				if( chop_style == RICO_CHOP_HARD && scheduled && mtick != 0 )
 					delay(10);   // to shorten the beep further
+
 				// In lift, amplifier usually enabled during silence before tick.
 				// But below the deadband need to enable here for continuous tone.
-				// Also in 2-tone mode need to enable the amplifier here - if mtick
+				// Also in 2-tone mode need to enable the amplifier.  If mtick
 				// is odd then amplifier will be enabled later on the next mtick.
-				if ( (mtick & 1) == 0 )   // but sound - including mtick==0
-					enableAmplifier( true );
+				// If enabling amplifier here then do need the 180 ms delay.
+
+				// on mtick==0 or any even-numbered mtick (non-hightone):
+				if ( (mtick & 1) == 0 )
+					enableAmplifier( true, true );
 
 				// Blend over gracefully volume changes
 				if( (current_volume != speaker_volume) && volume_change ){
@@ -740,7 +742,7 @@ void Audio::dactask(void* arg )
 			}
 
 			else{  // if not sound
-				if (scheduled && mtick > 0)
+				if (scheduled && mtick > 0 && mtick < 5)
 					ESP_LOGI(FNAME, "no sound, mtick %d, te %2.1f", mtick, _te );
 				silent_ticks += ticks;
 				if (silent_ticks > 500)      // silence has lasted 5 sec
@@ -772,7 +774,7 @@ void Audio::dactask(void* arg )
 				// Also in non-RICO style try and turn on the amplifier ahead of time.
 				// If we are here (no sound) that means mode is not two-tone.
 				if ( mtick == 1 )
-					enableAmplifier( true );
+					enableAmplifier( true, false );
 				else if( disable_amp )
 					enableAmplifier( false );
 			}
@@ -865,13 +867,13 @@ void Audio::restart()
 	dac_offset_set(_ch, 0 );
 	dac_invert_set(_ch, 2 );    // invert MSB to get sine waveform
 	dac_scale_set(_ch, 2 );
-	enableAmplifier( true );
+	enableAmplifier( true, true );
 	dacEnable();
 }
 
 void Audio::rescale(int scale)
 {
-	ESP_LOGI(FNAME,"Audio::rescale");
+	//ESP_LOGI(FNAME,"Audio::rescale");
 	//dacDisable();
 	//dac_cosine_enable(_ch);
 	//dac_offset_set(_ch, 0 );
@@ -897,7 +899,7 @@ void Audio::boot(){
 	restart();
 }
 
-void Audio::enableAmplifier( bool enable )
+void Audio::enableAmplifier( bool enable, bool do_delay )
 {
 	// ESP_LOGI(FNAME,"Audio::enableAmplifier( %d )", (int)enable );
 	// enable Audio
@@ -911,7 +913,7 @@ void Audio::enableAmplifier( bool enable )
 			// In the silence before first beep or tick (mtick==1),
 			// no delay needed, amplifier will be ready for the first tick.
 			// But if in sink falling below the deadband, need the delay.
-			if ( (mtick & 1) == 0 ) {   // 0 or any even (non-hightone)
+			if ( do_delay ) {
 				delay(180);  // amplifier startup time ~175mS according to datasheet Fig. 21
 				ESP_LOGI(FNAME,"180 ms delay...");
 			}

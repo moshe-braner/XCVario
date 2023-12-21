@@ -59,10 +59,10 @@ private:
 	static void dac_invert_set(dac_channel_t channel, int invert);
 	static void dactask(void* arg);
 	static void modtask(void* arg );
-    static void calcS2Fmode();
+    static void calcS2Fmode( bool recalc=false );
     static bool inDeadBand( float te );
 	static bool lookup( float f, int& div, int &step );
-	static void enableAmplifier( bool enable );  // frue ON, false OFF
+	static void enableAmplifier( bool enable, bool do_delay=false );  // true ON, false OFF
 	static float equal_volume( float volume );
 	static void  calculateFrequency();
 	static void writeVolume( float volume );
