@@ -764,10 +764,10 @@ void SetupMenu::vario_menu_create_meanclimb( MenuEntry *top ){
 }
 
 void SetupMenu::vario_menu_create_s2f( MenuEntry *top ){
-		SetupMenuValFloat * mc = new SetupMenuValFloat( PROGMEM"MC", "",	0.0, 9.9, 0.1, 0, true, &MC );
-		mc->setHelp(PROGMEM"MacCready value for optimum cruise speed, or average climb rate to be provided in same unit as the variometer");
-		mc->setPrecision(1);
-		top->addEntry( mc );
+	SetupMenuValFloat * mc = new SetupMenuValFloat( PROGMEM"MC", "",	0.0, 9.9, 0.1, 0, true, &MC );
+	mc->setHelp(PROGMEM"MacCready value for optimum cruise speed, or average climb rate to be provided in same unit as the variometer");
+	mc->setPrecision(1);
+	top->addEntry( mc );
 
 	SetupMenuValFloat * vds2 = new SetupMenuValFloat( PROGMEM"Damping", "sec", 0.10001, 10.0, 0.1, 0, false, &s2f_delay );
 	vds2->setHelp(PROGMEM"Time constant of S2F low pass filter");
@@ -917,15 +917,27 @@ void SetupMenu::audio_menu_create_tonestyles( MenuEntry *top ){
 	htv->setHelp(PROGMEM"Tone variation in Dual Tone mode, percent of frequency pitch up for second tone");
 	top->addEntry( htv );
 
+	SetupMenuSelect * tch = new SetupMenuSelect( PROGMEM"Chopping", RST_NONE, eval_chop, true, &chopping_mode );
+	tch->setHelp(PROGMEM"Select tone chopping option on positive values for Vario and or S2F");
+	tch->addEntry( PROGMEM"Disabled");             // 0
+	tch->addEntry( PROGMEM"Vario only");           // 1
+	tch->addEntry( PROGMEM"S2F only");             // 2
+	tch->addEntry( PROGMEM"Vario and S2F");        // 3  default
+	top->addEntry( tch );
+
+	SetupMenuSelect * tchs = new SetupMenuSelect( PROGMEM"Chopping Style", RST_NONE, audio_setup_s, true, &chopping_style );
+	tchs->setHelp(PROGMEM"Tone chopping style, hard, or soft with fadein/fadeout.  RICO style is very short tones/clicks");
+	tchs->addEntry( PROGMEM"Soft");             // 0  default
+	tchs->addEntry( PROGMEM"Hard");             // 1
+	tchs->addEntry( PROGMEM"RICO Soft");        // 2
+	tchs->addEntry( PROGMEM"RICO Hard");        // 3
+	top->addEntry( tchs );
+
 	SetupMenuSelect * advarto = new SetupMenuSelect( PROGMEM"Variable Tone", RST_NONE, 0 , true, &audio_variable_frequency );
 	advarto->setHelp(PROGMEM"Enable audio frequency updates within climbing tone intervals, disable keeps frequency constant");
 	advarto->addEntry( PROGMEM"Disable");       // 0
 	advarto->addEntry( PROGMEM"Enable");        // 1
 	top->addEntry( advarto );
-
-	SetupMenuValFloat * afac = new SetupMenuValFloat( PROGMEM"Audio Exponent", "", -1.0, 2.5, 0.25, 0 , false, &audio_factor );
-	afac->setHelp(PROGMEM"How the audio frequency responds to the climb rate: < 1 for logarithmic, and > 1 for exponential, response");
-	top->addEntry( afac);
 }
 
 void SetupMenu::audio_menu_create_deadbands( MenuEntry *top ){
@@ -966,7 +978,7 @@ void SetupMenu::audio_menu_create_volume( MenuEntry *top ){
 	    0.0, 100.0, 2.0, vol_adj, false, &audio_volume );
 	// unlike top-level menu volume which exits setup, this returns to parent menu
 	vol->setHelp(PROGMEM"Audio volume level for variometer tone on internal and external speaker");
-	//vol->setMax(max_volume.get()); - not good if this is only done at startup
+	vol->setMax(max_volume.get());   // only works after leaving this *parent* menu and returning
 	top->addEntry( vol );
 
 	SetupMenuSelect * cdv = new SetupMenuSelect( PROGMEM"Current->Default", RST_NONE, cur_vol_dflt, true );
@@ -980,9 +992,10 @@ void SetupMenu::audio_menu_create_volume( MenuEntry *top ){
 	dv->setHelp(PROGMEM"Default volume for Audio when device is switched on");
 	top->addEntry( dv );
 
+// after max_volume exit menu, when re-entering will setMax() volume setting above
 	SetupMenuValFloat * mv = new SetupMenuValFloat( PROGMEM"Max Volume", "%",
-		    0.0, 100.0, 4.0, 0, false, &max_volume );
-	mv->setHelp(PROGMEM"Maximum audio volume setting allowed. Set to 0% to mute audio entirely.");
+		    0.0, 100.0, 4.0, 0, true, &max_volume );
+	mv->setHelp(PROGMEM"Maximum audio volume setting allowed");
 	top->addEntry( mv );
 
 	SetupMenu * audeq = new SetupMenu( PROGMEM"Equalizer" );
@@ -1005,9 +1018,11 @@ void SetupMenu::audio_menu_create_volume( MenuEntry *top ){
 
 void SetupMenu::audio_menu_create_mute( MenuEntry *top ){
 	SetupMenuSelect * asida = new SetupMenuSelect( PROGMEM"In Sink", RST_NONE, 0 , true, &audio_mute_sink );
-	asida->setHelp(PROGMEM"Select whether vario audio will be muted while in sink");
-	asida->addEntry( PROGMEM"Stay On");  // 0
-	asida->addEntry( PROGMEM"Mute");     // 1
+	asida->setHelp(PROGMEM"Configure vario audio volume while in sink");
+	asida->addEntry( PROGMEM"Normal");  // 0
+	asida->addEntry( PROGMEM"Louder");  // 1
+	asida->addEntry( PROGMEM"Softer");  // 2
+	asida->addEntry( PROGMEM"Mute");    // 3
 	top->addEntry( asida );
 
 	SetupMenuSelect * ameda = new SetupMenuSelect( PROGMEM"In Setup", RST_NONE, 0 , true, &audio_mute_menu );
@@ -1018,15 +1033,16 @@ void SetupMenu::audio_menu_create_mute( MenuEntry *top ){
 
 	SetupMenuSelect * ageda = new SetupMenuSelect( PROGMEM"Generally", RST_NONE, 0 , true, &audio_mute_gen );
 	ageda->setHelp(PROGMEM"Select audio on, or vario audio muted, or all audio muted including alarms");
-	ageda->addEntry( PROGMEM"Audio On");      // 0
-	ageda->addEntry( PROGMEM"Alarms On");     // 1
-	ageda->addEntry( PROGMEM"Audio Off");     // 2
+	ageda->addEntry( PROGMEM"Audio On");      // 0 = AUDIO_ON
+	ageda->addEntry( PROGMEM"Alarms On");     // 1 = AUDIO_ALARMS
+	ageda->addEntry( PROGMEM"Audio Off");     // 2 = AUDIO_OFF
 	top->addEntry( ageda );
 
 	SetupMenuSelect * amps = new SetupMenuSelect( PROGMEM"Amplifier", RST_NONE, 0 , true, &amplifier_shutdown );
-	amps->setHelp(PROGMEM"Select whether amplifier is shutdown during long silences, or always stays on");
-	amps->addEntry( PROGMEM"Stay On");   // 0
-	amps->addEntry( PROGMEM"Shutdown");  // 1
+	amps->setHelp(PROGMEM"Whether amplifier always stays on, is shutdown in deadband immediately, or after 5 sec silence");
+	amps->addEntry( PROGMEM"Stay On");   // 0 = AMP_STAY_ON
+	amps->addEntry( PROGMEM"Shutdown");  // 1 = AMP_SHUTDOWN
+	amps->addEntry( PROGMEM"After 5s");  // 2 = AMP_SHUTDOWN_5S
 	top->addEntry( amps );
 }
 
@@ -1049,7 +1065,7 @@ void SetupMenu::audio_menu_create( MenuEntry *audio ){
 
 	SetupMenu * audios = new SetupMenu( PROGMEM"Tone Styles" );
 	audio->addEntry( audios );
-	audios->setHelp( PROGMEM "Configure audio style in terms of center frequency, single/dual tone, octaves, and exponent", 220);
+	audios->setHelp( PROGMEM "Configure vario audio frequencies and chopping", 240);
 	audios->addCreator(audio_menu_create_tonestyles);
 
 	update_rentry(0);
@@ -1060,26 +1076,14 @@ void SetupMenu::audio_menu_create( MenuEntry *audio ){
 	audio_range_sm->setHelp(PROGMEM"Audio range: fixed, or variable according to current Vario display range setting");
 	audio->addEntry( audio_range_sm );
 
-	SetupMenuSelect * tch = new SetupMenuSelect( PROGMEM"Chopping", RST_NONE, eval_chop, true, &chopping_mode );
-	tch->setHelp(PROGMEM"Select tone chopping option on positive values for Vario and or S2F", 220);
-	tch->addEntry( PROGMEM"Disabled");          // 0
-	tch->addEntry( PROGMEM"Vario only");        // 1
-	tch->addEntry( PROGMEM"S2F only");          // 2
-	tch->addEntry( PROGMEM"Vario and S2F");     // 3  default
-	audio->addEntry( tch );
-
-	SetupMenuSelect * tchs = new SetupMenuSelect( PROGMEM"Chopping Style", RST_NONE, 0 , true, &chopping_style );
-	tchs->setHelp(PROGMEM"Tone chopping style, hard, or soft with fadein/fadeout.  RICO style is very short tones/clicks");
-	tchs->addEntry( PROGMEM"Soft");             // 0  default
-	tchs->addEntry( PROGMEM"Hard");             // 1
-	tchs->addEntry( PROGMEM"RICO Soft");        // 2
-	tchs->addEntry( PROGMEM"RICO Hard");        // 3
-	audio->addEntry( tchs );
-
 	SetupMenu * db = new SetupMenu( PROGMEM"Deadbands" );
 	audio->addEntry( db );
 	db->setHelp(PROGMEM"Dead band limits within which audio remains silent.  1 m/s equals roughly 200 fpm or 2 knots");
 	db->addCreator(audio_menu_create_deadbands);
+
+	SetupMenuValFloat * afac = new SetupMenuValFloat( PROGMEM"Audio Exponent", "", -0.5, 2.0, 0.1, 0 , false, &audio_factor );
+	afac->setHelp(PROGMEM"How the audio frequency responds to the climb rate: < 1 for logarithmic, and > 1 for exponential, response");
+	audio->addEntry( afac);
 }
 
 void SetupMenu::glider_menu_create_polarpoints( MenuEntry *top ){
@@ -2173,7 +2177,7 @@ void SetupMenu::setup_create_root(MenuEntry *top ){
 	else {
 		SetupMenuValFloat * vol = new SetupMenuValFloat( PROGMEM"Audio Volume", "%", 0.0, 100, 1, vol_adj, true, &audio_volume );
 		vol->setHelp(PROGMEM"Audio volume level for variometer tone on internal and external speaker");
-		vol->setMax(max_volume.get());
+		vol->setMax(max_volume.get());   // is this only done at startup?
 		top->addEntry( vol );
 	}
 

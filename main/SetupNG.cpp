@@ -90,14 +90,28 @@ void resetCWindAge() {
 }
 
 void change_volume() {
+//	static bool reentered = false;
 	float vol = audio_volume.get();
-	float max = max_volume.get();
-	if (vol > max) {
-		audio_volume.set( max );  // will call this function again!
-		return;
-	}
+//	if (! reentered) {
+//		float max = max_volume.get();  // enforce max_volume
+//		if (vol > max) {
+//			reentered = true;
+//			audio_volume.set( max );  // will call this function again indirectly
+//			return;
+//		}
+//	}
+//	// get here either if re-entered or if vol < max
+//	reentered = false;
 	Audio::setVolume( vol );
-	ESP_LOGI(FNAME,"change_volume -> %f", audio_volume.get() );
+	ESP_LOGI(FNAME,"change_volume -> %f", vol );
+}
+
+void change_max_volume() {
+	float max = max_volume.get();
+	if ( audio_volume.get() > max ) {   // enforce max_volume
+		audio_volume.set( max );
+		ESP_LOGI(FNAME,"change volume -> %f to fit max", max );
+	}
 }
 
 void set_volume_sync() {
@@ -190,7 +204,7 @@ SetupNG<int>  			audio_variable_frequency( "AUD_VAFQ", 0);
 SetupNG<int>  			s2f_switch_mode( "AUDIO_MODE" ,  AM_AUTOSPEED );
 SetupNG<int>  			chopping_mode( "CHOPPING_MODE",  VARIO_CHOP );
 SetupNG<int>  			chopping_style( "CHOP_STYLE",  AUDIO_CHOP_SOFT );
-SetupNG<int>  			amplifier_shutdown( "AMP_DIS", 0 );
+SetupNG<int>  			amplifier_shutdown( "AMP_DIS", AMP_STAY_ON );
 SetupNG<int>            audio_equalizer( "AUD_EQ", AUDIO_EQ_DISABLE, false );
 
 SetupNG<int>  			wireless_type( "BT_ENABLE" ,  WL_BLUETOOTH );
@@ -216,7 +230,7 @@ SetupNG<float>  		core_climb_history( "CORE_CLIMB_HIST" , 45, true, SYNC_FROM_MA
 SetupNG<float>  		mean_climb_major_change( "MEAN_CLMC", 0.5, true, SYNC_FROM_MASTER );
 SetupNG<float>  		elevation( "ELEVATION", -1, true, SYNC_BIDIR, PERSISTENT, 0, UNIT_ALT );
 SetupNG<float>  		default_volume( "DEFAULT_VOL", 25.0 );
-SetupNG<float>  		max_volume( "MAXI_VOL", 60.0 );
+SetupNG<float>  		max_volume( "MAXI_VOL", 60.0, true, SYNC_NONE, PERSISTENT, change_max_volume );
 SetupNG<int>  			sync_volume( "SYNC_VOL", 1, true, SYNC_BIDIR, PERSISTENT, set_volume_sync );
 SetupNG<float>  		frequency_response( "FREQ_RES", 30.0 );
 SetupNG<float>  		s2f_deadband( "DEADBAND_S2F", 10.0, true, SYNC_BIDIR, PERSISTENT, 0, UNIT_SPEED );
@@ -368,7 +382,7 @@ SetupNG<int> 			wk_label_minus_3( "WKLM3", 42,  true, SYNC_FROM_MASTER, PERSISTE
 SetupNG<float>       	flap_takeoff("FLAPTO", 1,  true, SYNC_FROM_MASTER);
 SetupNG<int> 			audio_mute_menu( "AUDIS", 0 );
 SetupNG<int> 			audio_mute_sink( "AUDISS", 0 );
-SetupNG<int> 			audio_mute_gen( "AUDISG", 0 );
+SetupNG<int> 			audio_mute_gen( "AUDISG", AUDIO_ON );
 SetupNG<int>			vario_mode("VAMOD", CRUISE_NETTO );  // switch to netto mode when cruising
 SetupNG<int>			airspeed_sensor_type("PTYPE", PS_NONE, RST_NONE);
 SetupNG<int>			cruise_audio_mode("CAUDIO", 0 );

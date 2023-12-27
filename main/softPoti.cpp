@@ -32,26 +32,20 @@ bool SoftPoti::readWiper( int &val ) {
 
 bool SoftPoti::writeWiper( int val ) {
     wiper = val;
-    static int prev_scale = -1;
     if (wiper == 0) {
         Audio::dacDisable();   // changing the scale is neither necessary nor sufficient
         // prev_scale = -1;
         return true;
     }
-    int scale;
+    int offset;
     if (wiper < 33)  // ==32
-        scale = 3;         // 1/8 amplitude
+        offset = -1;        // 1/8 amplitude
     else if (wiper < 65)
-        scale = 2;         // 1/4 amplitude
+        offset = 0;         // 1/4 amplitude
     else // if (wiper < 97)
-        scale = 1;         // 1/2 amplitude
-    //else
-    //    scale = 0;         // full amplitude
-    if( scale != prev_scale ) {
-        //ESP_LOGI(FNAME,"writeWiper: scale -> %d", scale );
-        Audio::rescale(scale);
-        prev_scale = scale;
-    }
+        offset = 1;         // 1/2 amplitude
+    //ESP_LOGI(FNAME,"writeWiper: scale -> %d", scale );
+    Audio::rescale(offset);
     return true;
 }
 
