@@ -77,7 +77,7 @@ typedef enum e_wind_logging { WLOG_DISABLE, WLOG_WIND, WLOG_GYRO_MAG, WLOG_BOTH 
 typedef enum e_unit_type{ UNIT_NONE, UNIT_TEMPERATURE, UNIT_ALT, UNIT_SPEED, UNIT_VARIO, UNIT_QNH } e_unit_type_t;
 typedef enum e_temperature_unit { T_CELCIUS, T_FAHRENHEIT, T_KELVIN } e_temperature_unit_t;
 typedef enum e_alt_unit { ALT_UNIT_METER, ALT_UNIT_FT, ALT_UNIT_FL } e_alt_unit_t;
-typedef enum e_dst_unit { DST_UNIT_KM, DST_UNIT_FT, DST_UNIT_MILES } e_dst_unit_t;
+typedef enum e_dst_unit { DST_UNIT_M, DST_UNIT_FT } e_dst_unit_t;
 typedef enum e_speed_unit { SPEED_UNIT_KMH, SPEED_UNIT_MPH, SPEED_UNIT_KNOTS } e_speed_unit_t;
 typedef enum e_vario_unit { VARIO_UNIT_MS, VARIO_UNIT_FPM, VARIO_UNIT_KNOTS } e_vario_unit_t;
 typedef enum e_qnh_unit { QNH_HPA, QNH_INHG } e_qnh_unit_t;
@@ -583,7 +583,10 @@ extern SetupNG<int>		    wk_sens_pos_minus_2;
 extern SetupNG<int>		    wk_sens_pos_minus_3;
 extern SetupNG<int>       	stall_warning;
 extern SetupNG<float>		stall_speed;
-extern SetupNG<int>       	flarm_warning;
+extern SetupNG<int>       	flarm_visual;  // replaced flarm_warning (same key)
+extern SetupNG<int>       	flarm_2icons;
+extern SetupNG<int>       	flarm_sound;
+extern SetupNG<int>       	flarm_sound_continuous;
 extern SetupNG<float>     	flarm_volume;
 extern SetupNG<int>       	flarm_sim;
 extern SetupNG<int>       	flap_sensor;
@@ -673,6 +676,7 @@ extern SetupNG<int> 		menu_long_press;
 extern SetupNG<int> 		menu_screens;
 extern SetupNG<int> 		screen_gmeter;
 extern SetupNG<int> 		screen_horizon;
+//extern SetupNG<int> 		screen_flarm;     // <<< is this (from my 2023 version) needed?
 extern SetupNG<int> 		screen_centeraid;
 extern SetupNG<int> 		data_monitor;
 extern SetupNG<int> 		data_monitor_mode;

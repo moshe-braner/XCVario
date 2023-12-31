@@ -1,18 +1,13 @@
 #ifndef _SENSOR_H_
 #define _SENSOR_H_
 
-//#define NOSENSORS         // compile for no-sensors board
-//#ifdef NOSENSORS
-//#define SUNTON28          // the specific no-sensors board to be compiled for
+// check that we got the definitions via the main/CMakeLists.txt file
+//#if !defined(NOSENSORS)
+//#error NOSENSORS PP symbol not defined
 //#endif
-
-// check that we got the definitions via the component.mk or CMakeLists.txt file
-#if !defined(NOSENSORS)
-#error NOSENSORS PP symbol not defined
-#endif
-#if !defined(SUNTON28)
-#error SUNTON28 PP symbol not defined
-#endif
+//#if !defined(SUNTON28)
+//#error SUNTON28 PP symbol not defined
+//#endif
 
 #include "MPU.hpp"        // main file, provides the class itself
 #include "AnalogInput.h"
@@ -59,7 +54,8 @@ typedef struct global_flags{
 	bool  standard_setting :1;
 	bool stall_warning_active :1;
 	bool stall_warning_armed :1;
-	bool flarmWarning :1 ;
+	bool flarmVisual :1 ;
+	//bool flarmSound :1 ;
 	bool gLoadDisplay :1;
 	bool horizon :1;
 	bool gear_warning_active :1;
@@ -75,6 +71,7 @@ extern CANbus* CAN;
 extern StraightWind theWind;
 extern xSemaphoreHandle xMutex;
 extern int active_screen;
+//extern int current_screen;   // <<< was in my 2023 version
 extern CenterAid *centeraid;
 extern AirspeedSensor *asSensor;
 

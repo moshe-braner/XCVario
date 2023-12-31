@@ -1170,19 +1170,40 @@ void SetupMenu::options_menu_create_units( MenuEntry *top ){
 }
 
 void SetupMenu::options_menu_create_flarm( MenuEntry *top ){
-	SetupMenuSelect * flarml = new SetupMenuSelect( PROGMEM"Alarm Level",	RST_NONE, 0, true, &flarm_warning );
-	flarml->setHelp( PROGMEM "Level of FLARM alarm to enable: 1 is lowest (13-18 sec), 2 medium (9-12 sec), 3 highest (0-8 sec) until impact");
-	flarml->addEntry( PROGMEM"Disable");
-	flarml->addEntry( PROGMEM"Level 1");
-	flarml->addEntry( PROGMEM"Level 2");
-	flarml->addEntry( PROGMEM"Level 3");
+
+	SetupMenuSelect * flarml = new SetupMenuSelect( PROGMEM"Visual Alarm", RST_NONE, 0, true, &flarm_visual );
+	flarml->setHelp( PROGMEM "FLARM level 1 is lowest with 13-18 sec, 2 medium 9-12 sec and 3 highest with 0-8 sec until impact");
+	flarml->addEntry( "Disable");
+	flarml->addEntry( "Level 1+");
+	flarml->addEntry( "Level 2+");
+	flarml->addEntry( "Level 3");
 	top->addEntry( flarml );
 
-	SetupMenuValFloat * flarmv = new SetupMenuValFloat( PROGMEM"Alarm Volume",  "%", 20, 100, 1, 0, false, &flarm_volume  );
+	SetupMenuSelect * flarmi = new SetupMenuSelect( PROGMEM"Visual Style", RST_NONE, 0, true, &flarm_2icons );
+	flarmi->setHelp( PROGMEM "FLARM Alarm screen style: single icon for traffic bearing, or add second icon for vertical angle");
+	flarmi->addEntry( "One icon");
+	flarmi->addEntry( "Two icons");
+	top->addEntry( flarmi );
+
+	SetupMenuSelect * flarma = new SetupMenuSelect( PROGMEM"Audio Alarm", RST_NONE, 0, true, &flarm_sound );
+	flarma->setHelp( PROGMEM "FLARM level 1 is lowest with 13-18 sec, 2 medium 9-12 sec and 3 highest with 0-8 sec until impact");
+	flarma->addEntry( "Disable");
+	flarma->addEntry( "Level 1+");
+	flarma->addEntry( "Level 2+");
+	flarma->addEntry( "Level 3");
+	top->addEntry( flarma );
+
+	SetupMenuSelect * flarmc = new SetupMenuSelect( PROGMEM"Audio Style", RST_NONE, 0, true, &flarm_sound_continuous );
+	flarmc->setHelp( PROGMEM "FLARM Alarm Audio: Short (<=2 sec) for each higher level or new aircraft, or Continuous while danger");
+	flarmc->addEntry( "Short");
+	flarmc->addEntry( "Continuous");
+	top->addEntry( flarmc );
+
+	SetupMenuValFloat * flarmv = new SetupMenuValFloat( PROGMEM"Alarm Volume", "%", 20, 100, 1, 0, false, &flarm_volume  );
 	flarmv->setHelp( PROGMEM "Maximum audio volume of FLARM alarm warning");
 	top->addEntry( flarmv );
 
-	SetupMenuSelect * flarms = new SetupMenuSelect( PROGMEM"FLARM Simulation",	RST_NONE, 0, true, &flarm_sim, false, true );
+	SetupMenuSelect * flarms = new SetupMenuSelect( PROGMEM"FLARM Simulation", RST_NONE, 0, true, &flarm_sim, false, true );
 	flarms->setHelp( PROGMEM "Simulate an airplane crossing from left to right with different alarm levels and vertical distance 5 seconds after pressed (exits setup!)");
 	flarms->addEntry( PROGMEM"Disable");
 	flarms->addEntry( PROGMEM"Start Sim");
@@ -1598,7 +1619,7 @@ void SetupMenu::options_menu_create( MenuEntry *opt ){
 
 	SetupMenu * flarm = new SetupMenu( PROGMEM"FLARM" );
 	opt->addEntry( flarm );
-	flarm->setHelp( PROGMEM"Option to display FLARM Warnings depending on FLARM alarm level");
+	flarm->setHelp( PROGMEM"Option to display or sound warnings depending on FLARM alarm level", 240);
 	flarm->addCreator(options_menu_create_flarm);
 
 	SetupMenu * compassWindMenu = new SetupMenu( PROGMEM"Compass/Wind" );
@@ -1985,11 +2006,11 @@ void SetupMenu::system_menu_create_interfaceS1( MenuEntry *top ){
 	srxi->addEntry( PROGMEM"Normal");
 	srxi->addEntry( PROGMEM"Inverted");
 
-	SetupMenuSelect * srxtw1 = new SetupMenuSelect( PROGMEM"Twist RX/TX Pins", RST_ON_EXIT, 0, true, &serial1_pins_twisted );
+	SetupMenuSelect * srxtw1 = new SetupMenuSelect( PROGMEM"RX/TX Pins", RST_ON_EXIT, 0, true, &serial1_pins_twisted );
 	top->addEntry( srxtw1 );
 	srxtw1->setHelp( PROGMEM"Option to swap RX and TX line for S1, e.g. for OpenVario. After change also a true power-cycle is needed  (reboots)");
 	srxtw1->addEntry( PROGMEM"Normal");
-	srxtw1->addEntry( PROGMEM"Twisted");
+	srxtw1->addEntry( PROGMEM"Swapped");
 
 	SetupMenuSelect * stxdis1 = new SetupMenuSelect( PROGMEM"TX Line", RST_ON_EXIT, 0, true, &serial1_tx_enable );
 	top->addEntry( stxdis1 );
@@ -2055,11 +2076,11 @@ void SetupMenu::system_menu_create_interfaceS2( MenuEntry *top ){
 	srxi2->addEntry( PROGMEM"Normal");
 	srxi2->addEntry( PROGMEM"Inverted");
 
-	SetupMenuSelect * srxtw2 = new SetupMenuSelect( PROGMEM"Twist RX/TX Pins", RST_ON_EXIT, 0, true, &serial2_pins_twisted );
+	SetupMenuSelect * srxtw2 = new SetupMenuSelect( PROGMEM"RX/TX Pins", RST_ON_EXIT, 0, true, &serial2_pins_twisted );
 	top->addEntry( srxtw2 );
 	srxtw2->setHelp( PROGMEM"Option to swap RX and TX line for S2, e.g. for OpenVario. After change also a true power-cycle is needed (reboots)");
 	srxtw2->addEntry( PROGMEM"Normal");
-	srxtw2->addEntry( PROGMEM"Twisted");
+	srxtw2->addEntry( PROGMEM"Swapped");
 
 	SetupMenuSelect * stxdis2 = new SetupMenuSelect( PROGMEM"TX Line", RST_ON_EXIT, 0, true, &serial2_tx_enable );
 	top->addEntry( stxdis2 );

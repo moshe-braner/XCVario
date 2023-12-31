@@ -20,12 +20,10 @@ public:
 	};
 
 	static float Distance( float d ){
-		if( dst_unit.get() == DST_UNIT_KM ) // km/h
+		if( dst_unit.get() == DST_UNIT_M ) // meters
 			return( d );
-		else if( dst_unit.get() == DST_UNIT_FT ) // ft
+		else if( dst_unit.get() == DST_UNIT_FT ) // feet
 			return( d*3.28084 );
-		else if( dst_unit.get() == DST_UNIT_MILES ) // mi
-			return( d*0.621371 );
 		else
 			ESP_LOGE(FNAME,"Wrong unit for Distance");
 		return d;
@@ -310,12 +308,10 @@ public:
 		int u=unit;
 		if( u == -1 )
 			u=dst_unit.get();
-		if( u == DST_UNIT_KM )      // kilometers km
-			return( "km" );
-		else if( u == DST_UNIT_FT ) // hundreds feet
+		if( u == DST_UNIT_M )      // meters
+			return( "m" );
+		else if( u == DST_UNIT_FT ) // feet
 			return( "ft" );
-		else if( u == DST_UNIT_MILES ) // Miles mi
-			return( "mi" );
 		else
 			ESP_LOGE(FNAME,"Wrong unit for distance %d", u );
 		return "nan";
