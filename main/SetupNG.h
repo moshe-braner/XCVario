@@ -57,8 +57,8 @@ typedef enum e_s2f_type  { S2F_HW_SWITCH, S2F_HW_PUSH_BUTTON, S2F_HW_SWITCH_INVE
 typedef enum e_serial_route_type { RT_XCVARIO, RT_WIRELESS, RT_S1, RT_S2, RT_CAN } e_serial_routing_t;
 typedef enum e_wireless_type { WL_DISABLE, WL_BLUETOOTH, WL_WLAN_MASTER, WL_WLAN_CLIENT, WL_WLAN_STANDALONE, WL_BLUETOOTH_LE } e_wireless_t;
 typedef enum e_audiomode_type { AM_VARIO, AM_S2F, AM_SWITCH, AM_AUTOSPEED, AM_EXTERNAL, AM_FLAP, AM_AHRS } e_audiomode_t;
-typedef enum e_audio_tone_mode { ATM_SINGLE_TONE, ATM_DUAL_TONE } e_audio_tone_mode_t;
-typedef enum e_audio_chopping_style { AUDIO_CHOP_SOFT, AUDIO_CHOP_HARD, RICO_CHOP_SOFT, RICO_CHOP_HARD } e_audio_chopping_style_t;
+typedef enum e_audio_tone_mode { ATM_SINGLE_TONE, ATM_DUAL_TONE, ATM_RICO_LONG, ATM_RICO_SHORT } e_audio_tone_mode_t;
+typedef enum e_audio_chopping_style { AUDIO_CHOP_SOFT, AUDIO_CHOP_HARD, AUDIO_CHOP_MEDIUM } e_audio_chopping_style_t;
 typedef enum e_audio_range { AUDIO_RANGE_5_MS, AUDIO_RANGE_10_MS, AUDIO_RANGE_VARIABLE } e_audio_range_t;
 typedef enum e_audio_mute_sink { SINK_ON, SINK_LOUD, SINK_SOFT, SINK_OFF } e_audio_mute_sink_t;
 typedef enum e_audio_mute_gen { AUDIO_ON, AUDIO_ALARMS, AUDIO_OFF } e_audio_mute_gen_t;
@@ -93,6 +93,7 @@ typedef enum e_altimeter_select { AS_TE_SENSOR, AS_BARO_SENSOR, AS_EXTERNAL } e_
 typedef enum e_menu_screens { SCREEN_VARIO, SCREEN_GMETER, SCREEN_HORIZON, SCREEN_FLARM, SCREEN_THERMAL_ASSISTANT } e_menu_screens_t; // addittional screens
 typedef enum e_s2f_arrow_color { AC_WHITE_WHITE, AC_BLUE_BLUE, AC_GREEN_RED } e_s2f_arrow_color_t;
 typedef enum e_vario_needle_color { VN_COLOR_WHITE, VN_COLOR_ORANGE, VN_COLOR_RED }  e_vario_needle_color_t;
+typedef enum e_horizon_color { WHITE_ON_DARK, BLACK_ON_BRIGHT, WHITE_ON_BRIGHT } e_horizon_color_t;
 typedef enum e_data_monitor { MON_OFF, MON_BLUETOOTH, MON_WIFI_8880, MON_WIFI_8881, MON_WIFI_8882, MON_S1, MON_S2, MON_CAN  }  e_data_monitor_t;
 typedef enum e_display_orientation { DISPLAY_NORMAL, DISPLAY_TOPDOWN } e_display_orientation_t;
 typedef enum e_gear_warning_io { GW_OFF, GW_FLAP_SENSOR, GW_S2_RS232_RX, GW_FLAP_SENSOR_INV, GW_S2_RS232_RX_INV, GW_EXTERNAL }  e_gear_warning_io_t;
@@ -540,6 +541,9 @@ extern SetupNG<int>  		serial2_tx_inverted;
 extern SetupNG<int>  		serial2_rx_inverted;
 extern SetupNG<int>  		serial2_tx_enable;
 extern SetupNG<int>  		software_update;
+#if defined(SUNTON28)
+extern SetupNG<int>  		reboot;
+#endif
 extern SetupNG<int>  		battery_display;
 extern SetupNG<int>  		airspeed_mode;
 extern SetupNG<int>  		nmea_protocol;
@@ -554,6 +558,9 @@ extern SetupNG<int>		    student_mode;
 extern SetupNG<float>		password;
 extern SetupNG<int>		    autozero;
 extern SetupNG<int>		    attitude_indicator;
+extern SetupNG<float>		horizon_offset;
+extern SetupNG<int>		    horizon_colors;
+extern SetupNG<int>		    horizon_largeicon;
 extern SetupNG<int>		    ahrs_rpyl_dataset;
 extern SetupNG<int>		    ahrs_autozero;
 extern SetupNG<float>		ahrs_gyro_factor;
@@ -676,7 +683,6 @@ extern SetupNG<int> 		menu_long_press;
 extern SetupNG<int> 		menu_screens;
 extern SetupNG<int> 		screen_gmeter;
 extern SetupNG<int> 		screen_horizon;
-//extern SetupNG<int> 		screen_flarm;     // <<< is this (from my 2023 version) needed?
 extern SetupNG<int> 		screen_centeraid;
 extern SetupNG<int> 		data_monitor;
 extern SetupNG<int> 		data_monitor_mode;
@@ -686,9 +692,6 @@ extern SetupNG<t_wireless_id>  custom_wireless_id;
 extern SetupNG<int> 		drawing_prio;
 extern uint8_t g_col_background;
 extern uint8_t g_col_highlight;
-
-extern float volume_vario;
-extern float volume_s2f;
 
 void change_ballast();
 void change_mc();

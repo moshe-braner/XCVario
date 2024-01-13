@@ -12,12 +12,7 @@ extern uint8_t g_col_header_light_b;
 // use extern int g_col_highlight and g_col_backgroud to define black and white
 // use xetren int g_col_header_xxx to define header color
 
-#if defined(SUNTON28)
-// the not-light COLOR_HEADER is hard to see
-#define COLOR_HEADER g_col_header_light_r,g_col_header_light_g,g_col_header_light_b
-#else
-#define COLOR_HEADER g_col_header_r,g_col_header_g,g_col_header_b  // Azureish gray
-#endif
+#define COLOR_HEADER       g_col_header_r,g_col_header_g,g_col_header_b  // Azureish gray
 #define COLOR_HEADER_LIGHT g_col_header_light_r,g_col_header_light_g,g_col_header_light_b  // Azureish ligher
 #define COLOR_WHITE g_col_highlight, g_col_highlight, g_col_highlight
 #define COLOR_BLACK g_col_background, g_col_background, g_col_background
@@ -36,16 +31,20 @@ extern uint8_t g_col_header_light_b;
 #define COLOR_BBLUE  170, 160, 0
 #define COLOR_LBBLUE 100, 100, 0
 #define COLOR_BROWN   255-50,255-15,255-5    // Chocolate Brown - rather dark
-#define COLOR_LBROWN  255-100,255-70,255-20  // Lighter Brown for horizon ground
+#define COLOR_MBROWN  255-75,255-52,255-12   // Medium Brown
+#define COLOR_LBROWN  255-100,255-70,255-20  // Lighter Brown
+#define COLOR_DBLUE  255-5, 255-15, 255-50
+
+// colors for horizon screen
+#define COLOR_LSKY    COLOR_LBBLUE
+#define COLOR_LGROUND COLOR_MBROWN
+#define COLOR_DSKY    COLOR_DBLUE
+#define COLOR_DGROUND COLOR_BROWN
 
 // colors for single-icon FLARM screen
 #define COLOR_ABOVE  COLOR_LBBLUE
 #define COLOR_LEVEL  COLOR_BRED
 #define COLOR_BELOW  COLOR_ORANGE
-
-// colors for horizon screen
-#define COLOR_SKY    COLOR_LBBLUE
-#define COLOR_GROUND COLOR_LBROWN
 
 #define DISPLAY_H 320
 #define DISPLAY_W 240

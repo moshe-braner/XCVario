@@ -285,6 +285,9 @@ SetupNG<int>  			rt_s2_wl( "S1_TX_WL", 0, RST_NONE, SYNC_NONE, VOLATILE );
 SetupNG<int>  			rt_s2_can( "S1_TX_CAN", 0,RST_NONE, SYNC_NONE, VOLATILE );
 SetupNG<int>  			serial2_rx_inverted( "SERIAL1_RX_INV", RS232_INVERTED );
 SetupNG<int>  			software_update( "SOFTWARE_UPDATE", 0 );
+#if defined(SUNTON28)
+SetupNG<int>  			reboot( "REBOOT", 0, RST_NONE, SYNC_NONE, VOLATILE );
+#endif
 SetupNG<int>  			battery_display( "BAT_DISPLAY", 0 );
 SetupNG<int>  			airspeed_mode( "AIRSPEED_MODE", MODE_IAS );
 SetupNG<int>  			nmea_protocol( "NMEA_PROTOCOL", XCVARIO );
@@ -303,6 +306,9 @@ SetupNG<int>		    student_mode( "STUD_MOD", 0 );
 SetupNG<float>		    password( "PASSWORD", 0 );
 SetupNG<int>		    autozero( "AUTOZERO", 0 );
 SetupNG<int>		    attitude_indicator("AHRS", 1 );
+SetupNG<float>		    horizon_offset("HRZOFST", 0, RST_NONE, SYNC_NONE, VOLATILE );
+SetupNG<int>		    horizon_colors("HRZCOLOR", 0, RST_NONE, SYNC_NONE, VOLATILE );  // later make this persistent
+SetupNG<int>		    horizon_largeicon("HRZLICON", 0, RST_NONE, SYNC_NONE, VOLATILE );  // later make this persistent
 SetupNG<int>		    ahrs_rpyl_dataset("RPYL", 0 );
 SetupNG<int>		    ahrs_autozero("AHRSAZ", 0 );
 SetupNG<float>		    ahrs_gyro_factor("AHRSMGYF", 100 );
