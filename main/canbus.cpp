@@ -35,6 +35,10 @@ xSemaphoreHandle nmeaMutex = 0;
 
 // install/reinstall CAN driver in corresponding mode
 void CANbus::driverInstall( twai_mode_t mode ){
+#if defined(SUNTON28)
+	_ready_initialized = false;
+	return;
+#endif
 	if( _ready_initialized ){
 		driverUninstall();
 	}
@@ -165,6 +169,10 @@ void CANbus::recover(){
 // begin CANbus, start selfTest and launch driver in normal (bidir) mode afterwards
 void CANbus::begin()
 {
+#if defined(SUNTON28)
+	return;
+#endif
+
 	//Initialize configuration structures using macro initializers
 	if( can_speed.get() == CAN_SPEED_OFF ){
 		ESP_LOGI(FNAME,"CAN bus OFF");

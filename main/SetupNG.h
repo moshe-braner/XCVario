@@ -55,7 +55,9 @@ typedef enum e_display_style  { DISPLAY_AIRLINER, DISPLAY_RETRO, DISPLAY_UL } di
 typedef enum e_display_variant { DISPLAY_WHITE_ON_BLACK, DISPLAY_BLACK_ON_WHITE } display_variant_t;
 typedef enum e_s2f_type  { S2F_HW_SWITCH, S2F_HW_PUSH_BUTTON, S2F_HW_SWITCH_INVERTED, S2F_SWITCH_DISABLE } e_s2f_type;
 typedef enum e_serial_route_type { RT_XCVARIO, RT_WIRELESS, RT_S1, RT_S2, RT_CAN } e_serial_routing_t;
+typedef enum e_master_mode { MODE_STANDALONE, MODE_WL_MASTER, MODE_WL_CLIENT, MODE_CAN_MASTER, MODE_CAN_CLIENT } e_master_mode_t;
 typedef enum e_wireless_type { WL_DISABLE, WL_BLUETOOTH, WL_WLAN_MASTER, WL_WLAN_CLIENT, WL_WLAN_STANDALONE, WL_BLUETOOTH_LE } e_wireless_t;
+typedef enum e_wireless_mode { WL_NONE, WL_BTSPP, WL_BLE, WL_WLAN } e_wireless_mode_t;
 typedef enum e_audiomode_type { AM_VARIO, AM_S2F, AM_SWITCH, AM_AUTOSPEED, AM_EXTERNAL, AM_FLAP, AM_AHRS } e_audiomode_t;
 typedef enum e_audio_tone_mode { ATM_SINGLE_TONE, ATM_DUAL_TONE, ATM_RICO_LONG, ATM_RICO_SHORT } e_audio_tone_mode_t;
 typedef enum e_audio_chopping_style { AUDIO_CHOP_SOFT, AUDIO_CHOP_HARD, AUDIO_CHOP_MEDIUM } e_audio_chopping_style_t;
@@ -93,7 +95,7 @@ typedef enum e_altimeter_select { AS_TE_SENSOR, AS_BARO_SENSOR, AS_EXTERNAL } e_
 typedef enum e_menu_screens { SCREEN_VARIO, SCREEN_GMETER, SCREEN_HORIZON, SCREEN_FLARM, SCREEN_THERMAL_ASSISTANT } e_menu_screens_t; // addittional screens
 typedef enum e_s2f_arrow_color { AC_WHITE_WHITE, AC_BLUE_BLUE, AC_GREEN_RED } e_s2f_arrow_color_t;
 typedef enum e_vario_needle_color { VN_COLOR_WHITE, VN_COLOR_ORANGE, VN_COLOR_RED }  e_vario_needle_color_t;
-typedef enum e_horizon_color { WHITE_ON_DARK, BLACK_ON_BRIGHT, WHITE_ON_BRIGHT } e_horizon_color_t;
+typedef enum e_horizon_color { WHITE_ON_DARK, BLACK_ON_BRIGHT, WHITE_ON_BRIGHT, WHITE_ON_BLACK } e_horizon_color_t;
 typedef enum e_data_monitor { MON_OFF, MON_BLUETOOTH, MON_WIFI_8880, MON_WIFI_8881, MON_WIFI_8882, MON_S1, MON_S2, MON_CAN  }  e_data_monitor_t;
 typedef enum e_display_orientation { DISPLAY_NORMAL, DISPLAY_TOPDOWN } e_display_orientation_t;
 typedef enum e_gear_warning_io { GW_OFF, GW_FLAP_SENSOR, GW_S2_RS232_RX, GW_FLAP_SENSOR_INV, GW_S2_RS232_RX_INV, GW_EXTERNAL }  e_gear_warning_io_t;
@@ -333,7 +335,8 @@ public:
 	virtual bool init() {
 		if( flags._volatile != PERSISTENT ){
 			// ESP_LOGI(FNAME,"NVS volatile set default");
-			set( _default );
+			set( _default );        // need action function for default crew_weigt etc
+			// _value = _default;   // that would by-pass the action function
 			return true;
 		}
 		size_t required_size;
@@ -354,6 +357,7 @@ public:
 			else {
 				// ESP_LOGI(FNAME,"NVS size okay");
 				ret = NVS.getBlob(_key, &_value, &required_size);
+				// >>> this by-passes set() so does not call the action function!
 
 				if ( !ret ){
 					ESP_LOGE(FNAME, "NVS nvs_get_blob returned error");
@@ -401,6 +405,11 @@ public:
 	inline uint8_t getSync() { return flags._sync; }
 	inline void setSync( e_sync_t sync ) { flags._sync = sync; }
 
+//	void master_mode_change();
+//	void wireless_mode_change();
+//	void wireless_type_change();
+//	void can_mode_change();
+
 private:
 	T _value;
 	T _default;
@@ -408,9 +417,6 @@ private:
 	t_setup_flags flags;
 	void (* _action)();
 };
-
-
-
 
 extern SetupNG<float> 		QNH;
 extern SetupNG<float> 		polar_wingload;
@@ -449,7 +455,9 @@ extern SetupNG<int>  		chopping_style;
 extern SetupNG<int>  		amplifier_shutdown;
 extern SetupNG<int>         audio_equalizer;
 
+extern SetupNG<int>  		master_mode;
 extern SetupNG<int>  		wireless_type;
+extern SetupNG<int>  		wireless_mode;
 extern SetupNG<float>  		wifi_max_power;
 extern SetupNG<int>  		factory_reset;
 extern SetupNG<int>  		audio_range;

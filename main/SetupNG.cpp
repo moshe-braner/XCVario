@@ -37,6 +37,161 @@
 #include <esp_http_server.h>
 #include "WifiApp.h"
 
+
+// reflect changes made in master_mode into the historical variables wireless_type & can_mode:
+//  - the set() calls are not circular thanks to them returning (with no action)
+//    when the current value is already the same as the value to be set.
+void master_mode_change() {
+	int mode = master_mode.get();
+	int wltype = wireless_type.get();
+	switch(mode) {
+	case MODE_STANDALONE:
+	case MODE_CAN_MASTER:
+	case MODE_CAN_CLIENT:
+		ESP_LOGI(FNAME,"master_mode_change -> not wifi");
+		if( wltype == WL_WLAN_MASTER || wltype == WL_WLAN_CLIENT )
+			wireless_type.set( WL_WLAN_STANDALONE );
+		break;
+	case MODE_WL_MASTER:
+		ESP_LOGI(FNAME,"master_mode_change -> WL master");
+		wireless_type.set( WL_WLAN_MASTER );
+		break;
+	case MODE_WL_CLIENT:
+		ESP_LOGI(FNAME,"master_mode_change -> WL client");
+		wireless_type.set( WL_WLAN_CLIENT );
+		break;
+	}
+	switch(mode) {
+	case MODE_STANDALONE:
+	case MODE_WL_MASTER:
+	case MODE_WL_CLIENT:
+		ESP_LOGI(FNAME,"master_mode_change -> not CAN");
+		can_mode.set( CAN_MODE_STANDALONE );
+		break;
+	case MODE_CAN_MASTER:
+		ESP_LOGI(FNAME,"master_mode_change -> CAN master");
+		can_mode.set( CAN_MODE_MASTER );
+		break;
+	case MODE_CAN_CLIENT:
+		ESP_LOGI(FNAME,"master_mode_change -> CAN client");
+		can_mode.set( CAN_MODE_CLIENT );
+		break;
+	}
+}
+
+// reflect changes made in wireless_mode (which is accessible by the menu)
+// into the hidden historical variable wireless_type
+void wireless_mode_change() {
+	int mode = master_mode.get();
+	int wlmode = wireless_mode.get();
+	if (wlmode == WL_NONE) {
+		ESP_LOGI(FNAME,"wireless_mode_change -> none");
+		wireless_type.set( WL_DISABLE );
+	} else if (wlmode == WL_BTSPP) {
+		ESP_LOGI(FNAME,"wireless_mode_change -> BTSPP");
+		wireless_type.set( WL_BLUETOOTH );
+	} else if (wlmode == WL_BLE) {
+		ESP_LOGI(FNAME,"wireless_mode_change -> BLE");
+		wireless_type.set( WL_BLUETOOTH_LE );
+	} else if (wlmode == WL_WLAN) {
+		ESP_LOGI(FNAME,"wireless_mode_change -> wifi");
+		switch(mode) {
+		case MODE_WL_MASTER:
+			ESP_LOGI(FNAME,"... wireless_type -> master");
+			wireless_type.set( WL_WLAN_MASTER );
+			break;
+		case MODE_WL_CLIENT:
+			ESP_LOGI(FNAME,"... wireless_type -> client");
+			wireless_type.set( WL_WLAN_CLIENT );
+			break;
+		default:
+			ESP_LOGI(FNAME,"... wireless_type -> standalone");
+			wireless_type.set( WL_WLAN_STANDALONE );
+			break;
+		}
+	}
+}
+
+// Reflect changes made in wireless_type into master_mode & can_mode.  The historical
+// wireless_type is now hidden, but can be in config, or changed via wireless_mode.
+// Also reflect changes made in wireless_type (via config) into wireless_mode.
+void wireless_type_change() {
+	int mode = master_mode.get();
+	int wltype = wireless_type.get();
+	switch(wltype) {
+	case WL_WLAN_MASTER:
+		ESP_LOGI(FNAME,"wireless_type_change -> master");
+		master_mode.set( MODE_WL_MASTER );
+		//can_mode.set( CAN_MODE_STANDALONE );
+		break;
+	case WL_WLAN_CLIENT:
+		ESP_LOGI(FNAME,"wireless_type_change -> client");
+		master_mode.set( MODE_WL_CLIENT );
+		//can_mode.set( CAN_MODE_STANDALONE );
+		break;
+	default:
+		ESP_LOGI(FNAME,"wireless_type_change -> standalone");
+		if (mode == MODE_WL_MASTER || mode == MODE_WL_CLIENT)
+			master_mode.set( MODE_STANDALONE );
+		break;
+	}
+	switch(wltype) {
+	case WL_DISABLE:
+		ESP_LOGI(FNAME,"wireless_type_change -> disable");
+		wireless_mode.set( WL_NONE );
+		break;
+	case WL_BLUETOOTH:
+		ESP_LOGI(FNAME,"wireless_type_change -> BT");
+		wireless_mode.set( WL_BTSPP );
+		break;
+	case WL_BLUETOOTH_LE:
+		ESP_LOGI(FNAME,"wireless_type_change -> BLE");
+		wireless_mode.set( WL_BLE );
+		break;
+	default:
+		ESP_LOGI(FNAME,"wireless_type_change -> wifi");
+		wireless_mode.set( WL_WLAN );
+		break;
+	}
+}
+
+// reflect changes made in can_mode into master_mode & wireless_type - note that
+//  can_mode is now hidden, but can be changed by loading config from NVS
+void can_mode_change() {
+	int mode = master_mode.get();
+	int canmode = can_mode.get();
+	//int wltype = wireless_type.get();
+	if (canmode == CAN_MODE_STANDALONE) {
+		ESP_LOGI(FNAME,"can_mode_change -> standalone");
+		if (mode == MODE_CAN_MASTER || mode == MODE_CAN_CLIENT)
+			master_mode.set( MODE_STANDALONE );
+	}
+	if (canmode == CAN_MODE_MASTER) {
+		ESP_LOGI(FNAME,"can_mode_change -> master");
+		master_mode.set( MODE_CAN_MASTER );      // wireless_type changed indirectly
+//		if (wltype == WL_WLAN_MASTER || wltype == WL_WLAN_CLIENT)
+//			wireless_type.set( WL_WLAN_STANDALONE );
+	}
+	if (canmode == CAN_MODE_CLIENT) {
+		ESP_LOGI(FNAME,"can_mode_change -> client");
+		master_mode.set( MODE_CAN_CLIENT );      // wireless_type changed indirectly
+//		if (wltype == WL_WLAN_MASTER || wltype == WL_WLAN_CLIENT)
+//			wireless_type.set( WL_WLAN_STANDALONE );
+	}
+}
+
+// reflect turning CAN *off* in can_speed_change into master_mode & (indirectly) can_mode
+// this function will remain even later when can_mode and wireless_type are removed
+void can_speed_change() {
+	int mode = master_mode.get();
+	if (can_speed.get() == CAN_SPEED_OFF && can_mode.get() != CAN_MODE_STANDALONE) {
+		ESP_LOGI(FNAME,"can_speed_change -> off");
+		if (mode == MODE_CAN_MASTER || mode == MODE_CAN_CLIENT)
+			master_mode.set( MODE_STANDALONE );
+		//can_mode.set( CAN_MODE_STANDALONE );
+	}
+}
+
 void change_mc() {
 	Speed2Fly.change_mc();
 }
@@ -207,7 +362,13 @@ SetupNG<int>  			chopping_style( "CHOP_STYLE",  AUDIO_CHOP_SOFT );
 SetupNG<int>  			amplifier_shutdown( "AMP_DIS", AMP_STAY_ON );
 SetupNG<int>            audio_equalizer( "AUD_EQ", AUDIO_EQ_DISABLE, false );
 
-SetupNG<int>  			wireless_type( "BT_ENABLE" ,  WL_BLUETOOTH );
+// new variable, interacts internally with wireless_type and can_mode:
+// eventually wireless_type & can_mode will be eliminated
+SetupNG<int>  			master_mode("MASTER_MODE", MODE_STANDALONE, true, SYNC_NONE, PERSISTENT, master_mode_change );
+// hidden persistent variable that mixes concepts of WL type and master/client:
+SetupNG<int>  			wireless_type("BT_ENABLE", WL_BLUETOOTH, true, SYNC_NONE, PERSISTENT, wireless_type_change );
+// new variable used in menu, translated internally into wireless_type:
+SetupNG<int>  			wireless_mode("WLTYPE", WL_BTSPP, true, SYNC_NONE, PERSISTENT, wireless_mode_change );
 SetupNG<float>  		wifi_max_power( "WIFI_MP" ,  50);
 SetupNG<int>  			factory_reset( "FACTORY_RES" , 0 );
 SetupNG<int>  			audio_range( "AUDIO_RANGE" , AUDIO_RANGE_5_MS );
@@ -414,11 +575,12 @@ SetupNG<float>       	max_circle_wind_diff("CI_WINDDM", 60.0 );
 SetupNG<float>       	max_circle_wind_delta_deg("CIMDELD", 20.0 );
 SetupNG<float>       	max_circle_wind_delta_speed("CIMDELS", 5.0 );
 SetupNG<float>       	circle_wind_lowpass("CI_WINDLOW", 5 );
-SetupNG<int> 			can_speed( "CANSPEED", CAN_SPEED_OFF );
+SetupNG<int> 			can_speed( "CANSPEED", CAN_SPEED_OFF, true, SYNC_NONE, PERSISTENT, can_speed_change );
 SetupNG<int> 			rt_can_xcv( "CANTX_XC", 0 );
 SetupNG<int> 			rt_xcv_wl( "WLTX_XC", 1 );
 SetupNG<int> 			rt_wl_can( "WLTX_CAN", 0 );
-SetupNG<int> 			can_mode( "CANMOD", CAN_MODE_STANDALONE );
+// hidden historical variable, set internally based on master_mode (or vice versa):
+SetupNG<int> 			can_mode( "CANMOD", CAN_MODE_STANDALONE, true, SYNC_NONE, PERSISTENT, can_mode_change );
 SetupNG<float> 			master_xcvario( "MSXCV", 0 );
 SetupNG<int> 			master_xcvario_lock( "MSXCVL", 0 );
 SetupNG<int> 			menu_long_press("MENU_LONG", 0 );

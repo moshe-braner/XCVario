@@ -165,6 +165,6 @@ static float limited_bank( float b );
 static float approxsin( float x );
 static float approxcos( float x );
 static int pitch2pixels( float p );
-static int pitch2pixels0( float p );
+static bool calc_horizon( int sb, int cb, int& x0, int& y0, int& x1, int& y1 );
 
 #endif /* IPS_DISPLAY_H */

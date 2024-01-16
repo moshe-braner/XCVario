@@ -82,3 +82,9 @@ private:
 	static char default_id[6];
 };
 
+// action functions for new and old mode setup variables:
+void wireless_type_change();
+void can_mode_change();
+void master_mode_change();
+void wireless_mode_change();
+void can_speed_change();
