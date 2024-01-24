@@ -153,10 +153,13 @@ private:
 	static void HznSetColor( const ucg_color_t *color );
 	static void double_line( int x1, int y1, int x2, int y2, int which=2 );
 	static void pitch_tick( bool draw, bool major, int pp );
-	static void pitch_ticks( bool draw );
-	static void ticks_bank( bool draw, bool major, int sinbb, int cosbb, int sbt );
-	static void bank_ticks( bool draw );
-	static void airplane_icon( int k0, int k1, int g0, int g1 );
+	static bool pitch_ticks( bool draw );
+	static bool bank_tick( int stage, int x1, int y1, int x2, int y2 );
+	static bool ticks_bank( int stage, int bank );
+	static bool bank_ticks( bool drawn, bool draw, bool early, int bank );
+	static bool banks_ticks( bool drawn, bool draw, bool early );
+	static void airplane_icon( bool draw );
+	static void erase_horizon_line( bool up0, bool up1 );
 };
 
 // internal functions used by drawHorizon():
