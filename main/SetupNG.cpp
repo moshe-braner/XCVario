@@ -6,6 +6,7 @@
  */
 
 #include "SetupNG.h"
+#include "SetupMenu.h"
 #include <string>
 #include <stdio.h>
 #include "esp_system.h"
@@ -37,11 +38,31 @@
 #include <esp_http_server.h>
 #include "WifiApp.h"
 
+const char *mode_shown = "Unknown";
+void show_mode_change() {
+	int canmode = can_mode.get();
+	int wltype = wireless_type.get();
+	mode_shown = "Inconsistent";
+	if( canmode == CAN_MODE_MASTER && wltype != WL_WLAN_MASTER && wltype != WL_WLAN_CLIENT )
+		mode_shown = "Master (via CAN)";
+	if( canmode == CAN_MODE_CLIENT && wltype != WL_WLAN_MASTER && wltype != WL_WLAN_CLIENT )
+		mode_shown = "Client (via CAN)";
+	if( wltype == WL_WLAN_MASTER && canmode != CAN_MODE_MASTER && canmode != CAN_MODE_CLIENT )
+		mode_shown = "Master (via WiFi)";
+	if( wltype == WL_WLAN_CLIENT && canmode != CAN_MODE_MASTER && canmode != CAN_MODE_CLIENT )
+		mode_shown = "Client (via WiFi)";
+	if( wltype != WL_WLAN_MASTER && wltype != WL_WLAN_CLIENT
+	       && canmode != CAN_MODE_MASTER && canmode != CAN_MODE_CLIENT )
+		mode_shown = "Standalone";
+	update_show_mode_menu();   // if that menu exists, the label will be changed within
+}
 
 // reflect changes made in master_mode into the historical variables wireless_type & can_mode:
 //  - the set() calls are not circular thanks to them returning (with no action)
 //    when the current value is already the same as the value to be set.
 void master_mode_change() {
+	if ( can_mode.get() == CAN_MODE_OBSOLETE && wireless_type.get() == WL_TYPE_OBSOLETE)
+		return;
 	int mode = master_mode.get();
 	int wltype = wireless_type.get();
 	switch(mode) {
@@ -77,6 +98,7 @@ void master_mode_change() {
 		can_mode.set( CAN_MODE_CLIENT );
 		break;
 	}
+	show_mode_change();
 }
 
 // reflect changes made in wireless_mode (which is accessible by the menu)
@@ -110,14 +132,17 @@ void wireless_mode_change() {
 			break;
 		}
 	}
+	show_mode_change();
 }
 
 // Reflect changes made in wireless_type into master_mode & can_mode.  The historical
 // wireless_type is now hidden, but can be in config, or changed via wireless_mode.
 // Also reflect changes made in wireless_type (via config) into wireless_mode.
 void wireless_type_change() {
-	int mode = master_mode.get();
 	int wltype = wireless_type.get();
+	if ( wltype == WL_TYPE_OBSOLETE )
+		return;
+	int mode = master_mode.get();
 	switch(wltype) {
 	case WL_WLAN_MASTER:
 		ESP_LOGI(FNAME,"wireless_type_change -> master");
@@ -153,13 +178,16 @@ void wireless_type_change() {
 		wireless_mode.set( WL_WLAN );
 		break;
 	}
+	show_mode_change();
 }
 
 // reflect changes made in can_mode into master_mode & wireless_type - note that
 //  can_mode is now hidden, but can be changed by loading config from NVS
 void can_mode_change() {
-	int mode = master_mode.get();
 	int canmode = can_mode.get();
+	if ( canmode == CAN_MODE_OBSOLETE )
+		return;
+	int mode = master_mode.get();
 	//int wltype = wireless_type.get();
 	if (canmode == CAN_MODE_STANDALONE) {
 		ESP_LOGI(FNAME,"can_mode_change -> standalone");
@@ -178,6 +206,7 @@ void can_mode_change() {
 //		if (wltype == WL_WLAN_MASTER || wltype == WL_WLAN_CLIENT)
 //			wireless_type.set( WL_WLAN_STANDALONE );
 	}
+	show_mode_change();
 }
 
 // reflect turning CAN *off* in can_speed_change into master_mode & (indirectly) can_mode
@@ -190,6 +219,96 @@ void can_speed_change() {
 			master_mode.set( MODE_STANDALONE );
 		//can_mode.set( CAN_MODE_STANDALONE );
 	}
+	show_mode_change();
+}
+
+void init_routing(){
+	uint32_t s1rt = (uint32_t)serial1_tx.get();
+	ESP_LOGI(FNAME,"init_routing S1: %x", s1rt);
+	rt_s1_xcv.set( (s1rt >> (RT_XCVARIO))& 1 );
+	rt_s1_wl.set( (s1rt >> (RT_WIRELESS))& 1 );
+	rt_s1_s2.set( (s1rt >> (RT_S1))& 1 );
+	rt_s1_w0.set( (s1rt >> (RT_W0))& 1 );
+	rt_w3_s1.set( (s1rt >> (RT_W3))& 1 );
+	rt_s1_can.set( (s1rt >> (RT_CAN))& 1 );
+
+	uint32_t s2rt = (uint32_t)serial2_tx.get();
+	ESP_LOGI(FNAME,"init_routing S2: %x", s2rt);
+	rt_s2_xcv.set( (s2rt >> (RT_XCVARIO))& 1 );
+	rt_s2_wl.set( (s2rt >> (RT_WIRELESS))& 1 );
+	rt_s1_s2.set( (s2rt >> (RT_S1))& 1 );
+	rt_s1_w0.set( (s2rt >> (RT_W0))& 1 );
+	rt_s2_w1.set( (s2rt >> (RT_W1))& 1 );
+	rt_w3_s2.set( (s2rt >> (RT_W3))& 1 );
+	rt_s2_can.set( (s2rt >> (RT_CAN))& 1 );
+
+	uint32_t w3rt = (uint32_t)w3_routes.get();
+	ESP_LOGI(FNAME,"init_routing W3: %x", w3rt);
+	rt_w3_xcv.set( (w3rt >> (RT_XCVARIO))& 1 );
+	rt_w3_s1.set( (w3rt >> (RT_S1))& 1 );
+	rt_w3_s2.set( (w3rt >> (RT_S2))& 1 );
+	rt_w3_w0.set( (w3rt >> (RT_W0))& 1 );
+	rt_w3_w1.set( (w3rt >> (RT_W1))& 1 );
+}
+
+void update_s1_routing(){
+	uint32_t routing =
+			( (uint32_t)rt_s1_xcv.get() << (RT_XCVARIO) ) |
+			( (uint32_t)rt_s1_wl.get()  << (RT_WIRELESS) ) |
+			( (uint32_t)rt_s1_s2.get()  << (RT_S1) ) |
+			( (uint32_t)rt_s1_w0.get()  << (RT_W0) ) |
+			( (uint32_t)rt_w3_s1.get()  << (RT_W3) ) |
+			( (uint32_t)rt_s1_can.get() << (RT_CAN) );
+	ESP_LOGI(FNAME,"update_routing S1: %x", routing);
+	serial1_tx.set( routing );
+}
+
+void update_s2_routing(){
+	uint32_t routing =
+			( (uint32_t)rt_s2_xcv.get()  << (RT_XCVARIO) ) |
+			( (uint32_t)rt_s2_wl.get() << (RT_WIRELESS) ) |
+			( (uint32_t)rt_s1_s2.get() << (RT_S1) ) |
+			( (uint32_t)rt_s2_w0.get()  << (RT_W0) ) |
+			( (uint32_t)rt_s2_w1.get() << (RT_W1) ) |
+			( (uint32_t)rt_w3_s2.get() << (RT_W3) ) |
+			( (uint32_t)rt_s2_can.get()<< (RT_CAN) );
+	ESP_LOGI(FNAME,"update_routing S2: %x", routing);
+	serial2_tx.set( routing );
+}
+
+void update_w3_routing(){
+	uint32_t routing =
+			( (uint32_t)rt_w3_xcv.get()  << (RT_XCVARIO) ) |
+			( (uint32_t)rt_w3_s1.get() << (RT_S1) ) |
+			( (uint32_t)rt_w3_s2.get() << (RT_S2) ) |
+			( (uint32_t)rt_w3_w0.get()  << (RT_W0) ) |
+			( (uint32_t)rt_w3_w1.get() << (RT_W1) );
+	ESP_LOGI(FNAME,"update_routing W3: %x", routing);
+	w3_routes.set( routing );
+}
+
+void update_routing(){
+	update_s1_routing();
+	update_s2_routing();
+	update_w3_routing();
+}
+
+// finish initializing setup variables - called from SetupCommon::initSetup()
+// - this function is called right after NGs have been loaded from NVS
+// - it serves two different purposes as commented below
+void post_init_NG() {
+
+	// configure new NG vars from deprecated ones (or vice versa)
+	can_mode_change();        // old into new - do CAN first so it takes priority over WiFi
+	wireless_type_change();   // old into new
+
+	// now can mark obsolete NGs so they will be ignored in the future:
+	// can_mode.set( CAN_MODE_OBSOLETE );
+	// wireless_type.set( WL_TYPE_OBSOLETE );
+
+	// here can do other setup configurations
+	// such as unpacking bitfields
+	init_routing();
 }
 
 void change_mc() {
@@ -245,20 +364,8 @@ void resetCWindAge() {
 }
 
 void change_volume() {
-//	static bool reentered = false;
-	float vol = audio_volume.get();
-//	if (! reentered) {
-//		float max = max_volume.get();  // enforce max_volume
-//		if (vol > max) {
-//			reentered = true;
-//			audio_volume.set( max );  // will call this function again indirectly
-//			return;
-//		}
-//	}
-//	// get here either if re-entered or if vol < max
-//	reentered = false;
-	Audio::setVolume( vol );
-	ESP_LOGI(FNAME,"change_volume -> %f", vol );
+	Audio::setVolume( audio_volume.get() );
+	//ESP_LOGI(FNAME,"change_volume -> %f", vol );
 }
 
 void change_max_volume() {
@@ -267,6 +374,7 @@ void change_max_volume() {
 		audio_volume.set( max );
 		ESP_LOGI(FNAME,"change volume -> %f to fit max", max );
 	}
+	update_volume_menu_max();   // make volume menu use the new max
 }
 
 void set_volume_sync() {
@@ -365,6 +473,7 @@ SetupNG<int>            audio_equalizer( "AUD_EQ", AUDIO_EQ_DISABLE, false );
 // new variable, interacts internally with wireless_type and can_mode:
 // eventually wireless_type & can_mode will be eliminated
 SetupNG<int>  			master_mode("MASTER_MODE", MODE_STANDALONE, true, SYNC_NONE, PERSISTENT, master_mode_change );
+SetupNG<int>  			show_mode("MASTER_MODE", 0, true, SYNC_NONE, VOLATILE );
 // hidden persistent variable that mixes concepts of WL type and master/client:
 SetupNG<int>  			wireless_type("BT_ENABLE", WL_BLUETOOTH, true, SYNC_NONE, PERSISTENT, wireless_type_change );
 // new variable used in menu, translated internally into wireless_type:
@@ -420,11 +529,6 @@ SetupNG<int>  			rot_default( "ROTARY_DEFAULT", 0 );
 SetupNG<int>  			serial1_speed( "SERIAL2_SPEED", 3 );   // tag will stay SERIAL2 from historical reason
 SetupNG<int>  			serial1_pins_twisted( "SERIAL2_PINS", 0 );
 SetupNG<int>  			serial1_rxloop( "SERIAL2_RXLOOP", 0 );
-SetupNG<int>  			serial1_tx( "SERIAL2_TX", (1UL << RT_XCVARIO) | (1UL << RT_WIRELESS) );   //  Default Wireless and local XCVario for Flarm Warnings, bincom
-SetupNG<int>  			rt_s1_xcv( "S2_TX_XCV", 1, RST_NONE, SYNC_NONE, VOLATILE  );
-SetupNG<int>  			rt_s1_wl( "S2_TX_WL", 1, RST_NONE, SYNC_NONE, VOLATILE );
-SetupNG<int>  			rt_s1_s2( "S2_TX_S2", 0, RST_NONE, SYNC_NONE, VOLATILE );
-SetupNG<int>  			rt_s1_can( "S2_TX_CAN", 0, RST_NONE, SYNC_NONE, VOLATILE );
 #if defined(SUNTON28)
 SetupNG<int>  			serial1_tx_inverted( "SERIAL2_TX_INV", RS232_NORMAL );  // LED lit when tx
 SetupNG<int>  			serial1_tx_enable( "SER1_TX_ENA", 0 );                  // LED dark by default
@@ -440,10 +544,6 @@ SetupNG<int>  			serial2_tx_enable( "SER2_TX_ENA", 1 );
 SetupNG<int>  			serial1_rx_inverted( "SERIAL2_RX_INV", RS232_INVERTED );
 SetupNG<int>  			serial2_speed( "SERIAL1_SPEED", 3 );
 SetupNG<int>  			serial2_pins_twisted( "SERIAL1_PINS", 0 );
-SetupNG<int>  			serial2_tx( "SERIAL1_TX", (1UL << RT_XCVARIO) | (1UL << RT_WIRELESS) );     //  BT device and XCVario, Serial2 is foreseen for Protocols or Kobo
-SetupNG<int>  			rt_s2_xcv( "S1_TX_XCV", 1, RST_NONE, SYNC_NONE, VOLATILE );
-SetupNG<int>  			rt_s2_wl( "S1_TX_WL", 0, RST_NONE, SYNC_NONE, VOLATILE );
-SetupNG<int>  			rt_s2_can( "S1_TX_CAN", 0,RST_NONE, SYNC_NONE, VOLATILE );
 SetupNG<int>  			serial2_rx_inverted( "SERIAL1_RX_INV", RS232_INVERTED );
 SetupNG<int>  			software_update( "SOFTWARE_UPDATE", 0 );
 #if defined(SUNTON28)
@@ -576,9 +676,37 @@ SetupNG<float>       	max_circle_wind_delta_deg("CIMDELD", 20.0 );
 SetupNG<float>       	max_circle_wind_delta_speed("CIMDELS", 5.0 );
 SetupNG<float>       	circle_wind_lowpass("CI_WINDLOW", 5 );
 SetupNG<int> 			can_speed( "CANSPEED", CAN_SPEED_OFF, true, SYNC_NONE, PERSISTENT, can_speed_change );
+
+// these are saved in flash indirectly via serial1_tx and serial2_tx and w3_routes
+SetupNG<int>  	rt_s1_xcv( "S2_TX_XCV", 1, RST_NONE, SYNC_NONE, VOLATILE, update_s1_routing ); // default
+SetupNG<int>  	rt_s1_w0( "S2_TX_W0", 0, RST_NONE, SYNC_NONE, VOLATILE, update_s1_routing );   // added, kept S1/S2 tag swap
+SetupNG<int>  	rt_s1_wl( "S2_TX_WL", 1, RST_NONE, SYNC_NONE, VOLATILE, update_s1_routing );   // default
+SetupNG<int>  	rt_s1_s2( "S2_TX_S2", 0, RST_NONE, SYNC_NONE, VOLATILE, update_routing );
+//   - calls the overall update_routing() since both S1 and S2 need updating
+SetupNG<int>  	rt_s1_can( "S2_TX_CAN", 0, RST_NONE, SYNC_NONE, VOLATILE, update_s1_routing );
+SetupNG<int>  	rt_s2_xcv( "S1_TX_XCV", 1, RST_NONE, SYNC_NONE, VOLATILE, update_s2_routing ); // default
+SetupNG<int>  	rt_s2_wl( "S1_TX_WL", 1, RST_NONE, SYNC_NONE, VOLATILE, update_s2_routing );   // default
+SetupNG<int>  	rt_s2_can( "S1_TX_CAN", 0, RST_NONE, SYNC_NONE, VOLATILE, update_s2_routing );
+SetupNG<int>  	rt_s2_w0( "S1_TX_W0", 0, RST_NONE, SYNC_NONE, VOLATILE, update_s2_routing );   // added
+SetupNG<int>  	rt_s2_w1( "S1_TX_W1", 0, RST_NONE, SYNC_NONE, VOLATILE, update_s2_routing );   // added
+SetupNG<int>  	rt_w3_xcv( "W3_TX_XCV", 0, RST_NONE, SYNC_NONE, VOLATILE, update_w3_routing ); // added
+SetupNG<int>  	rt_w3_w0( "W3_TX_W0", 0, RST_NONE, SYNC_NONE, VOLATILE, update_w3_routing );   // added
+SetupNG<int>  	rt_w3_w1( "W3_TX_W1", 0, RST_NONE, SYNC_NONE, VOLATILE, update_w3_routing );   // added
+// the two below call the overall update_routing() since both S1/S2 and W3 need updating
+SetupNG<int>  	rt_w3_s1( "W3_TX_S1", 0, RST_NONE, SYNC_NONE, VOLATILE, update_routing );      // added
+SetupNG<int>  	rt_w3_s2( "W3_TX_S2", 0, RST_NONE, SYNC_NONE, VOLATILE, update_routing );      // added
+
+// these are saved directly to flash  (yes SERIAL1,2 keys swapped)
+SetupNG<int>  			serial1_tx( "SERIAL2_TX", (1UL << RT_XCVARIO) | (1UL << RT_WIRELESS) );
+    //  Default Wireless and local XCVario for Flarm Warnings, bincom
+SetupNG<int>  			serial2_tx( "SERIAL1_TX", (1UL << RT_XCVARIO) | (1UL << RT_WIRELESS) );
+    //  BT device and XCVario, Serial2 is foreseen for Protocols or Kobo
 SetupNG<int> 			rt_can_xcv( "CANTX_XC", 0 );
-SetupNG<int> 			rt_xcv_wl( "WLTX_XC", 1 );
+SetupNG<int> 			rt_xcv_wl( "WLTX_XC", 1 );       // default
 SetupNG<int> 			rt_wl_can( "WLTX_CAN", 0 );
+SetupNG<int>  			w3_routes( "W3_RT", 0 );         // added
+SetupNG<int>  			w3_tx_enable( "W3_TX_ENA", 0 );  // added
+
 // hidden historical variable, set internally based on master_mode (or vice versa):
 SetupNG<int> 			can_mode( "CANMOD", CAN_MODE_STANDALONE, true, SYNC_NONE, PERSISTENT, can_mode_change );
 SetupNG<float> 			master_xcvario( "MSXCV", 0 );
@@ -601,4 +729,5 @@ SetupNG<mpud::raw_axes_t>	gyro_bias("GYRO_BIAS", zero_bias );
 SetupNG<mpud::raw_axes_t>	accl_bias("ACCL_BIAS", zero_bias );
 SetupNG<float>              mpu_temperature("MPUTEMP", 45.0, true, SYNC_FROM_MASTER, PERSISTENT, chg_mpu_target );    // default for AHRS chip temperature (XCV 2023)
 
-
+// >>> note: every place it says "RST_NONE" it should say "false",
+//        it just happens that RST_NONE == 0 == false

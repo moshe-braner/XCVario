@@ -16,12 +16,14 @@
 #include "Serial.h"
 #include "UbloxGNSSdecode.h"
 
-RingBufCPP<SString, QUEUE_SIZE> wl_vario_tx_q;
-RingBufCPP<SString, QUEUE_SIZE> wl_flarm_tx_q;
-RingBufCPP<SString, QUEUE_SIZE> wl_aux_tx_q;
+RingBufCPP<SString, QUEUE_SIZE> wl_vario_tx_q;    // vario means port 8880
+RingBufCPP<SString, QUEUE_SIZE> wl_main_tx_q;     // main  means port 8881
+RingBufCPP<SString, QUEUE_SIZE> wl_aux_tx_q;      // aux   means port 8882
+RingBufCPP<SString, QUEUE_SIZE> wl_p2000_tx_q;    // wifi port 2000
 RingBufCPP<SString, QUEUE_SIZE> wl_vario_rx_q;
-RingBufCPP<SString, QUEUE_SIZE> wl_flarm_rx_q;
+RingBufCPP<SString, QUEUE_SIZE> wl_main_rx_q;
 RingBufCPP<SString, QUEUE_SIZE> wl_aux_rx_q;
+RingBufCPP<SString, QUEUE_SIZE> wl_p2000_rx_q;
 
 RingBufCPP<SString, QUEUE_SIZE> bt_tx_q;
 RingBufCPP<SString, QUEUE_SIZE> bt_rx_q;
@@ -145,9 +147,19 @@ void Router::routeXCV(){
 					// ESP_LOGI(FNAME,"XCV data forwarded to S2 device, %d bytes", xcv.length() );
 				}
 			}
-			if( rt_can_xcv.get() && can_speed.get() && (strncmp( xcv.c_str(), "$PXCV", 5 ) != 0) ){ // don't route PXCV to master, has its own
+			if( rt_can_xcv.get() && can_speed.get()
+			     && (strncmp( xcv.c_str(), "$PXCV", 5 ) != 0) )
+			        // don't route PXCV to master, has its own
+			{
 				if( forwardMsg( xcv, can_tx_q ) ){
 					// ESP_LOGI(FNAME,"XCV data forwarded to CAN bus, %d bytes", xcv.length() );
+				}
+			}
+			if( rt_w3_xcv.get() && w3_tx_enable.get()
+			     && (wireless == WL_WLAN_MASTER || wireless == WL_WLAN_STANDALONE) )
+			{
+				if( forwardMsg( xcv, wl_p2000_tx_q ) ){
+					// ESP_LOGI(FNAME,"XCV data forwarded to port 2000, %d bytes", xcv.length() );
 				}
 			}
 		}
@@ -162,10 +174,22 @@ void Router::routeS1(){
 		// ESP_LOGI(FNAME,"routeS1 RX %d bytes, Q:%d  B:%d", s1.length(), s1_rx_q.numElements(), Flarm::bincom );
 		// ESP_LOG_BUFFER_HEXDUMP(FNAME,s1.c_str(),s1.length(), ESP_LOG_INFO);
 
-		if( rt_s1_wl.get() && (wireless == WL_WLAN_MASTER || wireless == WL_WLAN_STANDALONE) ){
-			if( forwardMsg( s1, wl_flarm_tx_q )){
+		if( wireless == WL_WLAN_MASTER || wireless == WL_WLAN_STANDALONE ){
+		  if( rt_s1_wl.get() ){
+			if( forwardMsg( s1, wl_main_tx_q )){
 				// ESP_LOGI(FNAME,"S1 RX %d bytes forwarded to WiFi port 8881", s1.length() );
 			}
+		  }
+		  if( rt_s1_w0.get() ){
+			if( forwardMsg( s1, wl_vario_tx_q )){
+				// ESP_LOGI(FNAME,"S1 RX %d bytes forwarded to WiFi port 8880", s1.length() );
+			}
+		  }
+		  if( rt_w3_s1.get() && w3_tx_enable.get() ){
+			if( forwardMsg( s1, wl_p2000_tx_q )){
+				// ESP_LOGI(FNAME,"S1 RX %d bytes forwarded to WiFi port 2000", s1.length() );
+			}
+		  }
 		}
 		if( rt_s1_wl.get() && ((wireless == WL_BLUETOOTH) || (wireless == WL_BLUETOOTH_LE)) ){
 			if( forwardMsg( s1, bt_tx_q )){
@@ -200,10 +224,24 @@ void Router::routeS2(){
 		// ESP_LOGI(FNAME,"S2 RX len: %d bytes, Q:%d BC:%d", s2.length(), bt_tx_q.isFull(), Flarm::bincom  );
 		// ESP_LOG_BUFFER_HEXDUMP(FNAME,s2.c_str(),s2.length(), ESP_LOG_INFO);
 
-		if( rt_s2_wl.get() && (wireless == WL_WLAN_MASTER || wireless == WL_WLAN_STANDALONE) )
+		if( wireless == WL_WLAN_MASTER || wireless == WL_WLAN_STANDALONE ) {
+		  if( rt_s2_wl.get() )
 			if( forwardMsg( s2, wl_aux_tx_q )){
 				// ESP_LOGI(FNAME,"S2 RX bytes %d forward to WiFi port 8882", s2.length() );
 			}
+		  if( rt_s2_w0.get() )
+			if( forwardMsg( s2, wl_vario_tx_q )){
+				// ESP_LOGI(FNAME,"S2 RX bytes %d forward to WiFi port 8880", s2.length() );
+			}
+		  if( rt_s2_w1.get() )
+			if( forwardMsg( s2, wl_main_tx_q )){
+				// ESP_LOGI(FNAME,"S2 RX bytes %d forward to WiFi port 8881", s2.length() );
+			}
+		  if( rt_w3_s2.get() && w3_tx_enable.get() )
+			if( forwardMsg( s2, wl_p2000_tx_q )){
+				// ESP_LOGI(FNAME,"S2 RX bytes %d forward to WiFi port 2000", s2.length() );
+			}
+		}
 		if( rt_s2_wl.get() && ((wireless == WL_BLUETOOTH) || (wireless == WL_BLUETOOTH_LE)) ){
 			if( forwardMsg( s2, bt_tx_q )){
 				// ESP_LOGI(FNAME,"S2 RX %d bytes forwarded to BT", s2.length() );
@@ -231,13 +269,13 @@ void Router::routeWLAN(){
 		// Route received data from any of the WLAN ports
 		while( pullMsg( wl_vario_rx_q, wlmsg) ){   // Port 8880 received data
 			// ESP_LOGI(FNAME,"From WLAN port 8880 RX NMEA %s", wlmsg.c_str() );
-			if( rt_s1_wl.get()  && serial1_speed.get() ){
+			if( rt_s1_w0.get()  && serial1_speed.get() ){
 				if( forwardMsg( wlmsg, s1_tx_q ) ){
 					Serial::setRxTxNotifier( TX1_REQ );
 					// ESP_LOGI(FNAME,"Send to S1 device, TCP port 8880 received %d bytes", wlmsg.length() );
 				}
 			}
-			if( rt_s2_wl.get() && serial2_speed.get() ){
+			if( rt_s2_w0.get() && serial2_speed.get() ){
 				if( forwardMsg( wlmsg, s2_tx_q ) ){
 					Serial::setRxTxNotifier( TX2_REQ );
 					// ESP_LOGI(FNAME,"Send to S2 device, TCP port 8880 received %d bytes", wlmsg.length() );
@@ -248,13 +286,29 @@ void Router::routeWLAN(){
 					// ESP_LOGI(FNAME,"Send to CAN XCV processing, TCP port 8880 received %d bytes", wlmsg.length() );
 				}
 			}
+			if( rt_w3_w0.get() && w3_tx_enable.get() ){
+				if( forwardMsg( wlmsg, wl_p2000_tx_q )){
+					// ESP_LOGI(FNAME,"%d bytes from port 8880 forwarded to port 2000", wlmsg.length() );
+				}
+			}
 			Protocols::parseNMEA( wlmsg.c_str() );
 		}
-		while( pullMsg( wl_flarm_rx_q, wlmsg ) ){   // Port 8881 received data
+		while( pullMsg( wl_main_rx_q, wlmsg ) ){   // Port 8881 received data
 			if( rt_s1_wl.get() && serial1_speed.get() ){
 				if( forwardMsg( wlmsg, s1_tx_q ) ){
 					Serial::setRxTxNotifier( TX1_REQ );
 					// ESP_LOGI(FNAME,"Send to S1 device, TCP port 8881 received %d bytes", wlmsg.length() );
+				}
+			}
+			if( rt_s2_w1.get() && serial2_speed.get() ){
+				if( forwardMsg( wlmsg, s2_tx_q ) ){
+					Serial::setRxTxNotifier( TX2_REQ );
+					// ESP_LOGI(FNAME,"Send to S2 device, TCP port 8881 received %d bytes", wlmsg.length() );
+				}
+			}
+			if( rt_w3_w1.get() && w3_tx_enable.get() ){
+				if( forwardMsg( wlmsg, wl_p2000_tx_q )){
+					// ESP_LOGI(FNAME,"%d bytes from port 8881 forwarded to port 2000", wlmsg.length() );
 				}
 			}
 			Protocols::parseNMEA( wlmsg.c_str() );
@@ -264,6 +318,31 @@ void Router::routeWLAN(){
 				if( forwardMsg( wlmsg, s2_tx_q ) ){
 					Serial::setRxTxNotifier( TX2_REQ );
 					// ESP_LOGI(FNAME,"Send to S2 device, TCP port 8882 received %d bytes", wlmsg.length() );
+				}
+			}
+			Protocols::parseNMEA( wlmsg.c_str() );
+		}
+		while( pullMsg( wl_p2000_rx_q, wlmsg ) ){
+			if( rt_w3_s1.get() && serial1_speed.get() ){
+				if( forwardMsg( wlmsg, s1_tx_q ) ){
+					Serial::setRxTxNotifier( TX1_REQ );
+					// ESP_LOGI(FNAME,"Send to S1, TCP port 2000 received %d bytes", wlmsg.length() );
+				}
+			}
+			if( rt_w3_s2.get() && serial2_speed.get() ){
+				if( forwardMsg( wlmsg, s2_tx_q ) ){
+					Serial::setRxTxNotifier( TX2_REQ );
+					// ESP_LOGI(FNAME,"Send to S2, TCP port 2000 received %d bytes", wlmsg.length() );
+				}
+			}
+			if( rt_w3_w0.get() ){
+				if( forwardMsg( wlmsg, wl_vario_tx_q )){
+					// ESP_LOGI(FNAME,"%d bytes from port 2000 forwarded to port 8880", wlmsg.length() );
+				}
+			}
+			if( rt_w3_w1.get() ){
+				if( forwardMsg( wlmsg, wl_main_tx_q )){
+					// ESP_LOGI(FNAME,"%d bytes from port 2000 forwarded to port 8881", wlmsg.length() );
 				}
 			}
 			Protocols::parseNMEA( wlmsg.c_str() );

@@ -54,8 +54,9 @@ typedef struct xcv_sock_server {
 }sock_server_t;
 
 static sock_server_t XCVario   = { .txbuf = &wl_vario_tx_q, .port=8880, .idle = 0, .pid = 0 };
-static sock_server_t FLARM     = { .txbuf = &wl_flarm_tx_q, .port=8881, .idle = 0, .pid = 0 };
+static sock_server_t MAIN      = { .txbuf = &wl_main_tx_q,  .port=8881, .idle = 0, .pid = 0 };
 static sock_server_t AUX       = { .txbuf = &wl_aux_tx_q,   .port=8882, .idle = 0, .pid = 0 };
+static sock_server_t P2000     = { .txbuf = &wl_p2000_tx_q, .port=2000, .idle = 0, .pid = 0 };
 static sock_server_t XCVarioMS = { .txbuf = &can_tx_q,      .port=8884, .idle = 0, .pid = 0 };
 
 
@@ -146,7 +147,10 @@ void WifiApp::socket_server(void *setup) {
 			if( len ){
 				// ESP_LOGI(FNAME, "port %d to sent %d: bytes, %s", config->port, len, buffer );
 				config->idle = 0;
-				DM.monitorString( MON_WIFI_8880+config->port-8880, DIR_TX, buffer, len );
+				if (config->port == 2000)
+					DM.monitorString( MON_WIFI_2000, DIR_TX, buffer, len );
+				else
+					DM.monitorString( MON_WIFI_8880+config->port-8880, DIR_TX, buffer, len );
 			}
 			else
 			{
@@ -167,7 +171,12 @@ void WifiApp::socket_server(void *setup) {
 				ssize_t sizeRead = recv(client_rec.client, r, SSTRLEN-1, MSG_DONTWAIT);
 				if (sizeRead > 0) {
 					config->dlw->process( r, sizeRead, config->port );
-					DM.monitorString( MON_WIFI_8880+config->port-8880, DIR_RX, r, sizeRead );
+					if (config->port == 2000)
+						DM.monitorString( MON_WIFI_2000, DIR_RX, r, sizeRead );
+					else
+						DM.monitorString( MON_WIFI_8880+config->port-8880, DIR_RX, r, sizeRead );
+
+
 					// ESP_LOGI(FNAME, "RX wifi client port %d size: %d bincom:%d", config->port, sizeRead, Flarm::bincom );
 					// ESP_LOG_BUFFER_HEXDUMP(FNAME,tcprx.c_str(),sizeRead, ESP_LOG_INFO);
 				}
@@ -233,6 +242,7 @@ void WifiApp::wifi_event_handler(void* arg, esp_event_base_t event_base,	int32_t
 
 void WifiApp::wifi_init_softap()
 {
+	// Wifi servers make sense only if mode is WLAN, not Bluetooth
 	if( wireless == WL_WLAN_MASTER || wireless == WL_WLAN_STANDALONE ){
 		tcpip_adapter_init();
 		ESP_LOGV(FNAME,"now esp_netif_init");
@@ -278,13 +288,40 @@ void WifiApp::wifi_init_softap()
 		ESP_ERROR_CHECK(esp_wifi_start());
 		ESP_ERROR_CHECK(esp_wifi_set_max_tx_power( int(wifi_max_power.get()*80.0/100.0) ));
 
-		if( serial2_speed.get() != 0 &&  serial2_tx.get() != 0 )  // makes only sense if there is data from AUX = serial interface S2
-			xTaskCreatePinnedToCore(&socket_server, "socket_ser_2", 4096, &AUX, 7, &AUX.pid, 0);  // 10
-		if( wireless == WL_WLAN_MASTER || wireless == WL_WLAN_STANDALONE ) // 8880 Wifi server makes only sense if mode is WLAN, not Bluetooth
+		// create the TCP servers based on whether routing (from serial or other) has been
+		// requested to them, not just based on use of the hardware serial ports.
+
+		bool s1_active = ( serial1_speed.get() != 0 );
+		bool s2_active = ( serial2_speed.get() != 0 );
+		// the original code also checked serial1_tx.get() and serial2_tx.get()
+		// - these are not the transmit flags, rather the bitfield routing NGs.
+		// but now some routings involving the serial ports are not in those fields
+		// so check the individual routing variables instead, e.g., rt_w3_s1.
+
+		// Port 8880 "XCV"
+		if ( rt_xcv_wl.get() || rt_w3_w0.get() || rt_wl_can.get()
+		      || ( rt_s1_w0.get() && s1_active )
+		      || ( rt_s2_w0.get() && s2_active ) )
 			xTaskCreatePinnedToCore(&socket_server, "socket_srv_0", 4096, &XCVario, 8, &XCVario.pid, 0);  // 10
-		if( serial1_speed.get() != 0 &&  serial1_tx.get() != 0 ) // makes only sense if there is a FLARM connected on S1
-			xTaskCreatePinnedToCore(&socket_server, "socket_ser_1", 4096, &FLARM, 9, &FLARM.pid, 0);  // 10
-		if( wireless == WL_WLAN_MASTER ) // New port 8884 makes sense if we are WLAN_MASTER (this is backward compatible)
+
+		// Port 8881 "MAIN"
+		if ( rt_w3_w1.get()
+		      || ( rt_s1_wl.get() && s1_active )
+		      || ( rt_s2_w1.get() && s2_active ) )
+			xTaskCreatePinnedToCore(&socket_server, "socket_ser_1", 4096, &MAIN, 9, &MAIN.pid, 0);  // 10
+
+		// Port 8882 "AUX"
+		if( rt_s2_wl.get() && s2_active )
+			xTaskCreatePinnedToCore(&socket_server, "socket_ser_2", 4096, &AUX, 7, &AUX.pid, 0);  // 10
+
+		// Port 2000
+		if ( rt_w3_xcv.get() || rt_w3_w0.get() || rt_w3_w1.get()
+		      || ( rt_w3_s1.get() && s1_active )
+		      || ( rt_w3_s2.get() && s2_active ) )
+			xTaskCreatePinnedToCore(&socket_server, "socket_2000", 4096, &P2000, 9, &P2000.pid, 0);  // 10
+
+		// New port 8884 makes sense if we are WLAN_MASTER (this is backward compatible)
+		if( wireless == WL_WLAN_MASTER )
 			xTaskCreatePinnedToCore(&socket_server, "socket_srv_3", 4096, &XCVarioMS, 6, &XCVarioMS.pid, 0);  // 10
 
 		ESP_LOGV(FNAME, "wifi_init_softap finished SUCCESS. SSID:%s password:%s channel:%d", (char *)wc.ap.ssid, (char *)wc.ap.password, wc.ap.channel );

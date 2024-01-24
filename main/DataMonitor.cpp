@@ -49,6 +49,7 @@ void DataMonitor::header( int ch, bool binary ){
 		case MON_WIFI_8880: what = "W 8880"; break;
 		case MON_WIFI_8881: what = "W 8881"; break;
 		case MON_WIFI_8882: what = "W 8882"; break;
+		case MON_WIFI_2000: what = "W 2000"; break;
 		case MON_S1:  what = "S1"; break;
 		case MON_S2:  what = "S2"; break;
 		case MON_CAN: what = "CAN"; break;

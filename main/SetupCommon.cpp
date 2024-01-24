@@ -186,6 +186,9 @@ bool SetupCommon::initSetup( bool& present ) {
 				ESP_LOGE(FNAME,"Error init with default NVS: %s", (*instances)[i]->key() );
 	}
 
+	// make any needed adjustments, from old to new NGs, unpack bitfields, etc:
+	post_init_NG();
+
 	if( factory_reset.get() ) {
 		ESP_LOGI(FNAME,"\n\n******  FACTORY RESET ******");
 		for(int i = 0; i < instances->size(); i++ ) {
@@ -206,7 +209,7 @@ bool SetupCommon::initSetup( bool& present ) {
 			}
 		}
 	}
-	//last_volume = (int)default_volume.get();
+
 	giveConfigChanges( 0, true );
 	return ret;
 };
@@ -251,7 +254,8 @@ const char * SetupCommon::getFixedID() {
 
 
 bool SetupCommon::isMaster(){
-	bool ret = (wireless == WL_WLAN_MASTER) || ((can_speed.get() != CAN_SPEED_OFF) && (can_mode.get() == CAN_MODE_MASTER));
+//	bool ret = (wireless == WL_WLAN_MASTER) || ((can_speed.get() != CAN_SPEED_OFF) && (can_mode.get() == CAN_MODE_MASTER));
+	bool ret = ( master_mode.get() == MODE_WL_MASTER || master_mode.get() == MODE_CAN_MASTER );
 	// ESP_LOGI(FNAME,"isMaster ret:%d", ret );
 	return( ret );
 }
@@ -268,8 +272,8 @@ bool SetupCommon::haveWLAN(){
 }
 
 bool SetupCommon::isClient(){
-	// ESP_LOGI(FNAME,"wireless:%d can_speed: %d can_mode: %d", wireless, can_speed.get(), can_mode.get() );
-	return((wireless == WL_WLAN_CLIENT) || ((can_speed.get() != CAN_SPEED_OFF) && (can_mode.get() == CAN_MODE_CLIENT) ));
+//	return((wireless == WL_WLAN_CLIENT) || ((can_speed.get() != CAN_SPEED_OFF) && (can_mode.get() == CAN_MODE_CLIENT) ));
+	return ( master_mode.get() == MODE_WL_CLIENT || master_mode.get() == MODE_CAN_CLIENT );
 }
 
 bool SetupCommon::isCanClient(){

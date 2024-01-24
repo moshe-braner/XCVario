@@ -71,6 +71,12 @@ void DataLink::addChk(const char c) {
 void DataLink::routeSerialData( const char *data, uint32_t len, int port, bool nmea ){
 	SString tx;
 	tx.set( data, len );
+	// TBD: this physically copies "data" byte by byte into an SString.
+	// But "data" is constant while this function runs,
+	// and so is "tx" which is destroyed upon return from this function.
+	// It would be nice to avoid the physical string copy, perhaps using std::string_view
+	// But note that forwardMsg() puts the string into a queue, to be transmitted later.
+
 	// ESP_LOGI(FNAME, "Port S%1d: len: %d", port, len );
 	// ESP_LOG_BUFFER_HEXDUMP(FNAME, tx.c_str(), tx.length(), ESP_LOG_INFO);
 	if( port == 1 ){      // S1
@@ -97,8 +103,8 @@ void DataLink::routeSerialData( const char *data, uint32_t len, int port, bool n
 		Router::routeWLAN();
 		// ESP_LOG_BUFFER_HEXDUMP(FNAME, tx.c_str(), tx.length(), ESP_LOG_INFO);
 	}
-	else if( port == 8881 ){  // WiFi / Flarm
-		Router::forwardMsg( tx, wl_flarm_rx_q, nmea  );
+	else if( port == 8881 ){  // WiFi / Main
+		Router::forwardMsg( tx, wl_main_rx_q, nmea  );
 		Router::routeWLAN();
 		// ESP_LOG_BUFFER_HEXDUMP(FNAME, tx.c_str(), tx.length(), ESP_LOG_INFO);
 	}
@@ -107,9 +113,14 @@ void DataLink::routeSerialData( const char *data, uint32_t len, int port, bool n
 		Router::routeWLAN();
 		// ESP_LOG_BUFFER_HEXDUMP(FNAME, tx.c_str(), tx.length(), ESP_LOG_INFO);
 	}
-	else if( port == 8884 ){  // WiFi / Aux
+	else if( port == 8884 ){  // WiFi Master/Client
 		Router::forwardMsg( tx, can_rx_q, nmea  );
 		Router::routeCAN();
+		// ESP_LOG_BUFFER_HEXDUMP(FNAME, tx.c_str(), tx.length(), ESP_LOG_INFO);
+	}
+	else if( port == 2000 ){  // WiFi port 2000
+		Router::forwardMsg( tx, wl_p2000_rx_q, nmea  );
+		Router::routeWLAN();
 		// ESP_LOG_BUFFER_HEXDUMP(FNAME, tx.c_str(), tx.length(), ESP_LOG_INFO);
 	}
 }

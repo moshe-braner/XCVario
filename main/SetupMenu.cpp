@@ -45,6 +45,18 @@
 SetupMenuSelect * audio_range_sm = 0;
 SetupMenuSelect * mpu = 0;
 
+SetupMenuSelect *show_mode_menu = 0;
+void update_show_mode_menu() {
+	if (show_mode_menu)
+		show_mode_menu->updateEntry( mode_shown, 0 );
+}
+
+SetupMenuValFloat *volume_menu = 0;
+void update_volume_menu_max() {
+	if (volume_menu)
+		volume_menu->setMax( max_volume.get() );
+}
+
 // Menu for flap setup
 
 float elev_step = 1;
@@ -60,41 +72,6 @@ int gload_reset( SetupMenuSelect * p ){
 }
 
 int compass_ena( SetupMenuSelect * p ){
-	return 0;
-}
-
-void init_routing(){
-	uint32_t s1rt = (uint32_t)serial1_tx.get();
-	ESP_LOGI(FNAME,"init_routing S1: %x", s1rt);
-	rt_s1_xcv.set( (s1rt >> (RT_XCVARIO))& 1 );
-	rt_s1_wl.set( (s1rt >> (RT_WIRELESS))& 1 );
-	rt_s1_s2.set( (s1rt >> (RT_S1))& 1 );
-	rt_s1_can.set( (s1rt >> (RT_CAN))& 1 );
-
-	uint32_t s2rt = (uint32_t)serial2_tx.get();
-	ESP_LOGI(FNAME,"init_routing S2: %x", s2rt);
-	rt_s2_xcv.set( (s2rt >> (RT_XCVARIO))& 1 );
-	rt_s2_wl.set( (s2rt >> (RT_WIRELESS))& 1 );
-	rt_s1_s2.set( (s2rt >> (RT_S1))& 1 );
-	rt_s2_can.set( (s2rt >> (RT_CAN))& 1 );
-}
-
-
-int update_routing( SetupMenuSelect * p ){
-	uint32_t routing =
-			( (uint32_t)rt_s1_xcv.get() << (RT_XCVARIO) ) |
-			( (uint32_t)rt_s1_wl.get()  << (RT_WIRELESS) ) |
-			( (uint32_t)rt_s1_s2.get()  << (RT_S1) ) |
-			( (uint32_t)rt_s1_can.get() << (RT_CAN) );
-	ESP_LOGI(FNAME,"update_routing S1: %x", routing);
-	serial1_tx.set( routing );
-	routing =
-			(uint32_t)rt_s2_xcv.get()  << (RT_XCVARIO) |
-			( (uint32_t)rt_s2_wl.get() << (RT_WIRELESS) ) |
-			( (uint32_t)rt_s1_s2.get() << (RT_S1) ) |
-			( (uint32_t)rt_s2_can.get()<< (RT_CAN) );
-	ESP_LOGI(FNAME,"update_routing S2: %x", routing);
-	serial2_tx.set( routing );
 	return 0;
 }
 
@@ -462,7 +439,7 @@ void SetupMenu::begin( IpsDisplay* display, PressureSensor * bmp, AnalogInput *a
 	_adc = adc;
 	setup();
 	audio_volume.set( default_volume.get() );
-	init_routing();
+	// init_routing();   now done from SetupNG update_NGs()
 	init_screens();
 	initGearWarning();
 }
@@ -761,16 +738,6 @@ void SetupMenu::escape(){
 	}
 }
 
-void SetupMenu::vario_menu_create_damping( MenuEntry *top ){
-	SetupMenuValFloat * vda = new SetupMenuValFloat( 	"Damping", "sec", 2.0, 10.0, 0.1, vario_setup, false, &vario_delay );
-	vda->setHelp("Response time, time constant of Vario low pass kalman filter");
-	top->addEntry( vda );
-
-	SetupMenuValFloat * vdav = new SetupMenuValFloat( 	"Averager", "sec", 2.0, 60.0, 1, 0, false, &vario_av_delay );
-	vdav->setHelp("Response time, time constant of digital Average Vario Display");
-	top->addEntry( vdav );
-}
-
 void SetupMenu::vario_menu_create_meanclimb( MenuEntry *top ){
 	SetupMenuValFloat * vccm = new SetupMenuValFloat( "Minimum climb", "",	0.0, 2.0, 0.1, 0, false, &core_climb_min );
 	vccm->setHelp("Minimum climb rate that counts for arithmetic mean climb value");
@@ -819,7 +786,7 @@ void SetupMenu::vario_menu_create_s2f( MenuEntry *top ){
 
 	SetupMenuSelect * s2fsw = new SetupMenuSelect( "S2F Switch", RST_NONE , 0, false, &s2f_switch_type );
 	top->addEntry( s2fsw );
-	s2fsw->setHelp(  "Select S2F switch type: normal switch, push button (toggling S2F mode on each press), or disabled");
+	s2fsw->setHelp( "Select S2F switch type: normal switch, push button (toggling S2F mode on each press), or disabled");
 	s2fsw->addEntry( "Switch");
 	s2fsw->addEntry( "Push Button");
 	s2fsw->addEntry( "Switch Invert");
@@ -861,8 +828,39 @@ void SetupMenu::vario_menu_create_ec( MenuEntry *top ){
 	top->addEntry( elca );
 };
 
+void SetupMenu::vario_menu_create_more( MenuEntry *top ){
+
+	SetupMenuSelect * ncolor = new SetupMenuSelect( "Needle Color", RST_NONE, 0 , true, &needle_color );
+	ncolor->setHelp("Choose the color of the vario needle");
+	ncolor->addEntry( "White");
+	ncolor->addEntry( "Orange");
+	ncolor->addEntry( "Red");
+	top->addEntry( ncolor );
+
+	SetupMenuValFloat * vda = new SetupMenuValFloat( "Damping", "sec", 2.0, 10.0, 0.1, vario_setup, false, &vario_delay );
+	vda->setHelp("Response time, time constant of Vario low pass kalman filter");
+	top->addEntry( vda );
+
+	SetupMenuValFloat * vdav = new SetupMenuValFloat( "Averager", "sec", 2.0, 60.0, 1, 0, false, &vario_av_delay );
+	vdav->setHelp("Response time, time constant of digital Average Vario Display");
+	top->addEntry( vdav );
+
+	SetupMenu * meanclimb = new SetupMenu( "Mean Climb" );
+	meanclimb->setHelp("Options for calculation of Mean Climb (MC recommendation) displayed by green/red rhombus");
+	top->addEntry( meanclimb );
+	meanclimb->addCreator( vario_menu_create_meanclimb );
+
+	SetupMenu * s2fs = new SetupMenu( "S2F Settings" );
+	top->addEntry( s2fs, meanclimb );
+	s2fs->addCreator( vario_menu_create_s2f );
+
+	SetupMenu * elco = new SetupMenu( "Electronic Compensation" );
+	top->addEntry( elco, s2fs );
+	elco->addCreator( vario_menu_create_ec );
+}
+
 void SetupMenu::vario_menu_create( MenuEntry *vae ){
-	ESP_LOGI(FNAME,"SetupMenu::vario_menu_create( %p )", vae );
+	//ESP_LOGI(FNAME,"SetupMenu::vario_menu_create( %p )", vae );
 
 	SetupMenuValFloat * vga = new SetupMenuValFloat( "Range", "",	1.0, 30.0, 1, audio_setup_f, true, &range );
 	vga->setHelp("Upper and lower value for Vario graphic display region");
@@ -873,56 +871,36 @@ void SetupMenu::vario_menu_create( MenuEntry *vae ){
 	vlogscale->setHelp("Use a logarithmic scale in the vario gauge");
 	vlogscale->addEntry( "DISABLE" );
 	vlogscale->addEntry( "ENABLE" );
-	vae->addEntry( vlogscale, vga );
+	vae->addEntry( vlogscale /* , vga */ );
 
 	SetupMenuSelect * vamod = new SetupMenuSelect( 	"Mode", RST_NONE, 0 , true, &vario_mode );
 	vamod->setHelp("Controls if vario considers polar sink (=Netto), or not (=Brutto), or if Netto vario applies only in Cruise Mode");
 	vamod->addEntry( "Brutto");
 	vamod->addEntry( "Netto");
 	vamod->addEntry( "Cruise-Netto");
-	vae->addEntry( vamod, vlogscale);
+	vae->addEntry( vamod /* , vlogscale */);
 
 	SetupMenuSelect * nemod = new SetupMenuSelect( "Netto Mode", RST_NONE, 0 , true, &netto_mode );
 	nemod->setHelp("In 'Relative' mode (also called 'Super-Netto') circling sink is considered,  to show climb rate as if you were circling there");
 	nemod->addEntry( "Normal");
 	nemod->addEntry( "Relative");
-	vae->addEntry( nemod, vamod  );
+	vae->addEntry( nemod /* , vamod */ );
 
 	SetupMenuSelect * sink = new SetupMenuSelect( "Polar Sink", RST_NONE, 0 , true, &ps_display );
 	sink->setHelp("Display polar sink rate together with climb rate when Vario is in Brutto Mode (else disabled)");
 	sink->addEntry( "DISABLE");
 	sink->addEntry( "ENABLE");
-	vae->addEntry( sink, nemod );
-
-	SetupMenuSelect * ncolor = new SetupMenuSelect( "Needle Color", RST_NONE, 0 , true, &needle_color );
-	ncolor->setHelp("Choose the color of the vario needle");
-	ncolor->addEntry( "White");
-	ncolor->addEntry( "Orange");
-	ncolor->addEntry( "Red");
-	vae->addEntry( ncolor, sink );
+	vae->addEntry( sink /* , nemod */ );
 
 	SetupMenuSelect * scrcaid = new SetupMenuSelect( "Center-Aid", RST_ON_EXIT, 0, true, &screen_centeraid );
 	scrcaid->setHelp("Enable/disable display of centering aid (reboots)");
 	scrcaid->addEntry( "Disable");
 	scrcaid->addEntry( "Enable");
-	vae->addEntry(scrcaid,ncolor);
+	vae->addEntry( scrcaid );
 
-	SetupMenu * vdamp = new SetupMenu( "Vario Damping" );
-	vae->addEntry( vdamp, scrcaid );
-	vdamp->addCreator( vario_menu_create_damping );
-
-	SetupMenu * meanclimb = new SetupMenu( "Mean Climb" );
-	meanclimb->setHelp("Options for calculation of Mean Climb (MC recommendation) displayed by green/red rhombus");
-	vae->addEntry( meanclimb, vdamp);
-	meanclimb->addCreator( vario_menu_create_meanclimb );
-
-	SetupMenu * s2fs = new SetupMenu( "S2F Settings" );
-	vae->addEntry( s2fs, meanclimb );
-	s2fs->addCreator( vario_menu_create_s2f );
-
-	SetupMenu * elco = new SetupMenu( "Electronic Compensation" );
-	vae->addEntry( elco, s2fs );
-	elco->addCreator( vario_menu_create_ec );
+	SetupMenu * vmore = new SetupMenu( "More Vario Options" );
+	vmore->addCreator( vario_menu_create_more );
+	vae->addEntry( vmore );
 }
 
 void SetupMenu::audio_menu_create_tonestyles( MenuEntry *top ){
@@ -1005,11 +983,13 @@ void SetupMenu::audio_menu_create_equalizer( MenuEntry *top ){
 }
 
 void SetupMenu::audio_menu_create_volume( MenuEntry *top ){
+
 	SetupMenuValFloat * vol = new SetupMenuValFloat( "Current Volume", "%",
 	    0.0, 200.0, 2.0, vol_adj, false, &audio_volume );
 	// unlike top-level menu volume which exits setup, this returns to parent menu
 	vol->setHelp("Audio volume level for variometer tone on internal and external speaker");
-	vol->setMax(max_volume.get());   // only works after leaving this *parent* menu and returning
+	vol->setMax(max_volume.get());   // this only works after leaving *parent* menu and returning
+	volume_menu = vol;               // but this allows changing the volume menu max later
 	top->addEntry( vol );
 
 	SetupMenuSelect * cdv = new SetupMenuSelect( "Current->Default", RST_NONE, cur_vol_dflt, true );
@@ -1023,14 +1003,13 @@ void SetupMenu::audio_menu_create_volume( MenuEntry *top ){
 	dv->setHelp("Default volume for Audio when device is switched on");
 	top->addEntry( dv );
 
-// after max_volume exit menu, when re-entering will setMax() volume setting above
 	SetupMenuValFloat * mv = new SetupMenuValFloat( "Max Volume", "%",
-		    0.0, 200.0, 5.0, 0, true, &max_volume );
+		    0.0, 200.0, 5.0, 0, false, &max_volume );
 	mv->setHelp("Maximum audio volume setting allowed");
 	top->addEntry( mv );
 
 	SetupMenu * audeq = new SetupMenu( "Equalizer" );
-	audeq->setHelp(  "Equalization parameters for a constant perceived volume over a wide frequency range", 220);
+	audeq->setHelp( "Equalization parameters for a constant perceived volume over a wide frequency range", 220);
 	audeq->addCreator(audio_menu_create_equalizer);
 	top->addEntry( audeq );
 
@@ -1083,7 +1062,50 @@ void SetupMenu::audio_menu_create_mute( MenuEntry *top ){
 	top->addEntry( amps );
 }
 
+// a few audio options to be made accessible in student mode
+void SetupMenu::audio_menu_create_student( MenuEntry *top ){
+
+	SetupMenuSelect * dt = new SetupMenuSelect( "Tone Flavor", RST_NONE, audio_setup_s, true, &dual_tone );
+	dt->setHelp("Single tone (di/di/di), dual tone (ILEC style) (di/da/di), short beeps (di, di), or very short (RICO style) (tick, tick)");
+	dt->addEntry( "Single Tone");      // 0=ATM_SINGLE_TONE
+	dt->addEntry( "Dual Tone");        // 1=ATM_DUAL_TONE
+	dt->addEntry( "Short Beeps");      // 2=ATM_RICO_LONG
+	dt->addEntry( "Very Short");       // 3=ATM_RICO_SHORT
+	top->addEntry( dt );
+
+	SetupMenuSelect * asida = new SetupMenuSelect( "In Sink", RST_NONE, 0 , true, &audio_mute_sink );
+	asida->setHelp("Configure vario audio volume while in sink (below deadband)");
+	asida->addEntry( "Normal");  // 0
+	asida->addEntry( "Louder");  // 1
+	asida->addEntry( "Softer");  // 2
+	asida->addEntry( "Mute");    // 3
+	top->addEntry( asida );
+
+	// like top-level menu, exit setup (unlike the non-student volume menu)
+	SetupMenuValFloat * vol = new SetupMenuValFloat( "Current Volume", "%",
+	    0.0, 200.0, 2.0, vol_adj, true, &audio_volume );
+	vol->setHelp("Audio volume level for variometer tone on internal and external speaker");
+	vol->setMax(max_volume.get());   // only works after leaving this *parent* menu and returning
+	top->addEntry( vol );
+
+	// after max_volume exit menu, when re-entering will setMax() volume setting above
+	SetupMenuValFloat * mv = new SetupMenuValFloat( "Max Volume", "%",
+		    0.0, 200.0, 5.0, 0, true, &max_volume );
+	mv->setHelp("Maximum audio volume setting allowed");
+	top->addEntry( mv );
+
+	SetupMenuSelect * amspvol = new SetupMenuSelect( "STF Volume", RST_NONE, 0 , true, &audio_split_vol );
+	amspvol->setHelp("Enable independent audio volume in SpeedToFly and Vario modes, disable for one volume for both");
+	amspvol->addEntry( "Disable");      // 0
+	amspvol->addEntry( "Enable");       // 1
+	top->addEntry( amspvol );
+}
+
 void SetupMenu::audio_menu_create( MenuEntry *audio ){
+
+	// volume menu has gone out of scope by now
+	// make sure update_volume_menu_max() does not try and dereference it
+	volume_menu = 0;
 	SetupMenu * volumes = new SetupMenu( "Volume options" );
 	audio->addEntry( volumes );
 	volumes->setHelp( "Configure audio volume options", 240);
@@ -1662,15 +1684,6 @@ void SetupMenu::options_menu_create_advanced( MenuEntry *top ){
 	top->addEntry( rotary );
 	rotary->addCreator(options_menu_create_rotary);
 
-	SetupMenu * gload = new SetupMenu( "G-Load Display" );
-	top->addEntry( gload );
-	gload->addCreator(options_menu_create_gload);
-
-	SetupMenu * horizon_screen = new SetupMenu( "Horizon Display");
-	top->addEntry( horizon_screen );
-	horizon_screen->setHelp("Options regarding the horizon screen");
-	horizon_screen->addCreator( options_menu_create_horizon_screen );
-
 	if( student_mode.get() == 0 ) {
 		SetupMenuSelect *stumo  = new SetupMenuSelect( "Student Mode", RST_ON_EXIT, 0, true, &student_mode );
 		top->addEntry( stumo );
@@ -1697,6 +1710,15 @@ void SetupMenu::options_menu_create( MenuEntry *top ){
 	top->addEntry( flarm );
 	flarm->setHelp( "Option to display or sound warnings depending on FLARM alarm level", 240);
 	flarm->addCreator(options_menu_create_flarm);
+
+	SetupMenu * gload = new SetupMenu( "G-Load Display" );
+	top->addEntry( gload );
+	gload->addCreator(options_menu_create_gload);
+
+	SetupMenu * horizon_screen = new SetupMenu( "Horizon Display");
+	top->addEntry( horizon_screen );
+	horizon_screen->setHelp("Options regarding the horizon screen");
+	horizon_screen->addCreator( options_menu_create_horizon_screen );
 
 	// Advanced Options submenu
 	SetupMenu * advopt = new SetupMenu( "Advanced Options" );
@@ -1991,20 +2013,26 @@ void SetupMenu::system_menu_create_altimeter_airspeed( MenuEntry *top ){
 }
 
 void SetupMenu::system_menu_create_interfaceS1_routing( MenuEntry *top ){
-	SetupMenuSelect * s1outxcv = new SetupMenuSelect( "XCVario", RST_NONE, update_routing, true, &rt_s1_xcv );
+	SetupMenuSelect * s1outxcv = new SetupMenuSelect( "XCVario", RST_ON_EXIT, 0, true, &rt_s1_xcv );
 	s1outxcv->addEntry( "Disable");
 	s1outxcv->addEntry( "Enable");
 	s1outxcv->setHelp( "Whether vario data is routed to/from serial port S1");
 	top->addEntry( s1outxcv );
 
-	SetupMenuSelect * s1outwl = new SetupMenuSelect( "Wireless", RST_NONE, update_routing, true, &rt_s1_wl );
+	SetupMenuSelect * s1outwl = new SetupMenuSelect( "Wireless", RST_ON_EXIT, 0, true, &rt_s1_wl );
 	s1outwl->addEntry( "Disable");
 	s1outwl->addEntry( "Enable");
 	s1outwl->setHelp( "Whether wireless (BT or WiFi port 8881) is routed to/from serial port S1");
 	top->addEntry( s1outwl );
 
+	SetupMenuSelect * s1outw0 = new SetupMenuSelect( "WiFi 8880", RST_ON_EXIT, 0, true, &rt_s1_w0 );
+	s1outw0->addEntry( "Disable");
+	s1outw0->addEntry( "Enable");
+	s1outw0->setHelp( "Whether WiFi port 8880 is routed to/from serial port S1");
+	top->addEntry( s1outw0 );
+
 	if( hardwareRevision.get() >= XCVARIO_21 ) {
-		SetupMenuSelect * s1outs2 = new SetupMenuSelect( "S2-RS232", RST_NONE, update_routing, true, &rt_s1_s2 );
+		SetupMenuSelect * s1outs2 = new SetupMenuSelect( "RS232 S2", RST_ON_EXIT, 0, true, &rt_s1_s2 );
 		s1outs2->addEntry( "Disable");
 		s1outs2->addEntry( "Enable");
 		s1outs2->setHelp( "Whether serial port S2 data is routed to/from serial port S1");
@@ -2065,17 +2093,29 @@ void SetupMenu::system_menu_create_interfaceS1( MenuEntry *top ){
 
 void SetupMenu::system_menu_create_interfaceS2_routing( MenuEntry *top ){
 
-	SetupMenuSelect * s2outxcv = new SetupMenuSelect( "XCVario", RST_NONE, update_routing, true, &rt_s2_xcv );
+	SetupMenuSelect * s2outxcv = new SetupMenuSelect( "XCVario", RST_ON_EXIT, 0, true, &rt_s2_xcv );
 	s2outxcv->addEntry( "Disable");
 	s2outxcv->addEntry( "Enable");
 	s2outxcv->setHelp( "Whether vario data is routed to/from serial port S2");
 	top->addEntry( s2outxcv );
 
-	SetupMenuSelect * s2outwl = new SetupMenuSelect( "Wireless", RST_NONE, update_routing, true, &rt_s2_wl );
+	SetupMenuSelect * s2outwl = new SetupMenuSelect( "Wireless", RST_ON_EXIT, 0, true, &rt_s2_wl );
 	s2outwl->addEntry( "Disable");
 	s2outwl->addEntry( "Enable");
 	s2outwl->setHelp( "Whether wireless (BT or WiFi port 8882) is routed to/from serial port S2");
 	top->addEntry( s2outwl );
+
+	SetupMenuSelect * s2outw0 = new SetupMenuSelect( "Wifi 8880", RST_ON_EXIT, 0, true, &rt_s2_w0 );
+	s2outw0->addEntry( "Disable");
+	s2outw0->addEntry( "Enable");
+	s2outw0->setHelp( "Whether WiFi port 8880 is routed to/from serial port S2");
+	top->addEntry( s2outw0 );
+
+	SetupMenuSelect * s2outw1 = new SetupMenuSelect( "Wifi 8881", RST_ON_EXIT, 0, true, &rt_s2_w1 );
+	s2outw1->addEntry( "Disable");
+	s2outw1->addEntry( "Enable");
+	s2outw1->setHelp( "Whether WiFi port 8881 is routed to/from serial port S2");
+	top->addEntry( s2outw1 );
 }
 
 void SetupMenu::system_menu_create_interfaceS2( MenuEntry *top ){
@@ -2116,25 +2156,26 @@ void SetupMenu::system_menu_create_interfaceS2( MenuEntry *top ){
 }
 
 void SetupMenu::system_menu_create_interfaceCAN_routing( MenuEntry *top ){
-	SetupMenuSelect * canoutxcv = new SetupMenuSelect( "XCVario", RST_NONE, 0, true, &rt_can_xcv );
+
+	SetupMenuSelect * canoutxcv = new SetupMenuSelect( "XCVario", RST_ON_EXIT, 0, true, &rt_can_xcv );
 	canoutxcv->addEntry( "Disable");
 	canoutxcv->addEntry( "Enable");
 	canoutxcv->setHelp( "Whether vario data is routed to/from the CAN bus");
 	top->addEntry( canoutxcv );
 
-	SetupMenuSelect * canoutwl = new SetupMenuSelect( "Wireless", RST_NONE, 0, true, &rt_wl_can );
+	SetupMenuSelect * canoutwl = new SetupMenuSelect( "Wireless", RST_ON_EXIT, 0, true, &rt_wl_can );
 	canoutwl->addEntry( "Disable");
 	canoutwl->addEntry( "Enable");
 	canoutwl->setHelp( "Whether wireless data (BT or WiFi port 8880) is routed to/from the CAN bus");
 	top->addEntry( canoutwl );
 
-	SetupMenuSelect * canouts1 = new SetupMenuSelect( "S1-RS232", RST_NONE, update_routing, true, &rt_s1_can );
+	SetupMenuSelect * canouts1 = new SetupMenuSelect( "RS232 S1", RST_ON_EXIT, 0, true, &rt_s1_can );
 	canouts1->addEntry( "Disable");
 	canouts1->addEntry( "Enable");
 	canouts1->setHelp( "Whether serial port S1 data is routed to/from the CAN bus");
 	top->addEntry( canouts1 );
 
-	SetupMenuSelect * canouts2 = new SetupMenuSelect( "S2-RS232", RST_NONE, update_routing, true, &rt_s2_can );
+	SetupMenuSelect * canouts2 = new SetupMenuSelect( "RS232 S2", RST_ON_EXIT, 0, true, &rt_s2_can );
 	canouts2->addEntry( "Disable");
 	canouts2->addEntry( "Enable");
 	canouts2->setHelp( "Whether serial port S2 data is routed to/from the CAN bus");
@@ -2154,10 +2195,8 @@ void SetupMenu::system_menu_create_comm_wireless( MenuEntry *top ){
 	btm->setHelp( "Activate wireless interface type to connect navigation devices or another XCvario. (Reboots)", 220 );
 	top->addEntry( btm );
 //#else
-// Need to set up a new variable since SetupMenuSelect requires entries corresponding
-// to the enum, thus we cannot simply skip some of the entries in wireless_type.
+
 // The selected entry will be internally translated into wireless_type (see SetupNG.cpp).
-/*
 	SetupMenuSelect * wlm = new SetupMenuSelect( "Wireless", RST_ON_EXIT, 0, true, &wireless_mode );
 	wlm->addEntry( "Disable");
 	wlm->addEntry( "Bluetooth");
@@ -2165,7 +2204,7 @@ void SetupMenu::system_menu_create_comm_wireless( MenuEntry *top ){
 	wlm->addEntry( "WiFi");
 	wlm->setHelp( "Activate wireless interface type to connect navigation devices or another XCvario. (Reboots)", 220 );
 	top->addEntry( wlm );
-*/
+
 //#endif
 
 	SetupMenuValFloat *wifip = new SetupMenuValFloat( "WIFI Power", "%", 10.0, 100.0, 5.0, update_wifi_power, false, &wifi_max_power );
@@ -2173,7 +2212,7 @@ void SetupMenu::system_menu_create_comm_wireless( MenuEntry *top ){
 	top->addEntry( wifip );
 	wifip->setHelp("Maximum Wifi Power to be used 10..100% or 2..20dBm");
 
-	SetupMenuSelect * wifimal = new SetupMenuSelect( "Lock Master", RST_NONE, master_xcv_lock, true, &master_xcvario_lock );
+	SetupMenuSelect * wifimal = new SetupMenuSelect( "Lock Master", RST_NONE, 0, true, &master_xcvario_lock );
 	wifimal->setHelp( "In wireless client role, lock this client to the scanned master XCVario ID above");
 	wifimal->addEntry( "Unlock");
 	wifimal->addEntry( "Lock");
@@ -2183,17 +2222,25 @@ void SetupMenu::system_menu_create_comm_wireless( MenuEntry *top ){
 	top->addEntry( cusid );
 	cusid->setHelp( "Select custom ID (SSID) for wireless BT (or WIFI) interface, e.g. D-1234. Restart device to activate", 215);
 	cusid->addCreator( options_menu_create_wireless_custom_id );
+
+	SetupMenuSelect * w3txdis = new SetupMenuSelect( "Port 2000 TX", RST_NONE, 0, true, &w3_tx_enable );
+	top->addEntry( w3txdis );
+	w3txdis->setHelp( "Disable transmission (TX) on WiFi Port 2000 if not required (for devices that are output-only)");
+	w3txdis->addEntry( "Disable");
+	w3txdis->addEntry( "Enable");
 }
 
 void SetupMenu::system_menu_create_comm_wired( MenuEntry *top ){
 
 	SetupMenu * rs232 = new SetupMenu( "RS232 Interface S1" );
 	top->addEntry( rs232 );
+	rs232->setHelp( "Configure serial interface S1 (reboots)", 240);
 	rs232->addCreator(system_menu_create_interfaceS1);
 
 	if( hardwareRevision.get() >= XCVARIO_21 ) {
 		SetupMenu * rs232_2 = new SetupMenu( "RS232 Interface S2" );
 		top->addEntry( rs232_2 );
+		rs232_2->setHelp( "Configure serial interface S2 (reboots)");
 		rs232_2->addCreator(system_menu_create_interfaceS2);
 	}
 
@@ -2203,7 +2250,7 @@ void SetupMenu::system_menu_create_comm_wired( MenuEntry *top ){
 		SetupMenuSelect * devmod = new SetupMenuSelect( "CAN Mode", RST_ON_EXIT , 0, false, &can_mode );
 		top->addEntry( devmod );
 		if (can_speed.get() == CAN_SPEED_OFF)
-			devmod->setHelp( "Warning: CAN is set to 'off' in the CAN speed menu");
+			devmod->setHelp( "Warning: CAN speed was set to 'off'");
 		else
 			devmod->setHelp( "Select 'Standalone' for single seater, 'Master' in front, 'Client' for secondary device in rear (reboots)");
 		devmod->addEntry( "Master");
@@ -2221,6 +2268,39 @@ void SetupMenu::system_menu_create_comm_wired( MenuEntry *top ){
 	}
 }
 
+void SetupMenu::system_menu_create_interfaceW3_routing( MenuEntry *top ){
+
+	SetupMenuSelect * w3outxcv = new SetupMenuSelect( "XCVario", RST_ON_EXIT, 0, true, &rt_w3_xcv );
+	w3outxcv->addEntry( "Disable");
+	w3outxcv->addEntry( "Enable");
+	w3outxcv->setHelp("Send vario data to/from WiFi port 2000");
+	top->addEntry( w3outxcv );
+
+	SetupMenuSelect * w3outs1 = new SetupMenuSelect( "RS232 S1", RST_ON_EXIT, 0, true, &rt_w3_s1 );
+	w3outs1->addEntry( "Disable");
+	w3outs1->addEntry( "Enable");
+	w3outs1->setHelp("Send S1 serial port data to/from WiFi port 2000");
+	top->addEntry( w3outs1 );
+
+	SetupMenuSelect * w3outs2 = new SetupMenuSelect( "RS232 S2", RST_ON_EXIT, 0, true, &rt_w3_s2 );
+	w3outs2->addEntry( "Disable");
+	w3outs2->addEntry( "Enable");
+	w3outs2->setHelp("Send S2 serial port data to/from WiFi port 2000");
+	top->addEntry( w3outs2 );
+
+	SetupMenuSelect * w3outw0 = new SetupMenuSelect( "WiFi 8880", RST_ON_EXIT, 0, true, &rt_w3_w0 );
+	w3outw0->addEntry( "Disable");
+	w3outw0->addEntry( "Enable");
+	w3outw0->setHelp("Send WiFi port 8880 data to/from WiFi port 2000");
+	top->addEntry( w3outw0 );
+
+	SetupMenuSelect * w3outw1 = new SetupMenuSelect( "WiFi 8881", RST_ON_EXIT, 0, true, &rt_w3_w1 );
+	w3outw1->addEntry( "Disable");
+	w3outw1->addEntry( "Enable");
+	w3outw1->setHelp("Send WiFi port 8881 data to/from WiFi port 2000");
+	top->addEntry( w3outw1 );
+}
+
 void SetupMenu::system_menu_create_comm_routing( MenuEntry *top ){
 
 	SetupMenuSelect * wloutxcv = new SetupMenuSelect( "XCVario-WL", RST_NONE, 0, true, &rt_xcv_wl );
@@ -2231,12 +2311,18 @@ void SetupMenu::system_menu_create_comm_routing( MenuEntry *top ){
 
 	SetupMenu * s1out = new SetupMenu( "S1 Routing");
 	top->addEntry( s1out );
-	s1out->setHelp( "Select data sources to be routed from/to serial interface S1");
+	if (serial1_speed.get() == 0)
+		s1out->setHelp( "Warning: S1 baud rate was set to 'off'");
+	else
+		s1out->setHelp( "Select data sources to be routed from/to serial interface S1 (reboots)");
 	s1out->addCreator( system_menu_create_interfaceS1_routing );
 
 	if( hardwareRevision.get() >= XCVARIO_21 ) {
 		SetupMenu * s2out = new SetupMenu( "S2 Routing" );
-		s2out->setHelp( "Select data sources to be routed from/to serial interface S2");
+		if (serial2_speed.get() == 0)
+			s2out->setHelp( "Warning: S2 baud rate was set to 'off'");
+		else
+			s2out->setHelp( "Select data sources to be routed from/to serial interface S2 (reboots)");
 		top->addEntry( s2out );
 		s2out->addCreator( system_menu_create_interfaceS2_routing );
 	}
@@ -2244,20 +2330,29 @@ void SetupMenu::system_menu_create_comm_routing( MenuEntry *top ){
 	if( hardwareRevision.get() >= XCVARIO_22 ){
 		SetupMenu * canrt = new SetupMenu( "CAN Routing" );
 		top->addEntry( canrt );
-		canrt->setHelp( "Select data sources to be routed from/to CAN interface");
+		canrt->setHelp( "Select data sources to be routed from/to CAN interface (reboots)");
 		canrt->addCreator( system_menu_create_interfaceCAN_routing );
 	}
 
-	SetupMenuSelect * datamon = new SetupMenuSelect( "Monitor", RST_NONE, data_mon, true, &data_monitor );
+	SetupMenu * w3rt = new SetupMenu( "Port 2000 Routing" );
+	top->addEntry( w3rt );
+	w3rt->setHelp( "Select data sources to be routed from/to WiFi port 2000 (reboots)");
+	w3rt->addCreator( system_menu_create_interfaceW3_routing );
+
+	SetupMenuSelectCodes * datamon = new SetupMenuSelectCodes( "Monitor", RST_NONE, data_mon, true, &data_monitor );
 	datamon->setHelp( "Short press to start/pause, long press to terminate", 280);
-	datamon->addEntry( "Disable");
-	datamon->addEntry( "Bluetooth");
-	datamon->addEntry( "Wifi 8880");
-	datamon->addEntry( "Wifi 8881");
-	datamon->addEntry( "Wifi 8882");
-	datamon->addEntry( "RS232 S1");
-	datamon->addEntry( "RS232 S2");
-	datamon->addEntry( "CAN Bus");
+	datamon->addEntryCode( "Disable", MON_OFF);
+	if ((wireless == WL_BLUETOOTH) || (wireless == WL_BLUETOOTH_LE)) {
+		datamon->addEntryCode( "Bluetooth", MON_BLUETOOTH);
+	} else if (wireless != WL_DISABLE) {
+		datamon->addEntryCode( "Wifi 8880", MON_WIFI_8880);
+		datamon->addEntryCode( "Wifi 8881", MON_WIFI_8881);
+		datamon->addEntryCode( "Wifi 8882", MON_WIFI_8882);
+		datamon->addEntryCode( "Wifi 2000", MON_WIFI_2000);
+	}
+	datamon->addEntryCode( "RS232 S1", MON_S1);
+	datamon->addEntryCode( "RS232 S2", MON_S2);
+	datamon->addEntryCode( "CAN Bus", MON_CAN);
 	top->addEntry( datamon );
 
 	SetupMenuSelect * datamonmod = new SetupMenuSelect( "Monitor Mode", RST_NONE, data_mon, true, &data_monitor_mode );
@@ -2269,7 +2364,6 @@ void SetupMenu::system_menu_create_comm_routing( MenuEntry *top ){
 
 void SetupMenu::system_menu_create_comm( MenuEntry *top ){
 
-/*
 	SetupMenuSelectCodes * mm = new SetupMenuSelectCodes( "Mode", RST_ON_EXIT, 0, true, &master_mode );
 	mm->setHelp( "XCVario operation: standalone (can connect to nav devices), or connected to another XCVario. (Reboots)");
 	mm->addEntryCode( "Standalone", MODE_STANDALONE);               // 0
@@ -2280,7 +2374,14 @@ void SetupMenu::system_menu_create_comm( MenuEntry *top ){
 	mm->addEntryCode( "Master (via WiFi)", MODE_WL_MASTER);         // 1
 	mm->addEntryCode( "Client (via WiFi)", MODE_WL_CLIENT);         // 2
 	top->addEntry( mm );
-*/
+
+	// just show the current master mode
+	show_mode_change();       // reflect current mode into mode_shown
+	SetupMenuSelect * sm = new SetupMenuSelect( "Mode", RST_ON_EXIT, 0, true, &show_mode );
+	sm->setHelp( "XCVario operation: standalone (can connect to nav devices), or connected to another XCVario");
+	sm->addEntry( mode_shown );
+	show_mode_menu = sm;    // allows changing the label (in SetupNG.cpp) later if mode changes
+	top->addEntry( sm );
 
 	// NMEA protocol of variometer
 	SetupMenuSelect * nmea = new SetupMenuSelect( "NMEA Protocol", RST_NONE , 0, true, &nmea_protocol );
@@ -2294,7 +2395,7 @@ void SetupMenu::system_menu_create_comm( MenuEntry *top ){
 
 	SetupMenu * wireless = new SetupMenu( "Wireless" );
 	wireless->addCreator(system_menu_create_comm_wireless);
-	wireless->setHelp("Configure wireless communications");
+	wireless->setHelp("Configure wireless communications, 240");
 	top->addEntry( wireless );
 
 	SetupMenu * wired = new SetupMenu( "Wired" );
@@ -2304,11 +2405,24 @@ void SetupMenu::system_menu_create_comm( MenuEntry *top ){
 
 	SetupMenu * routing = new SetupMenu( "Data Routing" );
 	routing->addCreator(system_menu_create_comm_routing);
-	routing->setHelp("Select how data is routed between sources and destinations", 260);
+	routing->setHelp("How data is routed between sources and destinations (reboots)", 260);
 	top->addEntry( routing );
 }
 
 void SetupMenu::system_menu_create( MenuEntry *sye ){
+
+	// show-mode menu has gone out of scope by now
+	// make sure SetupNG.cpp/show_mode_change() does not try and dereference it
+	show_mode_menu = nullptr;
+	SetupMenu * comm = new SetupMenu( "Communications" );
+	comm->setHelp( "Setup wired and wireless communications, data routing, etc", 240 );
+	sye->addEntry( comm );
+	comm->addCreator(system_menu_create_comm);
+
+	SetupMenu * hardware = new SetupMenu( "Hardware Setup" );
+	hardware->setHelp( "Setup variometer hardware e.g. display, rotary, AS and AHRS sensor, voltmeter, etc", 240 );
+	sye->addEntry( hardware );
+	hardware->addCreator(system_menu_create_hardware);
 
 	SetupMenu * soft = new SetupMenu( "Software Update" );
 	sye->addEntry( soft );
@@ -2319,16 +2433,6 @@ void SetupMenu::system_menu_create( MenuEntry *sye ){
 	fa->addEntry( "Cancel");
 	fa->addEntry( "ResetAll");
 	sye->addEntry( fa );
-
-	SetupMenu * comm = new SetupMenu( "Communications" );
-	comm->setHelp( "Setup wired and wireless communications, data routing, etc", 240 );
-	sye->addEntry( comm );
-	comm->addCreator(system_menu_create_comm);
-
-	SetupMenu * hardware = new SetupMenu( "Hardware Setup" );
-	hardware->setHelp( "Setup variometer hardware e.g. display, rotary, AS and AHRS sensor, voltmeter, etc", 240 );
-	sye->addEntry( hardware );
-	hardware->addCreator(system_menu_create_hardware);
 }
 
 void SetupMenu::setup_create_root(MenuEntry *top ){
@@ -2375,10 +2479,12 @@ void SetupMenu::setup_create_root(MenuEntry *top ){
 	// Student mode: Query password
 	if( student_mode.get() )
 	{
+		// simplified audio menu
+		SetupMenu * ad = new SetupMenu( "Audio" );
+		top->addEntry( ad );
+		ad->addCreator( audio_menu_create_student );
 
-	// >>> may want to add access to some other settings here, for example:
-	// Audio volume and muting
-
+		// path to exit student mode
 		SetupMenuValFloat * passw = new SetupMenuValFloat( "Expert Password", "", 0, 1000, 1, 0, false, &password  );
 		passw->setPrecision( 0 );
 		passw->setHelp( "To exit from student mode enter expert password and restart device after expert password has been set correctly");
@@ -2386,15 +2492,15 @@ void SetupMenu::setup_create_root(MenuEntry *top ){
 	}
 	else  // not student mode
 	{
-		// Audio
-		SetupMenu * ad = new SetupMenu( "Audio" );
-		top->addEntry( ad );
-		ad->addCreator( audio_menu_create );
-
 		// Glider Setup
 		SetupMenu * po = new SetupMenu( "Glider Details" );
 		top->addEntry( po );
 		po->addCreator( glider_menu_create );
+
+		// Audio
+		SetupMenu * ad = new SetupMenu( "Audio" );
+		top->addEntry( ad );
+		ad->addCreator( audio_menu_create );
 
 		// Options Setup
 		SetupMenu * opt = new SetupMenu( "Options" );

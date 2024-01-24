@@ -43,7 +43,7 @@ public:
 	static void setup_create_root( MenuEntry *top );
 
 	static void vario_menu_create( MenuEntry *top );
-	static void vario_menu_create_damping( MenuEntry *top );
+	static void vario_menu_create_more( MenuEntry *top );
 	static void vario_menu_create_meanclimb( MenuEntry *top );
 	static void vario_menu_create_s2f( MenuEntry *top );
 	static void vario_menu_create_ec( MenuEntry *top );
@@ -54,6 +54,7 @@ public:
 	static void audio_menu_create_deadbands( MenuEntry *top );
 	static void audio_menu_create_equalizer( MenuEntry *top );
 	static void audio_menu_create_mute( MenuEntry *top );
+	static void audio_menu_create_student( MenuEntry *top );
 
 	static void glider_menu_create( MenuEntry *top );
 	static void glider_menu_create_polarpoints( MenuEntry *top );
@@ -87,6 +88,7 @@ public:
 	static void system_menu_create_interfaceS2( MenuEntry *top );
 	static void system_menu_create_interfaceS2_routing( MenuEntry *top );
 	static void system_menu_create_interfaceCAN_routing( MenuEntry *top );
+	static void system_menu_create_interfaceW3_routing( MenuEntry *top );
 	static void system_menu_create_hardware( MenuEntry *top );
 	static void system_menu_create_ahrs( MenuEntry *top );
 	static void system_menu_create_ahrs_lc( MenuEntry *top );

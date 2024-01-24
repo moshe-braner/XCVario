@@ -54,9 +54,9 @@ typedef enum altitude_display_mode  { MODE_QNH, MODE_QFE } altitude_display_mode
 typedef enum e_display_style  { DISPLAY_AIRLINER, DISPLAY_RETRO, DISPLAY_UL } display_style_t;
 typedef enum e_display_variant { DISPLAY_WHITE_ON_BLACK, DISPLAY_BLACK_ON_WHITE } display_variant_t;
 typedef enum e_s2f_type  { S2F_HW_SWITCH, S2F_HW_PUSH_BUTTON, S2F_HW_SWITCH_INVERTED, S2F_SWITCH_DISABLE } e_s2f_type;
-typedef enum e_serial_route_type { RT_XCVARIO, RT_WIRELESS, RT_S1, RT_S2, RT_CAN } e_serial_routing_t;
+typedef enum e_serial_route_type { RT_XCVARIO, RT_WIRELESS, RT_S1, RT_S2, RT_CAN, RT_W0, RT_W1, RT_W2, RT_W3 } e_serial_routing_t;
 typedef enum e_master_mode { MODE_STANDALONE, MODE_WL_MASTER, MODE_WL_CLIENT, MODE_CAN_MASTER, MODE_CAN_CLIENT } e_master_mode_t;
-typedef enum e_wireless_type { WL_DISABLE, WL_BLUETOOTH, WL_WLAN_MASTER, WL_WLAN_CLIENT, WL_WLAN_STANDALONE, WL_BLUETOOTH_LE } e_wireless_t;
+typedef enum e_wireless_type { WL_DISABLE=0, WL_BLUETOOTH, WL_WLAN_MASTER, WL_WLAN_CLIENT, WL_WLAN_STANDALONE, WL_BLUETOOTH_LE=6, WL_TYPE_OBSOLETE=9 } e_wireless_t;
 typedef enum e_wireless_mode { WL_NONE, WL_BTSPP, WL_BLE, WL_WLAN } e_wireless_mode_t;
 typedef enum e_audiomode_type { AM_VARIO, AM_S2F, AM_SWITCH, AM_AUTOSPEED, AM_EXTERNAL, AM_FLAP, AM_AHRS } e_audiomode_t;
 typedef enum e_audio_tone_mode { ATM_SINGLE_TONE, ATM_DUAL_TONE, ATM_RICO_LONG, ATM_RICO_SHORT } e_audio_tone_mode_t;
@@ -90,13 +90,13 @@ typedef enum e_sync { SYNC_NONE, SYNC_FROM_MASTER, SYNC_FROM_CLIENT, SYNC_BIDIR 
 typedef enum e_reset { RESET_NO, RESET_YES } e_reset_t;   // determines if data is reset to defaults on factory reset
 typedef enum e_volatility { VOLATILE, PERSISTENT, SEMI_VOLATILE } e_volatility_t;  // stored in RAM, FLASH, or into FLASH after a while
 typedef enum e_can_speed { CAN_SPEED_OFF, CAN_SPEED_250KBIT, CAN_SPEED_500KBIT, CAN_SPEED_1MBIT } e_can_speed_t;  // stored in RAM, FLASH, or into FLASH after a while
-typedef enum e_can_mode { CAN_MODE_MASTER, CAN_MODE_CLIENT, CAN_MODE_STANDALONE } e_can_mode_t;
+typedef enum e_can_mode { CAN_MODE_MASTER=0, CAN_MODE_CLIENT, CAN_MODE_STANDALONE=2, CAN_MODE_OBSOLETE=9 } e_can_mode_t;
 typedef enum e_altimeter_select { AS_TE_SENSOR, AS_BARO_SENSOR, AS_EXTERNAL } e_altimeter_select_t;
 typedef enum e_menu_screens { SCREEN_VARIO, SCREEN_GMETER, SCREEN_HORIZON, SCREEN_FLARM, SCREEN_THERMAL_ASSISTANT } e_menu_screens_t; // addittional screens
 typedef enum e_s2f_arrow_color { AC_WHITE_WHITE, AC_BLUE_BLUE, AC_GREEN_RED } e_s2f_arrow_color_t;
 typedef enum e_vario_needle_color { VN_COLOR_WHITE, VN_COLOR_ORANGE, VN_COLOR_RED }  e_vario_needle_color_t;
 typedef enum e_horizon_color { WHITE_ON_DARK, BLACK_ON_BRIGHT, WHITE_ON_BRIGHT, WHITE_ON_BLACK } e_horizon_color_t;
-typedef enum e_data_monitor { MON_OFF, MON_BLUETOOTH, MON_WIFI_8880, MON_WIFI_8881, MON_WIFI_8882, MON_S1, MON_S2, MON_CAN  }  e_data_monitor_t;
+typedef enum e_data_monitor { MON_OFF, MON_BLUETOOTH, MON_WIFI_8880, MON_WIFI_8881, MON_WIFI_8882, MON_S1, MON_S2, MON_CAN, MON_WIFI_2000 }  e_data_monitor_t;
 typedef enum e_display_orientation { DISPLAY_NORMAL, DISPLAY_TOPDOWN } e_display_orientation_t;
 typedef enum e_gear_warning_io { GW_OFF, GW_FLAP_SENSOR, GW_S2_RS232_RX, GW_FLAP_SENSOR_INV, GW_S2_RS232_RX_INV, GW_EXTERNAL }  e_gear_warning_io_t;
 typedef enum e_data_mon_mode { MON_MOD_ASCII, MON_MOD_BINARY } e_data_mon_mode_t;
@@ -405,11 +405,6 @@ public:
 	inline uint8_t getSync() { return flags._sync; }
 	inline void setSync( e_sync_t sync ) { flags._sync = sync; }
 
-//	void master_mode_change();
-//	void wireless_mode_change();
-//	void wireless_type_change();
-//	void can_mode_change();
-
 private:
 	T _value;
 	T _default;
@@ -456,6 +451,7 @@ extern SetupNG<int>  		amplifier_shutdown;
 extern SetupNG<int>         audio_equalizer;
 
 extern SetupNG<int>  		master_mode;
+extern SetupNG<int>  		show_mode;
 extern SetupNG<int>  		wireless_type;
 extern SetupNG<int>  		wireless_mode;
 extern SetupNG<float>  		wifi_max_power;
@@ -532,6 +528,17 @@ extern SetupNG<int>  		rt_s1_xcv;
 extern SetupNG<int>  		rt_s1_wl;
 extern SetupNG<int>  		rt_s1_s2;
 extern SetupNG<int>  		rt_s1_can;
+extern SetupNG<int>  		rt_s1_w0;   // added
+extern SetupNG<int>  		rt_s2_w0;   // added
+extern SetupNG<int>  		rt_s2_w1;   // added
+extern SetupNG<int>  		rt_s1_w2;   // added
+extern SetupNG<int>  		rt_w3_xcv;  // added
+extern SetupNG<int>  		rt_w3_s1;   // added
+extern SetupNG<int>  		rt_w3_s2;   // added
+extern SetupNG<int>  		rt_w3_w0;   // added
+extern SetupNG<int>  		rt_w3_w1;   // added
+extern SetupNG<int>  		w3_routes;   // added
+extern SetupNG<int>  		w3_tx_enable;    // added
 extern SetupNG<int>			serial1_pins_twisted;
 extern SetupNG<int>  		serial1_tx_inverted;
 extern SetupNG<int>  		serial1_rx_inverted;
@@ -703,3 +710,19 @@ extern uint8_t g_col_highlight;
 
 void change_ballast();
 void change_mc();
+
+// variables and functions to update setup menus on the fly:
+void update_volume_menu_max();
+extern const char *mode_shown;
+void show_mode_change();
+void update_show_mode_menu();
+
+// action functions for new and old mode setup variables:
+void wireless_type_change();
+void can_mode_change();
+void master_mode_change();
+void wireless_mode_change();
+void can_speed_change();
+
+// finish initializing setup variables - called from SetupCommon::initSetup()
+void post_init_NG();

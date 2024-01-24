@@ -30,7 +30,7 @@ typedef struct xcv_sock_client {
 }sock_client_t;
 
 static sock_client_t XCVarioCL = { .txbuf = &can_tx_q, .rxbuf = &can_rx_q, .port=8884, .connected=false, .sock=-1 };
-static sock_client_t FLARM   =   { .txbuf = &wl_flarm_tx_q, .rxbuf = &wl_flarm_rx_q, .port=8881, .connected=false, .sock=-1 };
+static sock_client_t MAIN   =   { .txbuf = &wl_main_tx_q, .rxbuf = &wl_main_rx_q, .port=8881, .connected=false, .sock=-1 };
 
 EventGroupHandle_t WifiClient::wifi_event_group;
 esp_netif_t *WifiClient::sta_netif = 0;
@@ -41,7 +41,7 @@ bool WifiClient::isConnected( int port ){
 	if( port == 8884 )
 		return( XCVarioCL.connected );
 	else if( port == 8881 )
-		return( FLARM.connected );
+		return( MAIN.connected );
 	return false;
 }
 
@@ -72,10 +72,10 @@ void WifiClient::event_handler(void* arg, esp_event_base_t event_base, int32_t e
 			XCVarioCL.sock = -1;
 			XCVarioCL.connected = false;
 		}
-		if( FLARM.sock > 0 ){
-			close( FLARM.sock );
-			FLARM.sock = -1;
-			FLARM.connected = false;
+		if( MAIN.sock > 0 ){
+			close( MAIN.sock );
+			MAIN.sock = -1;
+			MAIN.connected = false;
 		}
 	} else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
 		ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
@@ -248,5 +248,5 @@ void WifiClient::start()
 	ESP_LOGI(FNAME, "start wifi_client"  );
     initialise_wifi();
     xTaskCreate(&tcp_client,"tcp_client_xcv",4096,&XCVarioCL,12,NULL);
-    xTaskCreate(&tcp_client,"tcp_client_flarm",4096,&FLARM,12,NULL);
+    xTaskCreate(&tcp_client,"tcp_client_main",4096,&MAIN,12,NULL);
 }
