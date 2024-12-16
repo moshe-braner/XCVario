@@ -61,42 +61,46 @@ void show_mode_change() {
 //  - the set() calls are not circular thanks to them returning (with no action)
 //    when the current value is already the same as the value to be set.
 void master_mode_change() {
-	if ( can_mode.get() == CAN_MODE_OBSOLETE && wireless_type.get() == WL_TYPE_OBSOLETE)
-		return;
+//	if ( can_mode.get() == CAN_MODE_OBSOLETE && wireless_type.get() == WL_TYPE_OBSOLETE)
+//		return;
 	int mode = master_mode.get();
 	int wltype = wireless_type.get();
-	switch(mode) {
-	case MODE_STANDALONE:
-	case MODE_CAN_MASTER:
-	case MODE_CAN_CLIENT:
-		ESP_LOGI(FNAME,"master_mode_change -> not wifi");
-		if( wltype == WL_WLAN_MASTER || wltype == WL_WLAN_CLIENT )
-			wireless_type.set( WL_WLAN_STANDALONE );
-		break;
-	case MODE_WL_MASTER:
-		ESP_LOGI(FNAME,"master_mode_change -> WL master");
-		wireless_type.set( WL_WLAN_MASTER );
-		break;
-	case MODE_WL_CLIENT:
-		ESP_LOGI(FNAME,"master_mode_change -> WL client");
-		wireless_type.set( WL_WLAN_CLIENT );
-		break;
+	if ( wltype != WL_TYPE_OBSOLETE ) {
+		switch(mode) {
+		case MODE_STANDALONE:
+		case MODE_CAN_MASTER:
+		case MODE_CAN_CLIENT:
+			ESP_LOGI(FNAME,"master_mode_change -> not wifi");
+			if( wltype == WL_WLAN_MASTER || wltype == WL_WLAN_CLIENT )
+				wireless_type.set( WL_WLAN_STANDALONE );
+			break;
+		case MODE_WL_MASTER:
+			ESP_LOGI(FNAME,"master_mode_change -> WL master");
+			wireless_type.set( WL_WLAN_MASTER );
+			break;
+		case MODE_WL_CLIENT:
+			ESP_LOGI(FNAME,"master_mode_change -> WL client");
+			wireless_type.set( WL_WLAN_CLIENT );
+			break;
+		}
 	}
-	switch(mode) {
-	case MODE_STANDALONE:
-	case MODE_WL_MASTER:
-	case MODE_WL_CLIENT:
-		ESP_LOGI(FNAME,"master_mode_change -> not CAN");
-		can_mode.set( CAN_MODE_STANDALONE );
-		break;
-	case MODE_CAN_MASTER:
-		ESP_LOGI(FNAME,"master_mode_change -> CAN master");
-		can_mode.set( CAN_MODE_MASTER );
-		break;
-	case MODE_CAN_CLIENT:
-		ESP_LOGI(FNAME,"master_mode_change -> CAN client");
-		can_mode.set( CAN_MODE_CLIENT );
-		break;
+	if ( can_mode.get() != CAN_MODE_OBSOLETE ) {
+		switch(mode) {
+		case MODE_STANDALONE:
+		case MODE_WL_MASTER:
+		case MODE_WL_CLIENT:
+			ESP_LOGI(FNAME,"master_mode_change -> not CAN");
+			can_mode.set( CAN_MODE_STANDALONE );
+			break;
+		case MODE_CAN_MASTER:
+			ESP_LOGI(FNAME,"master_mode_change -> CAN master");
+			can_mode.set( CAN_MODE_MASTER );
+			break;
+		case MODE_CAN_CLIENT:
+			ESP_LOGI(FNAME,"master_mode_change -> CAN client");
+			can_mode.set( CAN_MODE_CLIENT );
+			break;
+		}
 	}
 	show_mode_change();
 }
@@ -237,7 +241,7 @@ void init_routing(){
 	rt_s2_xcv.set( (s2rt >> (RT_XCVARIO))& 1 );
 	rt_s2_wl.set( (s2rt >> (RT_WIRELESS))& 1 );
 	rt_s1_s2.set( (s2rt >> (RT_S1))& 1 );
-	rt_s1_w0.set( (s2rt >> (RT_W0))& 1 );
+	rt_s2_w0.set( (s2rt >> (RT_W0))& 1 );
 	rt_s2_w1.set( (s2rt >> (RT_W1))& 1 );
 	rt_w3_s2.set( (s2rt >> (RT_W3))& 1 );
 	rt_s2_can.set( (s2rt >> (RT_CAN))& 1 );
@@ -293,6 +297,34 @@ void update_routing(){
 	update_w3_routing();
 }
 
+void init_horizon_options(){
+	uint32_t options = (uint32_t)horizon_options.get();
+	ESP_LOGI(FNAME,"init_horizon_options: %x", options);
+	horizon_colors.set(  options & 0x0F );
+	horizon_line.set(   (options >> 4)  & 0x03 );
+	horizon_bticks.set( (options >> 6)  & 0x07 );
+	horizon_pticks.set( (options >> 9)  & 0x07 );
+	horizon_icon.set(   (options >> 12) & 0x03 );
+	horizon_prange.set( (options >> 14) & 0x03 );
+	horizon_plimit.set( (options >> 16) & 0x03 );
+	horizon_nums.set(   (options >> 18) & 0x01 );
+}
+
+void update_horizon_options(){
+	uint32_t options =
+			( (uint32_t)(horizon_colors.get() & 0x0F) ) |
+			( (uint32_t)(horizon_line.get()   & 0x03) << 4 ) |
+			( (uint32_t)(horizon_bticks.get() & 0x07) << 6 ) |
+			( (uint32_t)(horizon_pticks.get() & 0x07) << 9 ) |
+			( (uint32_t)(horizon_icon.get()   & 0x03) << 12 ) |
+			( (uint32_t)(horizon_prange.get() & 0x03) << 14 ) |
+			( (uint32_t)(horizon_plimit.get() & 0x03) << 16 ) |
+			( (uint32_t)(horizon_nums.get()   & 0x01) << 18 );
+			// bits 19-31 still not used
+	ESP_LOGI(FNAME,"update_horizon_options: %x", options);
+	horizon_options.set( options );
+}
+
 // finish initializing setup variables - called from SetupCommon::initSetup()
 // - this function is called right after NGs have been loaded from NVS
 // - it serves two different purposes as commented below
@@ -303,12 +335,19 @@ void post_init_NG() {
 	wireless_type_change();   // old into new
 
 	// now can mark obsolete NGs so they will be ignored in the future:
-	// can_mode.set( CAN_MODE_OBSOLETE );
-	// wireless_type.set( WL_TYPE_OBSOLETE );
+	//  - for now only do it for non-XCV hardware, since
+	//      mainline firmware is still using these old variables
+#if defined(NOSENSORS)
+	if ( can_mode.get() != CAN_MODE_OBSOLETE )
+		can_mode.set( CAN_MODE_OBSOLETE );
+	if ( wireless_type.get() != WL_TYPE_OBSOLETE )
+		wireless_type.set( WL_TYPE_OBSOLETE );
+#endif
 
 	// here can do other setup configurations
 	// such as unpacking bitfields
 	init_routing();
+	init_horizon_options();
 }
 
 void change_mc() {
@@ -546,9 +585,10 @@ SetupNG<int>  			serial2_speed( "SERIAL1_SPEED", 3 );
 SetupNG<int>  			serial2_pins_twisted( "SERIAL1_PINS", 0 );
 SetupNG<int>  			serial2_rx_inverted( "SERIAL1_RX_INV", RS232_INVERTED );
 SetupNG<int>  			software_update( "SOFTWARE_UPDATE", 0 );
-#if defined(SUNTON28)
+//#if defined(SUNTON28)
 SetupNG<int>  			reboot( "REBOOT", 0, RST_NONE, SYNC_NONE, VOLATILE );
-#endif
+SetupNG<int>  			testmode( "TESTMODE", 0, RST_NONE, SYNC_NONE, VOLATILE );
+//#endif
 SetupNG<int>  			battery_display( "BAT_DISPLAY", 0 );
 SetupNG<int>  			airspeed_mode( "AIRSPEED_MODE", MODE_IAS );
 SetupNG<int>  			nmea_protocol( "NMEA_PROTOCOL", XCVARIO );
@@ -568,8 +608,15 @@ SetupNG<float>		    password( "PASSWORD", 0 );
 SetupNG<int>		    autozero( "AUTOZERO", 0 );
 SetupNG<int>		    attitude_indicator("AHRS", 1 );
 SetupNG<float>		    horizon_offset("HRZOFST", 0, RST_NONE, SYNC_NONE, VOLATILE );
-SetupNG<int>		    horizon_colors("HRZCOLOR", 0, RST_NONE, SYNC_NONE, VOLATILE );  // later make this persistent
-SetupNG<int>		    horizon_largeicon("HRZLICON", 0, RST_NONE, SYNC_NONE, VOLATILE );  // later make this persistent
+SetupNG<int>		horizon_colors("HRZCOLOR", 0, RST_NONE, SYNC_NONE, VOLATILE, update_horizon_options );
+SetupNG<int>		horizon_line("HRZLINE", 0, RST_NONE, SYNC_NONE, VOLATILE, update_horizon_options );
+SetupNG<int>		horizon_bticks("HRZBTIK", 0, RST_NONE, SYNC_NONE, VOLATILE, update_horizon_options );
+SetupNG<int>		horizon_pticks("HRZPTIK", 0, RST_NONE, SYNC_NONE, VOLATILE, update_horizon_options );
+SetupNG<int>		horizon_icon("HRZICON", 0, RST_NONE, SYNC_NONE, VOLATILE, update_horizon_options );
+SetupNG<int>		horizon_prange("HRZPRNG", 0, RST_NONE, SYNC_NONE, VOLATILE, update_horizon_options );
+SetupNG<int>		horizon_plimit("HRZPLIM", 0, RST_NONE, SYNC_NONE, VOLATILE, update_horizon_options );
+SetupNG<int>		horizon_nums("HRZNUMS", 0, RST_NONE, SYNC_NONE, VOLATILE, update_horizon_options );
+SetupNG<int>		horizon_options("HRZOPT", 0 );  // now persistent
 SetupNG<int>		    ahrs_rpyl_dataset("RPYL", 0 );
 SetupNG<int>		    ahrs_autozero("AHRSAZ", 0 );
 SetupNG<float>		    ahrs_gyro_factor("AHRSMGYF", 100 );

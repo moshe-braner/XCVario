@@ -1,4 +1,3 @@
-
 /*
  * IpsDisplay.h
  *
@@ -14,6 +13,9 @@
 #include <SPI.h>
 #include <AdaptUGC.h>
 #include "Colors.h"
+
+#define DISPLAY_H 320
+#define DISPLAY_W 240
 
 #define TEGAP 26
 #define TEMIN TEGAP

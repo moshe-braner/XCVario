@@ -480,7 +480,7 @@ void Flap::configureADC( int port ){
 		ESP_LOGI( FNAME, "Client role: Abort");
 		return; // no analog pin config for the client
 	}
-#ifdef SUNTON28
+#if defined(SUNTON28)
 	// use GPIO34 which is connected to the light sensor
 	sensorAdc = new AnalogInput( -1, ADC_ATTEN_DB_0, ADC_CHANNEL_6, ADC_UNIT_1, true );
 #else

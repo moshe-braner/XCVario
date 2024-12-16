@@ -30,7 +30,7 @@
 #include "AirspeedSensor.h"
 
 // Display 4 Wire SPI and Display CS
-#ifdef SUNTON28
+#if defined(SUNTON28)
 #define RESET_Display  GPIO_NUM_MAX  // is this ((gpio_num_t) 255)? // no display reset on Sunton board
 #define CS_Display     GPIO_NUM_15
 #define SPI_SCLK       GPIO_NUM_14
@@ -130,7 +130,7 @@ extern float mpu_target_temp;
 extern MPU_t MPU;
 
 // There is no temperature control for XCV hardware < 23, GPIO Pin there is wired to CAN slope control
-#ifdef SUNTON28
+#if defined(SUNTON28)
 #define HAS_MPU_TEMP_CONTROL (false)
 #else
 #define HAS_MPU_TEMP_CONTROL (CAN && !CAN->hasSlopeSupport())

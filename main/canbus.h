@@ -2,7 +2,7 @@
 #include "driver/gpio.h"
 #include "driver/twai.h"
 
-#ifdef SUNTON28
+#if defined(SUNTON28)
 // possible additional I/O bus on the Sunton board
 #define CAN_BUS_TX_PIN GPIO_NUM_27    // temp probe connector - or use for I2C
 #define CAN_BUS_RX_PIN GPIO_NUM_35    // in expansion connector - or use for S1

@@ -439,7 +439,7 @@ void SetupMenu::begin( IpsDisplay* display, PressureSensor * bmp, AnalogInput *a
 	_adc = adc;
 	setup();
 	audio_volume.set( default_volume.get() );
-	// init_routing();   now done from SetupNG update_NGs()
+	// init_routing();   now done by post_init_NG() in SetupNG.cpp
 	init_screens();
 	initGearWarning();
 }
@@ -509,23 +509,37 @@ void SetupMenu::down(int count){
 		else
 		if( rot_default.get() == 1) {  // MC Value
 			float mc = MC.get();
+			// ESP_LOGI(FNAME,"MC down: %f count: %d", mc, count );
 			float step = Units::Vario2ms( 0.1 );
+#if defined(SUNTON28)
+			mc += step;
+			if( mc > 9.9 )
+				mc = 9.9;
+#else
 			mc -= step*count;
 			if( mc < 0.0 )
 				mc = 0.0;
+#endif
+			// ESP_LOGI(FNAME,"NEW MC: %f", mc );
 			MC.set( mc );
 		}
 		else{  // Volume
-#if defined(SUNTON28)
-			count = 1;
-#endif
 			float vol = audio_volume.get();
+#if defined(SUNTON28)
+			// using touch screen instead of rotary, touching bottom part of screen
+			// means move selection in menus towards bottom (higher index)
+			// but move volume and numbers to a lower value
 			if( vol<3.0 )
 				vol=3.0;
-			for( int i=0; i<count; i++ )
-				vol = vol * 1.17;
+			vol = vol * 1.17;               // count always considered as 1
 			if( vol > max_volume.get() )
 				vol = max_volume.get();
+#else
+			for( int i=0; i<count; i++ )
+				vol = vol * 0.83;
+			if( vol<3.0 )
+				vol=0;
+#endif
 			audio_volume.set( vol );
 			//ESP_LOGI(FNAME,"down: volume pct up to %f", vol );
 		}
@@ -569,21 +583,32 @@ void SetupMenu::up(int count){
 			float mc = MC.get();
 			// ESP_LOGI(FNAME,"MC up: %f count: %d", mc, count );
 			float step = Units::Vario2ms( 0.1 );
+#if defined(SUNTON28)
+			mc -= step;
+			if( mc < 0.0 )
+				mc = 0.0;
+#else
 			mc += step*count;
 			if( mc > 9.9 )
 				mc = 9.9;
+#endif
 			// ESP_LOGI(FNAME,"NEW MC: %f", mc );
 			MC.set( mc );
 		}
 		else{  // Volume
-#if defined(SUNTON28)
-			count = 1;
-#endif
 			float vol = audio_volume.get();
-			for( int i=0; i<count; i++ )
-				vol = vol * 0.83;
+#if defined(SUNTON28)
+			vol = vol * 0.83;
 			if( vol<3.0 )
 				vol=0;
+#else
+			if( vol<3.0 )
+				vol=3.0;
+			for( int i=0; i<count; i++ )
+				vol = vol * 1.17;
+			if( vol > max_volume.get() )
+				vol = max_volume.get();
+#endif
 			audio_volume.set( vol );
 			//ESP_LOGI(FNAME,"up: volume pct down to %f", vol );
 		}
@@ -715,8 +740,36 @@ void SetupMenu::longPress(){
 		return;
 	// ESP_LOGI(FNAME,"longPress()");
 	ESP_LOGI(FNAME,"longPress() active_srceen %d, pressed %d inSet %d", active_screen, pressed, gflags.inSetup );
-	if( menu_long_press.get() && !gflags.inSetup ){
-		showMenu();
+//	if( menu_long_press.get() && !gflags.inSetup ){
+//		showMenu();
+//	}
+	if( menu_long_press.get() ){
+        if ( !gflags.inSetup ){
+			showMenu();
+/*
+Would be nice to be able to leave the menu completely with one long-press.
+The following code does not work though!
+It only goes up one step to parent - before letting go of the button.
+Calling escape() didn't work either - hard to get back into the setup menu.
+		} else {
+			// try and leave menu by going up step by step:
+			if( _parent != 0 ){
+				// ESP_LOGI(FNAME,"Long-press: to parent menu");
+				selected = _parent;
+				selected->highlight = -1;
+				selected->pressed = true;
+				delete_subtree();
+				return;
+			}
+			// ESP_LOGI(FNAME,"Long-press: End Setup Menu");
+			screens_init = INIT_DISPLAY_NULL;
+			_display->doMenu(false);
+			if( selected->get_restart() )
+				selected->restart();
+			gflags.inSetup=false;
+			//return;
+*/
+		}
 	}
 	if( pressed ){
 		pressed = false;
@@ -729,6 +782,7 @@ void SetupMenu::longPress(){
 	}
 }
 
+// >>> when is this called?
 void SetupMenu::escape(){
 	if( gflags.inSetup ){
 		ESP_LOGI(FNAME,"escape now Setup Menu");
@@ -1630,9 +1684,7 @@ void SetupMenu::options_menu_create_altimeter_airspeed( MenuEntry *top ){
 	top->addEntry( vmax );
 }
 
-// this submenu will eventually have additional horizon screen options, such as:
-// colors, size of airplane icon, whether to display pitch and bank ticks and/or numbers...
-// - maybe also a default (boot-time) value for the horizon_offset.
+// this submenu may eventually have a default (boot-time) value for the horizon_offset.
 void SetupMenu::options_menu_create_horizon_screen( MenuEntry *top ){
 
 	// this should be here, not in hardware/rotary
@@ -1647,17 +1699,56 @@ void SetupMenu::options_menu_create_horizon_screen( MenuEntry *top ){
 	top->addEntry(horizon);
 
 	SetupMenuSelect * colors = new SetupMenuSelect( "Colors", RST_NONE, 0, true, &horizon_colors );
-	colors->addEntry( "White on Dark");
-	colors->addEntry( "Black on Bright");
-	colors->addEntry( "White on Bright");
-	colors->addEntry( "White on Black");
-	horizon->setHelp( "Color scheme for the horizon screen");
+	colors->addEntry( "White on Dark" );
+	colors->addEntry( "Black on Bright" );
+	colors->addEntry( "White on Bright" );
+	colors->addEntry( "White on Black" );
+	horizon->setHelp( "Color scheme for the horizon screen" );
 	top->addEntry(colors);
 
-	SetupMenuSelect * icon = new SetupMenuSelect( "Airplane Icon", RST_NONE, 0, true, &horizon_largeicon );
+	SetupMenuSelect * line = new SetupMenuSelect( "Horizon Line", RST_NONE, 0, true, &horizon_line );
+	line->addEntry( "None" );
+	line->addEntry( "Thin" );
+	line->addEntry( "Thick" );
+	top->addEntry(line);
+
+	SetupMenuSelect * bticks = new SetupMenuSelect( "Bank Ticks", RST_NONE, 0, true, &horizon_bticks );
+	bticks->addEntry( "None" );
+	bticks->addEntry( "As needed") ;
+	bticks->addEntry( "Show all" );
+	bticks->setHelp( "'As needed' means 45 degree tick will appear when bank is > 30, etc." );
+	top->addEntry(bticks);
+
+	SetupMenuSelect * pticks = new SetupMenuSelect( "Pitch Ticks", RST_NONE, 0, true, &horizon_pticks );
+	pticks->addEntry( "None" );
+	pticks->addEntry( "As needed") ;
+	pticks->addEntry( "Show all" );
+	pticks->setHelp( "'As needed' means 10 degree tick will appear when pitch is > 5, etc." );
+	top->addEntry(pticks);
+
+	SetupMenuSelect * icon = new SetupMenuSelect( "Airplane Icon", RST_NONE, 0, true, &horizon_icon );
 	icon->addEntry( "Small");
 	icon->addEntry( "Large");
 	top->addEntry(icon);
+
+	SetupMenuSelect * prange = new SetupMenuSelect( "Pitch Scale", RST_NONE, 0, true, &horizon_prange );
+	prange->addEntry( "30 degrees");
+	prange->addEntry( "90 degrees");
+	prange->setHelp( "At 90 degree scale it is harder to see small changes in pitch" );
+	top->addEntry(prange );
+
+	SetupMenuSelect * plimit = new SetupMenuSelect( "Pitch Movement", RST_NONE, 0, true, &horizon_plimit );
+	plimit->addEntry( "Unlimited");
+	plimit->addEntry( "Limited");
+	plimit->setHelp( "If limited, some 'sky' and some 'ground' will always be visible" );
+	top->addEntry(plimit);
+
+	if (testmode.get()) {
+		SetupMenuSelect * nums = new SetupMenuSelect( "P&B Numbers", RST_NONE, 0, true, &horizon_nums );
+		nums->addEntry( "None");
+		nums->addEntry( "Show");
+		top->addEntry(nums);
+	}
 
 	SetupMenuValFloat * offset = new SetupMenuValFloat( "Horizon Pitch Offset", "°", -10, 10, 0.5, 0, false, &horizon_offset );
 	offset->setPrecision( 1 );
@@ -1717,7 +1808,7 @@ void SetupMenu::options_menu_create( MenuEntry *top ){
 
 	SetupMenu * horizon_screen = new SetupMenu( "Horizon Display");
 	top->addEntry( horizon_screen );
-	horizon_screen->setHelp("Options regarding the horizon screen");
+	//horizon_screen->setHelp("Options regarding the horizon screen");
 	horizon_screen->addCreator( options_menu_create_horizon_screen );
 
 	// Advanced Options submenu
@@ -1738,12 +1829,25 @@ void SetupMenu::system_menu_create_software( MenuEntry *top ){
 	upd->addEntry( "Start");
 	top->addEntry( upd );
 
-#if defined(SUNTON28)
+	SetupMenuSelect * fa = new SetupMenuSelect( "Factory Reset", RST_IMMEDIATE, 0, false, &factory_reset );
+	fa->setHelp("Option to reset all settings to factory defaults, means metric system, 5 m/s vario range and more");
+	fa->addEntry( "Cancel");
+	fa->addEntry( "ResetAll");
+	top->addEntry( fa );
+
+//#if defined(SUNTON28)
 	SetupMenuSelect * rbt = new SetupMenuSelect( "Reboot", RST_IMMEDIATE, 0, true, &reboot );
 	rbt->addEntry( "Cancel");
 	rbt->addEntry( "Go Ahead");
+	rbt->setHelp("Option to restart XCvario immediately upon exiting this menu");
 	top->addEntry( rbt );
-#endif
+
+	SetupMenuSelect * tst = new SetupMenuSelect( "Test Mode", RST_NONE, 0, true, &testmode );
+	tst->addEntry( "Disable");
+	tst->addEntry( "Enable");
+	tst->setHelp("Option to turn on some experimental software features");
+	top->addEntry( tst );
+//#endif
 }
 
 void SetupMenu::system_menu_create_battery( MenuEntry *top ){
@@ -1793,7 +1897,7 @@ void SetupMenu::options_menu_create_display( MenuEntry *top ){
 #if defined(SUNTON28)
 	diso->setHelp( "Display Orientation.  NORMAL means USB jack at bottom, TOPDOWN means USB at top (reboots)");
 #else
-	diso->setHelp( "Display Orientation.  NORMAL means Rotary on right, TOPDOWN means Rotary on left  (reboots)");
+	diso->setHelp( "Display Orientation.  NORMAL means Rotary on left, TOPDOWN means Rotary on right  (reboots)");
 #endif
 	diso->addEntry( "NORMAL");
 	diso->addEntry( "TOPDOWN");
@@ -2183,19 +2287,8 @@ void SetupMenu::system_menu_create_interfaceCAN_routing( MenuEntry *top ){
 }
 
 void SetupMenu::system_menu_create_comm_wireless( MenuEntry *top ){
-//#if 0
-// better to avoid mixing master/client and wireless type:
-	SetupMenuSelectCodes * btm = new SetupMenuSelectCodes( "Wireless", RST_ON_EXIT, 0, true, &wireless_type );
-	btm->addEntryCode( "Disable", WL_DISABLE);                   // 0
-	btm->addEntryCode( "Bluetooth", WL_BLUETOOTH);               // 1
-	btm->addEntryCode( "Bluetooth LE", WL_BLUETOOTH_LE);         // 5
-	btm->addEntryCode( "WiFi (Standalone)", WL_WLAN_STANDALONE); // 4
-	btm->addEntryCode( "WiFi (Master)", WL_WLAN_MASTER);         // 2
-	btm->addEntryCode( "WiFi (Client)", WL_WLAN_CLIENT);         // 3
-	btm->setHelp( "Activate wireless interface type to connect navigation devices or another XCvario. (Reboots)", 220 );
-	top->addEntry( btm );
-//#else
 
+// better to avoid mixing master/client and wireless type:
 // The selected entry will be internally translated into wireless_type (see SetupNG.cpp).
 	SetupMenuSelect * wlm = new SetupMenuSelect( "Wireless", RST_ON_EXIT, 0, true, &wireless_mode );
 	wlm->addEntry( "Disable");
@@ -2205,7 +2298,17 @@ void SetupMenu::system_menu_create_comm_wireless( MenuEntry *top ){
 	wlm->setHelp( "Activate wireless interface type to connect navigation devices or another XCvario. (Reboots)", 220 );
 	top->addEntry( wlm );
 
-//#endif
+if (testmode.get()) {
+	SetupMenuSelectCodes * btm = new SetupMenuSelectCodes( "WL (old)", RST_ON_EXIT, 0, true, &wireless_type );
+	btm->addEntryCode( "Disable", WL_DISABLE);                   // 0
+	btm->addEntryCode( "Bluetooth", WL_BLUETOOTH);               // 1
+	btm->addEntryCode( "Bluetooth LE", WL_BLUETOOTH_LE);         // 5
+	btm->addEntryCode( "WiFi (Standalone)", WL_WLAN_STANDALONE); // 4
+	btm->addEntryCode( "WiFi (Master)", WL_WLAN_MASTER);         // 2
+	btm->addEntryCode( "WiFi (Client)", WL_WLAN_CLIENT);         // 3
+	btm->setHelp( "Select wireless mode (using the obsolete setting variable). (Reboots)", 220 );
+	top->addEntry( btm );
+}
 
 	SetupMenuValFloat *wifip = new SetupMenuValFloat( "WIFI Power", "%", 10.0, 100.0, 5.0, update_wifi_power, false, &wifi_max_power );
 	wifip->setPrecision(0);
@@ -2222,12 +2325,6 @@ void SetupMenu::system_menu_create_comm_wireless( MenuEntry *top ){
 	top->addEntry( cusid );
 	cusid->setHelp( "Select custom ID (SSID) for wireless BT (or WIFI) interface, e.g. D-1234. Restart device to activate", 215);
 	cusid->addCreator( options_menu_create_wireless_custom_id );
-
-	SetupMenuSelect * w3txdis = new SetupMenuSelect( "Port 2000 TX", RST_NONE, 0, true, &w3_tx_enable );
-	top->addEntry( w3txdis );
-	w3txdis->setHelp( "Disable transmission (TX) on WiFi Port 2000 if not required (for devices that are output-only)");
-	w3txdis->addEntry( "Disable");
-	w3txdis->addEntry( "Enable");
 }
 
 void SetupMenu::system_menu_create_comm_wired( MenuEntry *top ){
@@ -2245,8 +2342,8 @@ void SetupMenu::system_menu_create_comm_wired( MenuEntry *top ){
 	}
 
 	if( hardwareRevision.get() >= XCVARIO_22 ){
-//#if 0
-// hide this menu, use the master mode menu instead
+
+if (testmode.get()) {
 		SetupMenuSelect * devmod = new SetupMenuSelect( "CAN Mode", RST_ON_EXIT , 0, false, &can_mode );
 		top->addEntry( devmod );
 		if (can_speed.get() == CAN_SPEED_OFF)
@@ -2256,7 +2353,9 @@ void SetupMenu::system_menu_create_comm_wired( MenuEntry *top ){
 		devmod->addEntry( "Master");
 		devmod->addEntry( "Client");
 		devmod->addEntry( "Standalone");
-//#endif
+}
+// else hide this menu, use the master mode menu instead
+
 		// Can Interface C1
 		SetupMenuSelect * canmode = new SetupMenuSelect( "CAN speed", RST_ON_EXIT, 0, true, &can_speed );
 		top->addEntry( canmode );
@@ -2299,6 +2398,12 @@ void SetupMenu::system_menu_create_interfaceW3_routing( MenuEntry *top ){
 	w3outw1->addEntry( "Enable");
 	w3outw1->setHelp("Send WiFi port 8881 data to/from WiFi port 2000");
 	top->addEntry( w3outw1 );
+
+	SetupMenuSelect * w3txdis = new SetupMenuSelect( "Port 2000 TX", RST_NONE, 0, true, &w3_tx_enable );
+	w3txdis->addEntry( "Disable");
+	w3txdis->addEntry( "Enable");
+	w3txdis->setHelp( "Disable transmission (TX) on WiFi Port 2000 if not required (for devices that are output-only)");
+	top->addEntry( w3txdis );
 }
 
 void SetupMenu::system_menu_create_comm_routing( MenuEntry *top ){
@@ -2375,13 +2480,15 @@ void SetupMenu::system_menu_create_comm( MenuEntry *top ){
 	mm->addEntryCode( "Client (via WiFi)", MODE_WL_CLIENT);         // 2
 	top->addEntry( mm );
 
+if (testmode.get()) {
 	// just show the current master mode
 	show_mode_change();       // reflect current mode into mode_shown
-	SetupMenuSelect * sm = new SetupMenuSelect( "Mode", RST_ON_EXIT, 0, true, &show_mode );
-	sm->setHelp( "XCVario operation: standalone (can connect to nav devices), or connected to another XCVario");
+	SetupMenuSelect * sm = new SetupMenuSelect( "Mode (old)", RST_ON_EXIT, 0, true, &show_mode );
+	sm->setHelp( "Current XCvario operational mode (use other 'Mode' menu to change)");
 	sm->addEntry( mode_shown );
 	show_mode_menu = sm;    // allows changing the label (in SetupNG.cpp) later if mode changes
 	top->addEntry( sm );
+}
 
 	// NMEA protocol of variometer
 	SetupMenuSelect * nmea = new SetupMenuSelect( "NMEA Protocol", RST_NONE , 0, true, &nmea_protocol );
@@ -2395,12 +2502,12 @@ void SetupMenu::system_menu_create_comm( MenuEntry *top ){
 
 	SetupMenu * wireless = new SetupMenu( "Wireless" );
 	wireless->addCreator(system_menu_create_comm_wireless);
-	wireless->setHelp("Configure wireless communications, 240");
+	wireless->setHelp("Configure wireless communications", 260);
 	top->addEntry( wireless );
 
 	SetupMenu * wired = new SetupMenu( "Wired" );
 	wired->addCreator(system_menu_create_comm_wired);
-	wired->setHelp("Configure wired data ports");
+	wired->setHelp("Configure wired data ports", 260);
 	top->addEntry( wired );
 
 	SetupMenu * routing = new SetupMenu( "Data Routing" );
@@ -2427,12 +2534,6 @@ void SetupMenu::system_menu_create( MenuEntry *sye ){
 	SetupMenu * soft = new SetupMenu( "Software Update" );
 	sye->addEntry( soft );
 	soft->addCreator(system_menu_create_software);
-
-	SetupMenuSelect * fa = new SetupMenuSelect( "Factory Reset", RST_IMMEDIATE, 0, false, &factory_reset );
-	fa->setHelp("Option to reset all settings to factory defaults, means metric system, 5 m/s vario range and more");
-	fa->addEntry( "Cancel");
-	fa->addEntry( "ResetAll");
-	sye->addEntry( fa );
 }
 
 void SetupMenu::setup_create_root(MenuEntry *top ){

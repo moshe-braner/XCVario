@@ -136,12 +136,21 @@ void SetupMenuValFloat::down( int count ){
 // somehow this is still reversed, so do "up" here:
 	// ESP_LOGI(FNAME,"val up %d times ", count );
 	_value = _nvs->get();
+#if defined(SUNTON28)
 	while( (_value < _max) && count > 0 ) {
 		_value += step( _step );
 		count--;
 	}
 	if( _value > _max )
 		_value = _max;
+#else
+	while( (_value > _min) && count > 0 ) {
+		_value -= step( _step );
+		count--;
+	}
+	if( _value < _min )
+		_value = _min;
+#endif
 	_nvs->set(_value );
 	displayVal();
 	if( _action != 0 )
@@ -153,12 +162,21 @@ void SetupMenuValFloat::up( int count ){
 		return;
 	// ESP_LOGI(FNAME,"val down %d times ", count );
 	_value = _nvs->get();
+#if defined(SUNTON28)
 	while( (_value > _min) && count > 0 ) {
 		_value -= step( _step );
 		count--;
 	}
 	if( _value < _min )
 		_value = _min;
+#else
+	while( (_value < _max) && count > 0 ) {
+		_value += step( _step );
+		count--;
+	}
+	if( _value > _max )
+		_value = _max;
+#endif
 	_nvs->set(_value );
 	displayVal();
 	if( _action != 0 )

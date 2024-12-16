@@ -186,9 +186,6 @@ bool SetupCommon::initSetup( bool& present ) {
 				ESP_LOGE(FNAME,"Error init with default NVS: %s", (*instances)[i]->key() );
 	}
 
-	// make any needed adjustments, from old to new NGs, unpack bitfields, etc:
-	post_init_NG();
-
 	if( factory_reset.get() ) {
 		ESP_LOGI(FNAME,"\n\n******  FACTORY RESET ******");
 		for(int i = 0; i < instances->size(); i++ ) {
@@ -209,6 +206,9 @@ bool SetupCommon::initSetup( bool& present ) {
 			}
 		}
 	}
+
+	// make any needed adjustments, from old to new NGs, unpack bitfields, etc:
+	post_init_NG();    // in SetupNG.cpp
 
 	giveConfigChanges( 0, true );
 	return ret;

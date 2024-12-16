@@ -97,8 +97,10 @@ void Cipher::begin()
 	_id = std::string( id );
 }
 
+#if defined(NOSENSORS)
 #define BYPASS_KEY
 // - for testing builds from a fork lacking the secret key
+#endif
 
 bool Cipher::init(){
 #if defined(BYPASS_KEY)
