@@ -1362,14 +1362,14 @@ void IpsDisplay::drawScale( int16_t max_pos, int16_t max_neg, int16_t pos, int16
 
 			float val = (*_gauge)((float)a/10.);
 			if( width < 3 )
-				drawOneScaleLine( val, pos, end, width, DARK_GREY );  // darker color for small scale
+				drawOneScaleLine( val, pos, end, width, COLOR_DGREY );  // darker color for small scale
 			else
 				drawOneScaleLine( val, pos, end, width, COLOR_WHITE );
 
 			if ( draw_label ) { drawOneLabel(val, a/10, pos+12, offset); }
 			if ( (-a/10) >= max_neg && at < max_neg ) {
 				if( width < 3 )
-					drawOneScaleLine( -val, pos, end, width, DARK_GREY );
+					drawOneScaleLine( -val, pos, end, width, COLOR_DGREY );
 				else
 					drawOneScaleLine( -val, pos, end, width, COLOR_WHITE );
 				if ( draw_label ) { drawOneLabel(-val, a/10, pos+12, -offset); }

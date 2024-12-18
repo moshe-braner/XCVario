@@ -35,6 +35,10 @@ extern uint8_t g_col_header_light_b;
 #define COLOR_LBROWN  255-100,255-70,255-20  // Lighter Brown
 #define COLOR_DBLUE  255-5, 255-15, 255-50
 
+// other color names
+//#define DARK_GREY     COLOR_DGREY
+//#define LIGHT_GREEN   COLOR_LGREEN
+
 // colors for horizon screen
 #define COLOR_LSKY    COLOR_LBBLUE
 #define COLOR_LGROUND COLOR_MBROWN
@@ -42,9 +46,9 @@ extern uint8_t g_col_header_light_b;
 #define COLOR_DGROUND COLOR_BROWN
 
 // colors for single-icon FLARM screen
-#define COLOR_ABOVE  COLOR_LBBLUE
-#define COLOR_LEVEL  COLOR_BRED
-#define COLOR_BELOW  COLOR_ORANGE
+#define COLOR_ABOVE   COLOR_LBBLUE
+#define COLOR_LEVEL   COLOR_BRED
+#define COLOR_BELOW   COLOR_ORANGE
 
 #define DISPLAY_H 320
 #define DISPLAY_W 240
