@@ -73,6 +73,7 @@ private:
 	static void drawWarning1();
 	static void drawWarning2();
 	static void flarmSim();
+	static long int GPSTime( char *time, char* date );
 
 	static AdaptUGC* ucg;
 	static int RX,TX,GPS,Power;
@@ -97,6 +98,8 @@ private:
 	static int ext_alt_timer;
 	static int _numSat;
 	static int sim_tick;
+	static int clock_timer;
+	static bool time_sync;
 };
 
 #endif

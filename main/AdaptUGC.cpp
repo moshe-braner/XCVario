@@ -10,28 +10,28 @@
 
 static eglib_t myeglib;
 
-uint8_t PROGMEM ucg_font_9x15B_mf[] = { UCG_FONT_9x15B_MF };
-uint8_t PROGMEM ucg_font_ncenR14_hr[] = { UCG_FONT_NCENR14_HR };
-uint8_t PROGMEM ucg_font_fub11_tr[] = { UCG_FONT_FUB11_TR };
-uint8_t PROGMEM ucg_font_fub11_hr[] = { UCG_FONT_FUB11_HR };
-uint8_t PROGMEM ucg_font_fub14_hn[] = { UCG_FONT_FUB14_HN };
-uint8_t PROGMEM ucg_font_fub14_hr[] = { UCG_FONT_FUB14_HR };
-uint8_t PROGMEM ucg_font_fub14_hf[] = { UCG_FONT_FUB14_HF };
-uint8_t PROGMEM ucg_font_fur14_hf[] = { UCG_FONT_FUR14_HF };
-uint8_t PROGMEM ucg_font_fub17_hf[] = { UCG_FONT_FUB17_HF };
-uint8_t PROGMEM ucg_font_fub20_hn[] = { UCG_FONT_FUB20_HN };
-uint8_t PROGMEM ucg_font_fub20_hr[] = { UCG_FONT_FUB20_HR };
-uint8_t PROGMEM ucg_font_fub20_hf[] = { UCG_FONT_FUB20_HF };
-uint8_t PROGMEM ucg_font_fur20_hf[] = { UCG_FONT_FUR20_HF };
-uint8_t PROGMEM ucg_font_fub25_hr[] = { UCG_FONT_FUB25_HR };
-uint8_t PROGMEM ucg_font_fub25_hf[] = { UCG_FONT_FUB25_HF };
-uint8_t PROGMEM ucg_font_fur25_hf[] = { UCG_FONT_FUR25_HF };
-uint8_t PROGMEM ucg_font_fub35_hn[] = { UCG_FONT_FUB35_HN };
-uint8_t PROGMEM ucg_font_fub35_hr[] = { UCG_FONT_FUB35_HR };
-uint8_t PROGMEM ucg_font_profont22_mr[] = {  UCG_FONT_PROFONT22_MR };
-uint8_t PROGMEM ucg_font_fub25_hn[] = { UCG_FONT_FUB25_HN };
-uint8_t PROGMEM ucg_font_fub11_hn[] = { UCG_FONT_FUB11_HN };
-uint8_t PROGMEM eglib_font_free_sansbold_66[] = { EGLIB_FONT_FREE_SANSBOLD_66 };
+const uint8_t ucg_font_9x15B_mf[] = { UCG_FONT_9x15B_MF };
+const uint8_t ucg_font_ncenR14_hr[] = { UCG_FONT_NCENR14_HR };
+const uint8_t ucg_font_fub11_tr[] = { UCG_FONT_FUB11_TR };
+const uint8_t ucg_font_fub11_hr[] = { UCG_FONT_FUB11_HR };
+const uint8_t ucg_font_fub14_hn[] = { UCG_FONT_FUB14_HN };
+const uint8_t ucg_font_fub14_hr[] = { UCG_FONT_FUB14_HR };
+const uint8_t ucg_font_fub14_hf[] = { UCG_FONT_FUB14_HF };
+const uint8_t ucg_font_fur14_hf[] = { UCG_FONT_FUR14_HF };
+const uint8_t ucg_font_fub17_hf[] = { UCG_FONT_FUB17_HF };
+const uint8_t ucg_font_fub20_hn[] = { UCG_FONT_FUB20_HN };
+const uint8_t ucg_font_fub20_hr[] = { UCG_FONT_FUB20_HR };
+const uint8_t ucg_font_fub20_hf[] = { UCG_FONT_FUB20_HF };
+const uint8_t ucg_font_fur20_hf[] = { UCG_FONT_FUR20_HF };
+const uint8_t ucg_font_fub25_hr[] = { UCG_FONT_FUB25_HR };
+const uint8_t ucg_font_fub25_hf[] = { UCG_FONT_FUB25_HF };
+const uint8_t ucg_font_fur25_hf[] = { UCG_FONT_FUR25_HF };
+const uint8_t ucg_font_fub35_hn[] = { UCG_FONT_FUB35_HN };
+const uint8_t ucg_font_fub35_hr[] = { UCG_FONT_FUB35_HR };
+const uint8_t ucg_font_profont22_mr[] = {  UCG_FONT_PROFONT22_MR };
+const uint8_t ucg_font_fub25_hn[] = { UCG_FONT_FUB25_HN };
+const uint8_t ucg_font_fub11_hn[] = { UCG_FONT_FUB11_HN };
+const uint8_t eglib_font_free_sansbold_66[] = { EGLIB_FONT_FREE_SANSBOLD_66 };
 
 static ili9341_config_t ili9341_config = {
 		.width = 240,
@@ -44,7 +44,7 @@ static ili9341_config_t ili9341_config = {
 		.horizontal_refresh = ILI9341_HORIZONTAL_REFRESH_LEFT_TO_RIGHT,
 };
 
-static PROGMEM esp32_hal_config_t esp32_ili9341_config = {
+static esp32_hal_config_t esp32_ili9341_config = {
 		.spi_num = 	VSPI,
 		.freq = 	13111111*3,  // max 40 MHz
 		.dataMode = SPI_MODE0,
@@ -57,7 +57,7 @@ static PROGMEM esp32_hal_config_t esp32_ili9341_config = {
 		.gpio_rs  = RESET_Display,
 };
 
-void AdaptUGC::setFont(uint8_t *f, bool filled ){    // adapter
+void AdaptUGC::setFont(const uint8_t *f, bool filled ){    // adapter
 	eglib_setFilledMode( eglib, filled );
 	switch( f[0] ){
 	case UCG_FONT_9x15B_MF:
@@ -134,7 +134,8 @@ void  AdaptUGC::begin() {
 		ili9341_config.page_address =  ILI9341_PAGE_ADDRESS_BOTTOM_TO_TOP;
 		ili9341_config.colum_address = ILI9341_COLUMN_ADDRESS_RIGHT_TO_LEFT;
 	}
-	ESP_LOGI(FNAME, "eglib_Send() &eglib:%x  hal-driv:%x config:%x\n", (unsigned int)eglib, (unsigned int)&esp32_ili9341, (unsigned int)&esp32_ili9341_config );
+	esp32_ili9341_config.freq = rint( FREQ_BMP_SPI * 3 * ((100.0 + display_clock_adj.get())/100.0));
+	ESP_LOGI(FNAME, "eglib_Send() &eglib:%x  hal-driv:%x config:%x  clk:%.3f MHz\n", (unsigned int)eglib, (unsigned int)&esp32_ili9341, (unsigned int)&esp32_ili9341_config, (double)(esp32_ili9341_config.freq/1000000.0) );
 	eglib_Init( &myeglib, &esp32_ili9341, &esp32_ili9341_config, &ili9341, &ili9341_config );
 	setClipRange( 0,0, 240, 320 );
 };

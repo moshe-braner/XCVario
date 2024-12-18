@@ -46,6 +46,8 @@
 #define SPI_MISO       GPIO_NUM_32      // SPI SDI Master In Slave Out
 #endif
 
+#define GYRO_FS (mpud::GYRO_FS_250DPS)
+
 typedef struct global_flags{
 	bool inSetup :1;
 	bool haveMPU :1;
@@ -80,10 +82,6 @@ extern xSemaphoreHandle display_mutex;
 
 extern e_wireless_type wireless;
 
-// MPU6050 sensor
-extern mpud::float_axes_t accelG;
-extern mpud::float_axes_t gyroDPS;
-
 extern float getTAS();
 void doAudio( float te );
 
@@ -107,6 +105,10 @@ extern S2F Speed2Fly;
 extern float meanClimb;
 extern Protocols OV;
 extern int the_can_mode;
+extern float baroP;    // Static pressure
+extern float dynamicP; // Pitot pressure
+
+extern long unsigned int _gps_millis;
 
 extern IpsDisplay *display;
 

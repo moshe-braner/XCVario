@@ -654,6 +654,9 @@ void IpsDisplay::erase_horizon_line( bool up0, bool up1 ) {
 
 void IpsDisplay::drawHorizon( float p, float b, float yaw )   // ( pitch, roll, yaw )
 {
+//	if( _menu || !gflags.ahrsKeyValid )
+//		return;
+
 	tick++;
 	if ( (tick&0x03) != 0 )    // redraw horizon every 80 ms
 		return;

@@ -7,6 +7,8 @@
 
 #include "SetupNG.h"
 #include "SetupMenu.h"
+#include "quaternion.h"
+
 #include <string>
 #include <stdio.h>
 #include "esp_system.h"
@@ -442,13 +444,11 @@ void chg_mpu_target(){
 	mpu_target_temp = mpu_temperature.get();
 };
 
-void set_ahrs_defaults(){
-	ahrs_gyro_factor.setDefault();
-	ahrs_min_gyro_factor.setDefault();
-	ahrs_dynamic_factor.setDefault();
-	gyro_gating.setDefault();
-	ahrs_gyro_cal.setDefault();
-}
+void chg_display_orientation(){
+	ESP_LOGI(FNAME, "display changed");
+	imu_reference.setDefault();
+};
+
 
 SetupNG<float>          MC(  "MacCready", 0.5, true, SYNC_BIDIR, PERSISTENT, change_mc, UNIT_VARIO );
 SetupNG<float>  		QNH( "QNH", 1013.25, true, SYNC_BIDIR, PERSISTENT, 0, UNIT_QNH );
@@ -549,7 +549,7 @@ SetupNG<float>  		factory_volt_adjust("FACT_VOLT_ADJ" , 0.00815, RST_NONE );
 
 SetupNG<int>  			display_type( "DISPLAY_TYPE",  UNIVERSAL );
 SetupNG<int>  			display_test( "DISPLAY_TEST", 0, RST_NONE, SYNC_NONE, VOLATILE );
-SetupNG<int>  			display_orientation("DISPLAY_ORIENT" , DISPLAY_NORMAL );
+SetupNG<int>  			display_orientation("DISPLAY_ORIENT" , DISPLAY_NORMAL, true, SYNC_NONE, PERSISTENT, chg_display_orientation );
 SetupNG<int>  			flap_enable( "FLAP_ENABLE", 0, true, SYNC_FROM_MASTER, PERSISTENT, flap_act);
 SetupNG<float>  		flap_minus_3( "FLAP_MINUS_3", 200,  true, SYNC_FROM_MASTER, PERSISTENT, flap_act, UNIT_SPEED );
 SetupNG<float>  		flap_minus_2( "FLAP_MINUS_2", 165,  true, SYNC_FROM_MASTER, PERSISTENT, flap_act, UNIT_SPEED );
@@ -595,7 +595,7 @@ SetupNG<int>  			nmea_protocol( "NMEA_PROTOCOL", XCVARIO );
 SetupNG<int>		    log_level( "LOG_LEVEL", 3 );
 SetupNG<float>		    audio_factor( "AUDIO_FACTOR", 1 );
 SetupNG<float>		    te_comp_adjust ( "TECOMP_ADJ", 0);
-SetupNG<int>		    te_comp_enable( "TECOMP_ENA", 0 );
+SetupNG<int>		    te_comp_enable( "TECOMP_ENA", TE_TEK_PROBE );
 SetupNG<int>		    rotary_dir( "ROTARY_DIR", 0 );
 SetupNG<int>		    rotary_inc( "ROTARY_INC", 1 );
 #if defined(NOSENSORS)
@@ -622,9 +622,8 @@ SetupNG<int>		    ahrs_autozero("AHRSAZ", 0 );
 SetupNG<float>		    ahrs_gyro_factor("AHRSMGYF", 100 );
 SetupNG<float>		    ahrs_min_gyro_factor("AHRSLGYF", 20 );
 SetupNG<float>		    ahrs_dynamic_factor("AHRSGDYN", 5 );
+SetupNG<int>		    ahrs_roll_check("AHRSRCHECK", 0 );
 SetupNG<float>       	gyro_gating("GYRO_GAT", 1.0 );
-SetupNG<float>  		ahrs_gyro_cal("AHRSGCAL", 1.07 );
-SetupNG<int>  			ahrs_defaults( "AHRSDEF", 0, RST_NONE, SYNC_NONE, VOLATILE, set_ahrs_defaults );
 SetupNG<int>		    display_style("DISPLAY_STYLE", 1 );
 SetupNG<int>		    s2f_switch_type("S2FHWSW", S2F_HW_SWITCH );
 SetupNG<int>		    hardwareRevision("HWREV", HW_UNKNOWN );
@@ -648,6 +647,7 @@ SetupNG<int>            flarm_sound_continuous( "FLARM_CONT", 1 );
 SetupNG<int>            flarm_2icons( "FLARM_ICONS", 1 );
 SetupNG<int>            flarm_sim( "FLARM_SIM", 0 );
 SetupNG<float>          flarm_volume( "FLARM_VOL", 100 );
+SetupNG<float>          flarm_alarm_time( "FLARM_ALM", 5 );
 SetupNG<int>            flap_sensor( "FLAP_SENS", 0, RST_NONE, SYNC_FROM_MASTER, PERSISTENT, flap_act);
 SetupNG<float>          flap_pos_max("FL_POS_M", +2, true, SYNC_FROM_MASTER, PERSISTENT, flap_act);
 SetupNG<float>          flap_neg_max("FL_NEG_M", -2, true, SYNC_FROM_MASTER, PERSISTENT, flap_act);
@@ -769,9 +769,12 @@ SetupNG<t_bitfield_compass>  calibration_bits("CALBIT", { 0,0,0,0,0,0 } );
 SetupNG<int> 			gear_warning("GEARWA", 0 );
 SetupNG<t_wireless_id>  custom_wireless_id("WLID", t_wireless_id("") );
 SetupNG<int> 			drawing_prio("DRAWP", DP_NEEDLE );
+SetupNG<int> 			logging("LOGGING", LOG_DISABLE );
+SetupNG<float>      	display_clock_adj("DSCLADHJ", 0 );
 
-mpud::raw_axes_t zero_bias;
-
+static mpud::raw_axes_t zero_bias;
+SetupNG<float>				glider_ground_aa("GLD_GND_AA", 12.0, true, SYNC_FROM_MASTER);
+SetupNG<Quaternion>			imu_reference("IMU_REFERENCE", Quaternion(), false);
 SetupNG<mpud::raw_axes_t>	gyro_bias("GYRO_BIAS", zero_bias );
 SetupNG<mpud::raw_axes_t>	accl_bias("ACCL_BIAS", zero_bias );
 SetupNG<float>              mpu_temperature("MPUTEMP", 45.0, true, SYNC_FROM_MASTER, PERSISTENT, chg_mpu_target );    // default for AHRS chip temperature (XCV 2023)

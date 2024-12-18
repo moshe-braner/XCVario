@@ -474,7 +474,7 @@ void IpsDisplay::initDisplay() {
 		ucg->print(Units::VarioUnit());
 		ucg->setPrintPos(FIELD_START,YVAR-VARFONTH+7);
 
-		ucg->print(PROGMEM"AV Vario");
+		ucg->print("AV Vario");
 		ucg->setColor(0, COLOR_WHITE );
 
 		// print TE scale
@@ -494,7 +494,7 @@ void IpsDisplay::initDisplay() {
 		ucg->printf("%s %s", Units::AirspeedModeStr(), Units::AirspeedUnitStr() );
 
 		ucg->setPrintPos(ASVALX,YS2F-(2*fh) - 8);
-		ucg->print(PROGMEM" S2F");
+		ucg->print(" S2F");
 
 		ucg->setColor(0, COLOR_WHITE );
 		// AS Box
@@ -1358,13 +1358,20 @@ void IpsDisplay::drawScale( int16_t max_pos, int16_t max_neg, int16_t pos, int16
 				}
 				draw_label = a!=0 && (draw_label || max_pos<5 || a==mid_lpos);
 			}
-			// ESP_LOGI(FNAME, "lines a %d %d %d", a, end, draw_label);
+			// ESP_LOGI(FNAME, "lines a:%d end:%d label: %d  width: %d", a, end, draw_label, width );
 
 			float val = (*_gauge)((float)a/10.);
-			drawOneScaleLine( val, pos, end, width, COLOR_WHITE );
+			if( width < 3 )
+				drawOneScaleLine( val, pos, end, width, DARK_GREY );  // darker color for small scale
+			else
+				drawOneScaleLine( val, pos, end, width, COLOR_WHITE );
+
 			if ( draw_label ) { drawOneLabel(val, a/10, pos+12, offset); }
 			if ( (-a/10) >= max_neg && at < max_neg ) {
-				drawOneScaleLine( -val, pos, end, width, COLOR_WHITE );
+				if( width < 3 )
+					drawOneScaleLine( -val, pos, end, width, DARK_GREY );
+				else
+					drawOneScaleLine( -val, pos, end, width, COLOR_WHITE );
 				if ( draw_label ) { drawOneLabel(-val, a/10, pos+12, -offset); }
 			}
 			draw_label = false;
@@ -1691,10 +1698,11 @@ bool IpsDisplay::drawAltitude( float altitude, int16_t x, int16_t y, bool dirty,
 }
 
 // Accepts speed in kmh IAS/TAS, translates into configured unit
+//   >>>  actually now already in display units?
 // right-aligned to value in 25 font size, no unit
-void IpsDisplay::drawSmallSpeed(float v_kmh, int16_t x, int16_t y)
+void IpsDisplay::drawSmallSpeed(float v, int16_t x, int16_t y)
 {
-	int airspeed = Units::AirspeedRounded(v_kmh);
+	int airspeed = Units::AirspeedRounded(v);
 	ucg->setColor( COLOR_WHITE );
 	ucg->setFont(ucg_font_fub14_hr, true);
 	char s[32];
@@ -1755,11 +1763,11 @@ void IpsDisplay::drawLoadDisplayTexts(){
 	ucg->setFont(ucg_font_fub11_hr, true);
 	ucg->setPrintPos(130,70);
 	ucg->setColor(  COLOR_HEADER_LIGHT  );
-	ucg->print( PROGMEM"MAX POS G" );
+	ucg->print( "MAX POS G" );
 	ucg->setPrintPos(130,205);
-	ucg->print( PROGMEM"MAX NEG G" );
+	ucg->print( "MAX NEG G" );
 	ucg->setPrintPos(130,260);
-	ucg->printf( PROGMEM"MAX IAS %s", Units::AirspeedUnitStr() );
+	ucg->printf( "MAX IAS %s", Units::AirspeedUnitStr() );
 }
 
 void IpsDisplay::initLoadDisplay(){
@@ -1770,7 +1778,7 @@ void IpsDisplay::initLoadDisplay(){
 	ucg->setColor( COLOR_HEADER );
 	ucg->setFont(ucg_font_fub11_hr);
 	ucg->setPrintPos(20,20);
-	ucg->print( PROGMEM"G-Force" );
+	ucg->print( "G-Force" );
 	drawLoadDisplayTexts();
 	int max_gscale = (int)( gload_pos_limit.get() )+1;
 	if( -gload_neg_limit.get() >= max_gscale )
@@ -2188,7 +2196,7 @@ void IpsDisplay::drawRetroDisplay( int airspeed_kmh, float te_ms, float ate_ms, 
 	}
 
 	// WK-Indicator
-	if( FLAP && !(tick%7) )
+	if( FLAP && !(tick%3) )
 	{
 		float wkspeed = Units::ActualWingloadCorrection(ias.get());
 		int wki;
@@ -2297,6 +2305,7 @@ void IpsDisplay::drawAirlinerDisplay( int airspeed_kmh, float te_ms, float ate_m
 	if( FLAP && !(tick%7) )
 	{
 		float wkspeed = Units::ActualWingloadCorrection(airspeed_kmh);
+		   // no units conversion in here, tbd: move sub to other place
 		int wki;
 		float wkopt=FLAP->getOptimum( wkspeed, wki );
 		int wk = (int)((wki - wkopt + 0.5)*10);
@@ -2487,7 +2496,7 @@ void IpsDisplay::drawAirlinerDisplay( int airspeed_kmh, float te_ms, float ate_m
 		}
 		ucg->undoClipRange();
 		// AS cleartext
-		drawSmallSpeed(airspeed_kmh, FIELD_START+35, YS2F-fh+3);
+		drawSmallSpeed(airspeed, FIELD_START+35, YS2F-fh+3);
 		as_prev = airspeed;
 	}
 	// S2F command trend triangle
@@ -2495,7 +2504,7 @@ void IpsDisplay::drawAirlinerDisplay( int airspeed_kmh, float te_ms, float ate_m
 		xSemaphoreGive(spiMutex);
 		return;
 	}
-	if( ((int)s2fd != s2fdalt && !((tick+1)%2)) || !(tick%21) ) {
+	if( ((int)s2fd != s2fdalt) || (s2falt != (int)(s2f+0.5)) || !(tick%21) ) {
 		// Arrow pointing there
 		if( s2fmode ){
 			// erase old

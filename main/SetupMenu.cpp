@@ -31,16 +31,17 @@
 #include "WifiClient.h"
 #include "Blackboard.h"
 #include "DataMonitor.h"
+#include "DataMonitor.h"
+#include "KalmanMPU6050.h"
+#include "sensor.h"
+#include "SetupNG.h"
 
+#include <logdef.h>
 #include <inttypes.h>
 #include <iterator>
 #include <algorithm>
-#include <logdef.h>
-#include <sensor.h>
 #include <cstring>
 #include <string>
-#include "SetupNG.h"
-#include "quaternion.h"
 
 SetupMenuSelect * audio_range_sm = 0;
 SetupMenuSelect * mpu = 0;
@@ -113,6 +114,17 @@ int speedcal_change(SetupMenuValFloat * p)
 	return 0;
 }
 
+int set_ahrs_defaults( SetupMenuSelect* p ){
+	if ( p->getSelect() == 1 ) {
+		ahrs_gyro_factor.setDefault();
+		ahrs_min_gyro_factor.setDefault();
+		ahrs_dynamic_factor.setDefault();
+		gyro_gating.setDefault();
+	}
+	p->setSelect(0);
+	return 0;
+}
+
 gpio_num_t SetupMenu::getGearWarningIO(){
 	gpio_num_t io = GPIO_NUM_0;
 #if !defined(NOSENSORS)
@@ -178,7 +190,9 @@ int do_display_test(SetupMenuSelect * p){
 
 int update_s2f_speed(SetupMenuValFloat * p)
 {
-	Switch::setCruiseSpeed( Units::Airspeed2Kmh( s2f_speed.get() ) );
+//	Switch::setCruiseSpeed( Units::Airspeed2Kmh( s2f_speed.get() ) );
+//	ESP_LOGI(FNAME,"sf2_speed: %.1f conv: %.1f",  s2f_speed.get(), Units::Airspeed2Kmh( s2f_speed.get() ) );
+	Switch::setCruiseSpeed( s2f_speed.get() );
 	return 0;
 }
 
@@ -214,6 +228,16 @@ int data_mon( SetupMenuSelect * p ){
 	return 0;
 }
 
+int data_monS1( SetupMenuSelect * p ){
+	data_monitor.set( MON_S1 );
+	return( data_mon(p) );
+}
+
+int data_monS2( SetupMenuSelect * p ){
+	data_monitor.set( MON_S2 );
+	return( data_mon(p) );
+}
+
 int update_id( SetupMenuChar * p){
 	const char *c = p->getEntry();
 	ESP_LOGI(FNAME,"New Letter %c Index: %d", *c, p->getCharIndex() );
@@ -236,6 +260,36 @@ int add_key( SetupMenuSelect * p )
 		if( mpu->existsEntry( "Enable") )
 			mpu->delEntry( "Enable");
 	}
+	return 0;
+}
+
+static int imu_gaa( SetupMenuValFloat* f )
+{
+	if ( ! (imu_reference.get() == Quaternion()) ) {
+		IMU::applyImuReference(f->_value, imu_reference.get());
+	}
+	return 0;
+}
+
+static int imu_calib( SetupMenuSelect *p )
+{
+	ESP_LOGI(FNAME,"Collect AHRS data (%d)", p->getSelect() );
+	int sel = p->getSelect();
+	switch (sel) {
+		case 0:
+			break; // cancel
+		case 1:
+			// collect samples
+			IMU::doImuCalibration(p);
+			break;
+		case 2:
+			// reset to default
+			IMU::defaultImuReference();
+			break;
+		default:
+			break;
+	}
+	p->setSelect(0);
 	return 0;
 }
 
@@ -529,15 +583,16 @@ void SetupMenu::down(int count){
 			// using touch screen instead of rotary, touching bottom part of screen
 			// means move selection in menus towards bottom (higher index)
 			// but move volume and numbers to a lower value
-			if( vol<3.0 )
-				vol=3.0;
+			if( vol<1.5 ) 
+				vol=1.5;
 			vol = vol * 1.17;               // count always considered as 1
 			if( vol > max_volume.get() )
 				vol = max_volume.get();
 #else
 			for( int i=0; i<count; i++ )
 				vol = vol * 0.83;
-			if( vol<3.0 )
+			if( vol<1.5 ) 
+				// allow smaller volumes to better support new 50% scale mode of ESP32 sine generator (default is 25%)
 				vol=0;
 #endif
 			audio_volume.set( vol );
@@ -553,11 +608,20 @@ void SetupMenu::down(int count){
 	ucg->setColor(COLOR_BLACK);
 	ucg->drawFrame( 1,(highlight+1)*25+3,238,25 );
 	ucg->setColor(COLOR_WHITE);
+#if defined(SUNTON28)
 	if( highlight  > -1 ){
 		highlight --;
 	}
 	else
 		highlight = (int)(_childs.size() -1 );
+#else
+	while( (highlight  > -1) && count ){
+		highlight --;
+		count--;
+	}
+	if( highlight < -1 )
+		highlight = (int)(_childs.size() -1 );
+#endif
 	ucg->drawFrame( 1,(highlight+1)*25+3,238,25 );
 	xSemaphoreGive(spiMutex );
 	pressed = true;
@@ -599,11 +663,11 @@ void SetupMenu::up(int count){
 			float vol = audio_volume.get();
 #if defined(SUNTON28)
 			vol = vol * 0.83;
-			if( vol<3.0 )
+			if( vol<1.5 )
 				vol=0;
 #else
-			if( vol<3.0 )
-				vol=3.0;
+			if( vol<1.5 )
+				vol=1.5;
 			for( int i=0; i<count; i++ )
 				vol = vol * 1.17;
 			if( vol > max_volume.get() )
@@ -622,11 +686,21 @@ void SetupMenu::up(int count){
 	ucg->setColor(COLOR_BLACK);
 	ucg->drawFrame( 1,(highlight+1)*25+3,238,25 );
 	ucg->setColor(COLOR_WHITE);
+#if defined(SUNTON28)
 	if( highlight < (int)(_childs.size()-1) ){
 		highlight ++;
 	}
 	else
 		highlight = -1;
+#else
+	while( highlight < (int)(_childs.size()-1) && count ){
+		highlight ++;
+		count--;
+	}
+	if( highlight > (int)(_childs.size()-1) ){
+		highlight = -1;
+	}
+#endif
 	ucg->drawFrame( 1,(highlight+1)*25+3,238,25 );
 	pressed = true;
 	xSemaphoreGive(spiMutex );
@@ -776,9 +850,6 @@ Calling escape() didn't work either - hard to get back into the setup menu.
 	}
 	else{
 		pressed = true;
-#ifdef Quaternionen_Test
-		Quaternion::quaternionen_test();
-#endif
 	}
 }
 
@@ -873,8 +944,9 @@ void SetupMenu::vario_menu_create_s2f( MenuEntry *top ){
 void SetupMenu::vario_menu_create_ec( MenuEntry *top ){
 	SetupMenuSelect * enac = new SetupMenuSelect( "eCompensation", RST_NONE, 0 , false, &te_comp_enable );
 	enac->setHelp("Enable/Disable electronic TE compensation option; Enable only when TE port is connected to ST (static) pressure");
-	enac->addEntry( "DISABLE");
-	enac->addEntry( "ENABLE");
+	enac->addEntry( "TEK Probe");
+	enac->addEntry( "EPOT");
+	enac->addEntry( "PRESSURE");
 	top->addEntry( enac );
 
 	SetupMenuValFloat * elca = new SetupMenuValFloat( "Adjustment", "%",	-100, 100, 0.1, 0, false, &te_comp_adjust );
@@ -1310,6 +1382,10 @@ void SetupMenu::options_menu_create_flarm( MenuEntry *top ){
 	SetupMenuValFloat * flarmv = new SetupMenuValFloat( "Alarm Volume", "%", 20, 100, 1, 0, false, &flarm_volume  );
 	flarmv->setHelp( "Maximum audio volume of FLARM alarm warning");
 	top->addEntry( flarmv );
+
+	SetupMenuValFloat * flarmt = new SetupMenuValFloat( "Alarm Timeout",  "sec", 1, 15, 1, 0, false, &flarm_alarm_time  );
+	flarmt->setHelp( "The time FLARM alarm warning keeps displayed after alarm went off");
+	top->addEntry( flarmt );
 
 	SetupMenuSelect * flarms = new SetupMenuSelect( "FLARM Simulation", RST_NONE, 0, true, &flarm_sim, false, true );
 	flarms->setHelp( "Simulate an airplane crossing from left to right with different alarm levels and vertical distance 5 seconds after pressed (exits setup!)");
@@ -1923,6 +1999,10 @@ void SetupMenu::options_menu_create_display( MenuEntry *top ){
 	dtest->setHelp( "Start display test screens, press rotary to cancel");
 	dtest->addEntry( "Cancel");
 	dtest->addEntry( "Start Test");
+
+	SetupMenuValFloat * dcadj= new SetupMenuValFloat( "Display Clk Adj", "%", -2, 2, 0.1, 0, true, &display_clock_adj, RST_IMMEDIATE  );
+	dcadj->setHelp( "Modify display clock by given percentage (restarts on exit)", 100 );
+	top->addEntry( dcadj );
 }
 
 void SetupMenu::options_menu_create_rotary( MenuEntry *top ){
@@ -1993,13 +2073,26 @@ void SetupMenu::system_menu_create_ahrs_parameter( MenuEntry *top ){
 	ahrsdgf->setHelp("Gyro dynamics factor, higher value trusts gyro more when load factor is different from one");
 	top->addEntry( ahrsdgf );
 
+	SetupMenuSelect * ahrsrollcheck = new SetupMenuSelect( "Gyro Roll Check", RST_NONE, nullptr, true, &ahrs_roll_check  );
+	ahrsrollcheck->setHelp( "Switch to test the gyro roll check code.");
+	ahrsrollcheck->addEntry( "Disable");
+	ahrsrollcheck->addEntry( "Enable");
+	top->addEntry( ahrsrollcheck );
+
 	SetupMenuValFloat * gyrog = new SetupMenuValFloat( "Gyro Gating", "°", 0, 10, 0.1, 0, false, &gyro_gating  );
 	gyrog->setHelp( "Minimum accepted gyro rate in degree per second");
 	top->addEntry( gyrog );
 
-	SetupMenuValFloat * gyrocal = new SetupMenuValFloat( "Gyro Calibration", "", -0.5, 1.5, 0.01, 0, false, &ahrs_gyro_cal  );
-	gyrocal->setHelp( "Gyro calibration factor to increase accuracy of gyro in %/100");
-	top->addEntry( gyrocal );
+	SetupMenuValFloat * tcontrol = new SetupMenuValFloat( "AHRS Temp Control", "", -1, 60, 1, 0, false, &mpu_temperature  );
+	tcontrol->setPrecision( 0 );
+	tcontrol->setHelp( "Regulated target temperature of AHRS silicon chip, if supported in hardware (model > 2023), -1 means OFF");
+	top->addEntry( tcontrol );
+
+	SetupMenuSelect * ahrsdef = new SetupMenuSelect( "Reset to Defaults", RST_NONE, set_ahrs_defaults);
+	top->addEntry( ahrsdef );
+	ahrsdef->setHelp( "Set optimum default values for all AHRS Parameters as determined to the best practice");
+	ahrsdef->addEntry( "Cancel");
+	ahrsdef->addEntry( "Set Defaults");
 
 }
 
@@ -2016,38 +2109,39 @@ void SetupMenu::system_menu_create_ahrs( MenuEntry *top ){
 	if( gflags.ahrsKeyValid )
 		mpu->addEntry( "Enable");
 
+	SetupMenu * ahrslc = new SetupMenu( "AHRS License Key" );
+	ahrslc->setHelp( "Enter valid AHRS License Key, then AHRS feature can be enabled under 'AHRS Option'");
+	ahrslc->addCreator( system_menu_create_ahrs_lc );
+	top->addEntry( ahrslc );
+
 	SetupMenuSelect * ahrsaz = new SetupMenuSelect( "AHRS Autozero", RST_IMMEDIATE , 0, true, &ahrs_autozero );
-	top->addEntry( ahrsaz );
 	ahrsaz->setHelp( "Start Autozero of AHRS Sensor; Preconditions: On ground; Wings 100% horizontal, fuselage in flight position! (reboots)");
 	ahrsaz->addEntry( "Cancel");
 	ahrsaz->addEntry( "Start");
+	top->addEntry( ahrsaz );
 
-	SetupMenu * ahrslc = new SetupMenu( "AHRS License Key" );
-	ahrslc->setHelp( "Enter valid AHRS License Key, then AHRS feature can be enabled under 'AHRS Option'");
-	top->addEntry( ahrslc );
-	ahrslc->addCreator( system_menu_create_ahrs_lc );
+	SetupMenuValFloat* ahrs_ground_aa = new SetupMenuValFloat( "Ground angle of attack", "°", -5, 20, 1, imu_gaa, false, &glider_ground_aa);
+	ahrs_ground_aa->setHelp(PROGMEM"Angle of attack with tail skid on the ground to adjust the AHRS reference. Change this any time to correct the AHRS horizon level.");
+	ahrs_ground_aa->setPrecision( 0 );
+	top->addEntry( ahrs_ground_aa );
+
+	SetupMenuSelect* ahrs_calib_collect = new SetupMenuSelect( "Axis calibration", RST_NONE, imu_calib, false);
+	ahrs_calib_collect->setHelp(PROGMEM"Calibrate IMU axis on flat leveled ground ground with no inclination. Run the procedure by selecting Start.");
+	ahrs_calib_collect->addEntry("Cancel");
+	ahrs_calib_collect->addEntry("Start");
+	ahrs_calib_collect->addEntry("Reset");
+	top->addEntry( ahrs_calib_collect );
 
 	SetupMenu * ahrspa = new SetupMenu( "AHRS Parameters" );
-	ahrspa->setHelp( "AHRS constants such as gyro trust and filtering", 275 );
 	top->addEntry( ahrspa );
+	ahrspa->setHelp( "AHRS constants such as gyro trust and filtering", 275 );
 	ahrspa->addCreator( system_menu_create_ahrs_parameter );
-
-	SetupMenuSelect * ahrsdef = new SetupMenuSelect( "AHRS Defaults", RST_NONE, 0, true, &ahrs_defaults );
-	top->addEntry( ahrsdef );
-	ahrsdef->setHelp( "Set optimum default values for all AHRS Parameters as determined to the best practice");
-	ahrsdef->addEntry( "Cancel");
-	ahrsdef->addEntry( "Set Defaults");
 
 	SetupMenuSelect * rpyl = new SetupMenuSelect( "AHRS RPYL", RST_NONE , 0, true, &ahrs_rpyl_dataset );
 	top->addEntry( rpyl );
 	rpyl->setHelp( "Send LEVIL AHRS like $RPYL sentence for artifical horizon");
 	rpyl->addEntry( "Disable");
 	rpyl->addEntry( "Enable");
-
-	SetupMenuValFloat * tcontrol = new SetupMenuValFloat( "AHRS Temp Control", "", -1, 60, 1, 0, false, &mpu_temperature  );
-	tcontrol->setPrecision( 0 );
-	tcontrol->setHelp( "Regulated target temperature of AHRS silicon chip, if supported in hardware (model > 2023), -1 means OFF");
-	top->addEntry( tcontrol );
 }
 
 void SetupMenu::system_menu_create_hardware( MenuEntry *top ){
@@ -2193,6 +2287,12 @@ void SetupMenu::system_menu_create_interfaceS1( MenuEntry *top ){
 	i2cpins->addEntry( "No TX, SCL=27");    // 1
 	i2cpins->addEntry( "TX=27, SCL=21");    // 2
 #endif
+
+	SetupMenuSelect * datamon = new SetupMenuSelect( "Monitor", RST_NONE, data_monS1, true, &data_monitor );
+	top->addEntry( datamon );
+	datamon->setHelp( "Short press button to start/pause, long press to terminate data monitor", 260);
+	datamon->addEntry( "Disable");
+	datamon->addEntry( "Start S1 RS232");
 }
 
 void SetupMenu::system_menu_create_interfaceS2_routing( MenuEntry *top ){
@@ -2257,6 +2357,12 @@ void SetupMenu::system_menu_create_interfaceS2( MenuEntry *top ){
 	stxdis2->setHelp( "Option to switch off RS232 TX line in case active sending is not required, e.g. for multiple devices connected to one device (reboots)");
 	stxdis2->addEntry( "Disable");
 	stxdis2->addEntry( "Enable");
+
+	SetupMenuSelect * datamon = new SetupMenuSelect( "Monitor", RST_NONE, data_monS2, true, &data_monitor );
+	top->addEntry( datamon );
+	datamon->setHelp( "Short press button to start/pause, long press to terminate data monitor", 260);
+	datamon->addEntry( "Disable");
+	datamon->addEntry( "Start S2 RS232");
 }
 
 void SetupMenu::system_menu_create_interfaceCAN_routing( MenuEntry *top ){
@@ -2480,7 +2586,7 @@ void SetupMenu::system_menu_create_comm( MenuEntry *top ){
 	mm->addEntryCode( "Client (via WiFi)", MODE_WL_CLIENT);         // 2
 	top->addEntry( mm );
 
-if (testmode.get()) {
+  if (testmode.get()) {
 	// just show the current master mode
 	show_mode_change();       // reflect current mode into mode_shown
 	SetupMenuSelect * sm = new SetupMenuSelect( "Mode (old)", RST_ON_EXIT, 0, true, &show_mode );
@@ -2488,7 +2594,7 @@ if (testmode.get()) {
 	sm->addEntry( mode_shown );
 	show_mode_menu = sm;    // allows changing the label (in SetupNG.cpp) later if mode changes
 	top->addEntry( sm );
-}
+  }
 
 	// NMEA protocol of variometer
 	SetupMenuSelect * nmea = new SetupMenuSelect( "NMEA Protocol", RST_NONE , 0, true, &nmea_protocol );
@@ -2499,6 +2605,12 @@ if (testmode.get()) {
 	nmea->addEntry( "Cambridge");
 	nmea->addEntry( "XCVario");
 	nmea->addEntry( "Disable");
+
+	SetupMenuSelect * logg = new SetupMenuSelect( "Output raw", RST_NONE, 0, true, &logging );
+	logg->setHelp( "Option to output raw sensor data as NMEA, e.g., to XCSoar");
+	logg->addEntry( "Disable");
+	logg->addEntry( "Enable");
+	top->addEntry( logg );
 
 	SetupMenu * wireless = new SetupMenu( "Wireless" );
 	wireless->addCreator(system_menu_create_comm_wireless);
@@ -2545,7 +2657,7 @@ void SetupMenu::setup_create_root(MenuEntry *top ){
 		top->addEntry( mc );
 	}
 	else {
-		SetupMenuValFloat * vol = new SetupMenuValFloat( "Audio Volume", "%", 0.0, 200, 2, vol_adj, true, &audio_volume );
+		SetupMenuValFloat * vol = new SetupMenuValFloat( "Audio Volume", "%", 0.0, 100, 2, vol_adj, true, &audio_volume );
 		vol->setHelp("Audio volume level for variometer tone on internal and external speaker");
 		vol->setMax(max_volume.get());
 		top->addEntry( vol );
@@ -2556,6 +2668,7 @@ void SetupMenu::setup_create_root(MenuEntry *top ){
 
 	SetupMenuValFloat * afe = new SetupMenuValFloat( "Airfield Elevation", "", -1, 3000, 1, 0, true, &elevation );
 	afe->setHelp("Airfield elevation in meters for QNH auto adjust on ground according to this elevation");
+	afe->setDynamic( 3.0 );
 	top->addEntry( afe );
 
 	SetupMenuValFloat * bgs = new SetupMenuValFloat( "Bugs", "%", 0.0, 50, 1, bug_adj, true, &bugs  );

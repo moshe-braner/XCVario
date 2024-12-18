@@ -9,6 +9,7 @@ CAT5171::CAT5171()
 	_noDevice = false;
 	wiper = CAT5171RANGE/2;
 	bus = 0;
+	_scale = 100;
 }
 
 bool CAT5171::begin()
@@ -92,10 +93,11 @@ bool CAT5171::writeWiper( int val ) {
 #endif
 }
 
+
 bool CAT5171::readVolume( float &val ) {
 	int ival;
 	if ( readWiper( ival ) ) {
-		val = (float)(100 * ival) * getInvRange();
+		val = (float)(_scale * ival) * getInvRange();
 		return true;
 	}
 	return false;
@@ -103,7 +105,7 @@ bool CAT5171::readVolume( float &val ) {
 
 bool CAT5171::writeVolume( float val ) {
 	int ival = (int)(val * getRange());
-	ival /= 100;
+	ival /= _scale;
 	return writeWiper( ival );
 }
 

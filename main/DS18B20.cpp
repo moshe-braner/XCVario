@@ -31,8 +31,9 @@ bool DS18B20::begin(){
 #else
 	ESP_LOGI(FNAME,"DS18B20::begin");
 	gpio_set_pull_mode(_pin, GPIO_PULLUP_ONLY);
-	// >>>bug?  why is the GPIO pin number hardwired below?
-	ow = new OnewireRmt( GPIO_NUM_23, RMT_CHANNEL_0, RMT_CHANNEL_1);
+
+	ow = new OnewireRmt(_pin, RMT_CHANNEL_0, RMT_CHANNEL_1);
+
 	dallas = new DallasRmt( ow );
 	dallas->begin();
 	numDevices = dallas->getDeviceCount();

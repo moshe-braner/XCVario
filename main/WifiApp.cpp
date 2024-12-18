@@ -28,7 +28,7 @@
 #include "RingBufCPP.h"
 #include "BTSender.h"
 #include "Router.h"
-#include <string.h>
+//#include <string.h>
 #include "esp_wifi.h"
 #include <list>
 #include "WifiClient.h"

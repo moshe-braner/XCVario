@@ -33,6 +33,8 @@
 #include "WifiApp.h"
 #include "ESP32NVS.h"
 
+// forwards
+class Quaternion;
 
 /*
  *
@@ -79,7 +81,7 @@ typedef enum e_wind_logging { WLOG_DISABLE, WLOG_WIND, WLOG_GYRO_MAG, WLOG_BOTH 
 typedef enum e_unit_type{ UNIT_NONE, UNIT_TEMPERATURE, UNIT_ALT, UNIT_SPEED, UNIT_VARIO, UNIT_QNH } e_unit_type_t;
 typedef enum e_temperature_unit { T_CELCIUS, T_FAHRENHEIT, T_KELVIN } e_temperature_unit_t;
 typedef enum e_alt_unit { ALT_UNIT_METER, ALT_UNIT_FT, ALT_UNIT_FL } e_alt_unit_t;
-typedef enum e_dst_unit { DST_UNIT_M, DST_UNIT_FT } e_dst_unit_t;
+typedef enum e_dst_unit { DST_UNIT_M, DST_UNIT_FT, DST_UNIT_MILES, DST_UNIT_NAUTICAL_MILES } e_dst_unit_t;
 typedef enum e_speed_unit { SPEED_UNIT_KMH, SPEED_UNIT_MPH, SPEED_UNIT_KNOTS } e_speed_unit_t;
 typedef enum e_vario_unit { VARIO_UNIT_MS, VARIO_UNIT_FPM, VARIO_UNIT_KNOTS } e_vario_unit_t;
 typedef enum e_qnh_unit { QNH_HPA, QNH_INHG } e_qnh_unit_t;
@@ -100,7 +102,8 @@ typedef enum e_data_monitor { MON_OFF, MON_BLUETOOTH, MON_WIFI_8880, MON_WIFI_88
 typedef enum e_display_orientation { DISPLAY_NORMAL, DISPLAY_TOPDOWN } e_display_orientation_t;
 typedef enum e_gear_warning_io { GW_OFF, GW_FLAP_SENSOR, GW_S2_RS232_RX, GW_FLAP_SENSOR_INV, GW_S2_RS232_RX_INV, GW_EXTERNAL }  e_gear_warning_io_t;
 typedef enum e_data_mon_mode { MON_MOD_ASCII, MON_MOD_BINARY } e_data_mon_mode_t;
-typedef enum e_hardware_rev { 	HW_UNKNOWN=0,
+typedef enum e_hardware_rev {
+ 	HW_UNKNOWN=0,
 	HW_LONG_VARIO=1,
 	XCVARIO_20=2,  // 1 RS232
 	XCVARIO_21=3,  // 2 RS232, AHRS
@@ -109,9 +112,12 @@ typedef enum e_hardware_rev { 	HW_UNKNOWN=0,
 } e_hardware_rev_t;        // XCVario-Num = hardware revision + 18
 typedef enum e_drawing_prio { DP_NEEDLE, DP_BACKGROUND } e_drawing_prio_t;
 typedef enum e_equalizer_type {  AUDIO_EQ_DISABLE, AUDIO_EQ_LS4, AUDIO_EQ_LS8, AUDIO_EQ_LSEXT } e_equalizer_type_t;
+typedef enum e_logging { LOG_DISABLE, LOG_SENSOR_RAW } e_logging_t;
+
 #if defined(SUNTON28)
 typedef enum e_i2c_pins { I2C_NONE, I2C_27, I2C_21 } e_i2c_pins_t;
 #endif
+typedef enum e_tek_compensation { TE_TEK_PROBE, TE_TEK_EPOT, TE_TEK_PRESSURE } e_tek_compensation_t;
 
 const int baud[] = { 0, 4800, 9600, 19200, 38400, 57600, 115200 };
 void change_bal();
@@ -139,9 +145,9 @@ public:
 			return 'A';
 		return 'U';
 	}
-	SetupNG( const char * akey,
-			T adefault,  				   // unique identification TAG
-			bool reset=true,               // reset data on factory reset
+	SetupNG( const char * akey,          // unique identification TAG
+			T adefault,
+			bool reset=true,             // reset data on factory reset
 			e_sync_t sync=SYNC_NONE,
 			e_volatility vol=PERSISTENT, // sync with client device is applicable
 			void (* action)()=0,
@@ -589,12 +595,13 @@ extern SetupNG<int>		    ahrs_autozero;
 extern SetupNG<float>		ahrs_gyro_factor;
 extern SetupNG<float>		ahrs_min_gyro_factor;
 extern SetupNG<float>		ahrs_dynamic_factor;
+extern SetupNG<int>		    ahrs_roll_check;
 extern SetupNG<float>       gyro_gating;
-extern SetupNG<int>  		ahrs_defaults;
-extern SetupNG<float>  		ahrs_gyro_cal;
 extern SetupNG<int>		    display_style;
 extern SetupNG<int>		    display_variant;
 extern SetupNG<int>		    s2f_switch_type;
+extern SetupNG<float>		glider_ground_aa;
+extern SetupNG<Quaternion>	imu_reference;
 extern SetupNG<mpud::raw_axes_t> gyro_bias;
 extern SetupNG<mpud::raw_axes_t> accl_bias;
 extern SetupNG<float>       mpu_temperature;
@@ -618,6 +625,7 @@ extern SetupNG<int>       	flarm_2icons;
 extern SetupNG<int>       	flarm_sound;
 extern SetupNG<int>       	flarm_sound_continuous;
 extern SetupNG<float>     	flarm_volume;
+extern SetupNG<float>       flarm_alarm_time;
 extern SetupNG<int>       	flarm_sim;
 extern SetupNG<int>       	flap_sensor;
 extern SetupNG<float>     	flap_pos_max;
@@ -715,6 +723,9 @@ extern SetupNG<t_wireless_id>  custom_wireless_id;
 extern SetupNG<int> 		drawing_prio;
 extern uint8_t g_col_background;
 extern uint8_t g_col_highlight;
+extern SetupNG<int> 		logging;
+extern SetupNG<float>      	display_clock_adj;
+
 
 void change_ballast();
 void change_mc();

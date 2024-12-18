@@ -57,7 +57,7 @@ void BMPVario::setup() {
 }
 
 
-double BMPVario::readTE( float tas ) {
+double BMPVario::readTE( float tas, float tep ) {
 	if ( _test )     // we are in testmode, just return what has been set
 		return _TEF;
 	bool success;
@@ -77,7 +77,7 @@ double BMPVario::readTE( float tas ) {
 
 	bmpTemp = _sensorTE->readTemperature( success );
 	// ESP_LOGI(FNAME,"BMP temp=%0.1f", bmpTemp );
-	if( te_comp_enable.get() ) {
+	if( te_comp_enable.get() == TE_TEK_EPOT ) {
 		_currentAlt = altitude.get(); // already read
 		if( !success )
 			_currentAlt = lastAltitude;  // ignore readout when failed
@@ -87,12 +87,13 @@ double BMPVario::readTE( float tas ) {
 		_currentAlt += ealt;
 		ESP_LOGD(FNAME,"Energiehöhe @%0.1f km/h: %0.1f cw: %f", tas, ealt, cw );
 	}
-	else{
-		_currentAlt = _sensorTE->readAltitude(_qnh, success );
-		if( !success )
-			_currentAlt = lastAltitude;  // ignore readout when failed
+	else if( te_comp_enable.get() == TE_TEK_PRESSURE ){
+		_currentAlt = _sensorTE->calcAltitude(_qnh, baroP-(dynamicP/100.0)*(1+(te_comp_adjust.get()/100.0) ));  // subtract PI pressure like TEK probe does
 	}
-	// ESP_LOGI(FNAME,"TE alt: %4.3f m", _currentAlt );
+	else{
+		_currentAlt = _sensorTE->calcAltitude(_qnh, tep );
+	}
+	// ESP_LOGI(FNAME,"TE alt: %4.3f m, ST: %.1f PI: %.1f", _currentAlt, baroP, (dynamicP*100) );
 	averageAlt += (_currentAlt - averageAlt) * 0.1;
 	double adiff = _currentAlt - Altitude;
 	// ESP_LOGI(FNAME,"BMPVario new alt %0.1f err %0.1f", _currentAlt, err);

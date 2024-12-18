@@ -19,7 +19,8 @@ SetupMenuValFloat * SetupMenuValFloat::qnh_menu = 0;
 SetupMenuValFloat * SetupMenuValFloat::meter_adj_menu = 0;
 char SetupMenuValFloat::_val_str[20];
 
-SetupMenuValFloat::SetupMenuValFloat( const char* title, const char *unit, float min, float max, float step, int (*action)( SetupMenuValFloat *p ), bool end_menu, SetupNG<float> *anvs, e_restart_mode_t restart, bool sync, bool live_update ) {
+SetupMenuValFloat::SetupMenuValFloat( const char* title, const char *unit, float min, float max, float step, int (*action)( SetupMenuValFloat *p ), bool end_menu, SetupNG<float> *anvs, e_restart_mode_t restart, bool sync, bool live_update ):
+			_dynamic(1.0) {
 	// ESP_LOGI(FNAME,"SetupMenuValFloat( %s ) ", title.c_str() );
 	attach(this);
 	_title = title;
@@ -52,7 +53,7 @@ SetupMenuValFloat::SetupMenuValFloat( const char* title, const char *unit, float
 
 SetupMenuValFloat::~SetupMenuValFloat()
 {
-    detach(this);
+	detach(this);
 }
 
 const char *SetupMenuValFloat::value(){
@@ -99,7 +100,7 @@ void SetupMenuValFloat::display( int mode ){
 		y+=24;
 		xSemaphoreTake(spiMutex,portMAX_DELAY );
 		ucg->setPrintPos( 1, 300 );
-		ucg->print(PROGMEM"Saved");
+		ucg->print("Saved");
 		xSemaphoreGive(spiMutex );
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
 	}
@@ -107,12 +108,11 @@ void SetupMenuValFloat::display( int mode ){
 
 void SetupMenuValFloat::displayVal()
 {
-	const char *val_str = value();
-	ESP_LOGI(FNAME,"displayVal %s", val_str );
+	// ESP_LOGI(FNAME,"displayVal %s", value() );
 	xSemaphoreTake(spiMutex,portMAX_DELAY );
 	ucg->setPrintPos( 1, 70 );
 	ucg->setFont(ucg_font_fub25_hf, true);
-	ucg->print( val_str );
+	ucg->print( value() );
 	xSemaphoreGive(spiMutex );
 	vTaskDelay(80 / portTICK_PERIOD_MS);  // added since font sometimes changed mid-print
 	ucg->setFont(ucg_font_ncenR14_hr);
@@ -144,14 +144,18 @@ void SetupMenuValFloat::down( int count ){
 	if( _value > _max )
 		_value = _max;
 #else
-	while( (_value > _min) && count > 0 ) {
+	// float start = _value;
+	int _count = std::pow( count, _dynamic );
+	while( (_value > _min) && _count > 0 ) {
 		_value -= step( _step );
-		count--;
+		_count --;
 	}
+
 	if( _value < _min )
 		_value = _min;
 #endif
-	_nvs->set(_value );
+	_nvs->set( _value );
+	// ESP_LOGI(FNAME,"val down diff=%f", start-_value );
 	displayVal();
 	if( _action != 0 )
 		(*_action)( this );
@@ -170,13 +174,16 @@ void SetupMenuValFloat::up( int count ){
 	if( _value < _min )
 		_value = _min;
 #else
-	while( (_value < _max) && count > 0 ) {
+	// float start = _value;
+	int _count = std::pow( count, _dynamic );
+	while( (_value < _max) && _count > 0 ) {
 		_value += step( _step );
-		count--;
+		_count--;
 	}
 	if( _value > _max )
 		_value = _max;
 #endif
+	// ESP_LOGI(FNAME,"val up diff=%f", _value-start );
 	_nvs->set(_value );
 	displayVal();
 	if( _action != 0 )
@@ -191,8 +198,9 @@ void SetupMenuValFloat::press(){
 	if( selected != this )
 		return;
 	ESP_LOGI(FNAME,"SetupMenuValFloat press %d", pressed );
+
 	if ( pressed ){
-		// ESP_LOGI(FNAME,"pressed, value: %f", _value );
+		ESP_LOGI(FNAME,"pressed, value: %f", _value );
 		_nvs->set( _value );
 		display( 1 );
 		if( bits._end_menu )

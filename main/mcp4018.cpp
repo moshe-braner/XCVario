@@ -9,6 +9,7 @@ MCP4018::MCP4018()
 	_noDevice = false;
 	wiper = MCP4018RANGE/2;
 	bus = 0;
+	_scale = 100;
 }
 
 bool MCP4018::begin()
@@ -17,7 +18,9 @@ bool MCP4018::begin()
 	    return( false );
 #else
 	errorcount=0;
-	if( readWiper( wiper ) ) {
+	int local_wiper;
+	if( readWiper( local_wiper ) ) {
+		wiper = local_wiper;
 		ESP_LOGI(FNAME,"MCP4018 wiper=%d", wiper );
 		return(true);
 	}
@@ -92,7 +95,7 @@ bool MCP4018::writeWiper( int val ) {
 bool MCP4018::readVolume( float &val ) {
 	int ival;
 	if ( readWiper( ival ) ) {
-		val = (float)(100 * ival) * getInvRange();
+		val = (float)(_scale * ival) * getInvRange();
 		return true;
 	}
 	else
@@ -103,6 +106,6 @@ bool MCP4018::readVolume( float &val ) {
 
 bool MCP4018::writeVolume( float val ) {
 	int ival = (int)(val * getRange());
-	ival /= 100;
+	ival /= _scale;
 	return writeWiper( ival );
 }

@@ -32,8 +32,6 @@ Last update: 2021-04-05
 #include "MenuEntry.h"
 #include "Router.h"
 #include "vector.h"
-// #include "sensor_processing_lib.h"
-// #include "canbus.h"
 
 /* Register numbers */
 #define REG_X_LSB 0         // Output Data Registers for magnetic sensor.
@@ -213,7 +211,6 @@ esp_err_t QMC5883L::initialize2( int a_odr, int a_osr )
 #else
 	esp_err_t e1, e2, e3, e4;
 	e1 = e2 = e3 = e4 = 0;
-	X = Y = Z = 0;
 
 	// Soft Reset
 	e1 = writeRegister( addr, REG_CONTROL2, SOFT_RST );
@@ -247,7 +244,7 @@ esp_err_t QMC5883L::initialize2( int a_odr, int a_osr )
 #endif
 }
 
-bool QMC5883L::rawAxes( t_magn_axes &axes )
+bool QMC5883L::readRaw( t_magn_axes &mag )
 {
 #if defined(NOSENSORS)
 	return false;
@@ -298,13 +295,11 @@ bool QMC5883L::rawAxes( t_magn_axes &axes )
 	// Data can be read in every case
 	if( count == 6 )
 	{
-		X = (int)( (int16_t)(( data[1] << 8 ) | data[0]) );
-		Y = (int)( (int16_t)(( data[3] << 8 ) | data[2]) );
-		Z = (int)( (int16_t)(( data[5] << 8 ) | data[4]) );
+		axes.x = (int)( (int16_t)(( data[1] << 8 ) | data[0]) );
+		axes.y = (int)( (int16_t)(( data[3] << 8 ) | data[2]) );
+		axes.z = (int)( (int16_t)(( data[5] << 8 ) | data[4]) );
 
-		axes.x = filterX( X );
-		axes.y = filterY( Y );
-		axes.z = filterZ( Z );
+		mag = axes;
 
 		// ESP_LOGI( FNAME, "Mag Average: X:%d Y:%d Z:%d  Raw: X:%d Y:%d Z:%d", axes.x, axes.y, axes.z, x, y, z );
 
