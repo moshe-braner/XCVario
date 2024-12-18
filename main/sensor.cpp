@@ -324,7 +324,6 @@ void drawDisplay(void *pvParameters){
 			}
 
 			// Flarm Warning Screen
-<<<<<<< .merge_file_a10456
 			if( gflags.stall_warning_active || gflags.gear_warning_active) {
 				// stall and gear warnings preempt FLARM warning
 				gflags.flarmVisual = false;
