@@ -169,12 +169,13 @@ void DataMonitor::longPress(){
 
 void DataMonitor::start(SetupMenuSelect * p){
 	ESP_LOGI(FNAME,"start");
-	if( !setup )
+	//if( !setup )
 		attach( this );
 	setup = p;
 	tx_total = 0;
 	rx_total = 0;
-	channel = p->getSelect();
+	//channel = p->getSelect();    this doesn't work right with data_monS1 etc
+	channel = data_monitor.get();
 	xSemaphoreTake(spiMutex,portMAX_DELAY );
 	SetupMenu::catchFocus( true );
 	ucg->setColor( COLOR_BLACK );
@@ -195,11 +196,13 @@ void DataMonitor::start(SetupMenuSelect * p){
 void DataMonitor::stop(){
 	ESP_LOGI(FNAME,"stop");
 	channel = MON_OFF;
+	data_monitor.set( MON_OFF );
+	detach( this );
 	mon_started = false;
 	paused = false;
 	delay(1000);
 	ucg->scrollLines( 0 );
-	setup->setSelect( MON_OFF );
+	//setup->setSelect( MON_OFF );   this doesn't work right with data_monS1 etc
 	SetupMenu::catchFocus( false );
 }
 
