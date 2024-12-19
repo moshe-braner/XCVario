@@ -200,7 +200,7 @@ bool do_factory_reset() {
 void drawDisplay(void *pvParameters){
 	while (1) {
 		if ( gflags.escapeSetup ) {       // need to step up all the way out of the menus
-			while ( flags.inSetup ) {
+			while ( gflags.inSetup ) {
 				SetupMenu::showMenu();    // will step up to parent menu
 				vTaskDelay(60/portTICK_PERIOD_MS);
 			}
