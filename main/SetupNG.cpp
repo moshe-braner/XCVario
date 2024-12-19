@@ -323,7 +323,7 @@ void update_horizon_options(){
 			( (uint32_t)(horizon_plimit.get() & 0x03) << 16 ) |
 			( (uint32_t)(horizon_nums.get()   & 0x01) << 18 );
 			// bits 19-31 still not used
-	ESP_LOGI(FNAME,"update_horizon_options: %x", options);
+	//ESP_LOGI(FNAME,"update_horizon_options: %x", options);
 	horizon_options.set( options );
 }
 

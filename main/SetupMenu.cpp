@@ -710,13 +710,21 @@ void SetupMenu::up(int count){
 
 void SetupMenu::showMenu(){
 	if ( gflags.escapeSetup ) {
-//		if ( _parent == 0 || !gflags.inSetup )
+// after debugging, concise:
+//		if ( _parent == 0 || !gflags.inSetup ) {
 //			gflags.escapeSetup = false;
+//		} else {
+//			pressed = true;
+//			ESP_LOGI(FNAME,"Escape to parent");
+//		}
+//		highlight = -1;
+//		// and fall through
 		if ( gflags.inSetup ) {
 			if( _parent == 0 ) {
 				ESP_LOGI(FNAME,"Escape root menu");
 				gflags.escapeSetup = false;
 			} else {
+				pressed = true;
 				ESP_LOGI(FNAME,"Escape to parent");
 			}
 		} else {
@@ -726,7 +734,6 @@ void SetupMenu::showMenu(){
 			//return;
 		}
 		highlight = -1;
-		pressed = true;
 		// and fall through
 #if 0
 		// or do it all explictly here:
@@ -852,13 +859,19 @@ void SetupMenu::longPress(){
 //	if( menu_long_press.get() && !gflags.inSetup ){
 //		showMenu();
 //	}
-	if( menu_long_press.get() ){
-        if ( !gflags.inSetup ){
-			showMenu();
 // a different approach:
-		} else {
-            gflags.escapeSetup = true;   // global
-			showMenu();
+	if ( gflags.inSetup ) {
+		gflags.escapeSetup = true;   // global
+		showMenu();
+	} else if( menu_long_press.get() ) {
+		showMenu();
+
+//	if( menu_long_press.get() ){
+//        if ( !gflags.inSetup ){
+//			showMenu();
+//		} else {
+//          gflags.escapeSetup = true;   // global
+//			showMenu();
 /*
 Would be nice to be able to leave the menu completely with one long-press.
 The following code does not work though!
@@ -882,7 +895,6 @@ Calling escape() didn't work either - hard to get back into the setup menu.
 			gflags.inSetup=false;
 			//return;
 */
-		}
 	}
 	if( pressed ){
 		pressed = false;

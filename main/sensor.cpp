@@ -199,6 +199,13 @@ bool do_factory_reset() {
 
 void drawDisplay(void *pvParameters){
 	while (1) {
+		if ( gflags.escapeSetup ) {       // need to step up all the way out of the menus
+			while ( flags.inSetup ) {
+				SetupMenu::showMenu();    // will step up to parent menu
+				vTaskDelay(60/portTICK_PERIOD_MS);
+			}
+			gflags.escapeSetup = false;   // also already done in showMenu()
+		}
 		if( Flarm::bincom ) {
 			if( gflags.flarmDownload == false ) {
 				gflags.flarmDownload = true;
@@ -680,7 +687,8 @@ void readSensors(void *pvParameters){
 			pos=strlen(log);
 			sprintf( log+pos, "\n");
 			Router::sendXCV( log );
-			ESP_LOGI(FNAME,"%s", log );
+			if (testmode.get())
+				ESP_LOGI(FNAME,"%s", log );
 		}
 		if( tok )
 			teP = tp;
