@@ -610,13 +610,14 @@ void SetupMenu::down(int count){
 	ucg->setColor(COLOR_WHITE);
 #if defined(SUNTON28)
 	if( highlight  > -1 ){
-		highlight --;
+		highlight--;
 	}
 	else
 		highlight = (int)(_childs.size() -1 );
 #else
-	while( (highlight  > -1) && count ){
-		highlight --;
+	count &= 7;
+	while( /* (highlight  >= -1) && */ count > 0 ){
+		highlight--;
 		count--;
 	}
 	if( highlight < -1 )
@@ -688,13 +689,14 @@ void SetupMenu::up(int count){
 	ucg->setColor(COLOR_WHITE);
 #if defined(SUNTON28)
 	if( highlight < (int)(_childs.size()-1) ){
-		highlight ++;
+		highlight++;
 	}
 	else
 		highlight = -1;
 #else
-	while( highlight < (int)(_childs.size()-1) && count ){
-		highlight ++;
+	count &= 7;
+	while( /* highlight <= (int)(_childs.size()-1) && */ count > 0 ){
+		highlight++;
 		count--;
 	}
 	if( highlight > (int)(_childs.size()-1) ){
@@ -707,15 +709,51 @@ void SetupMenu::up(int count){
 }
 
 void SetupMenu::showMenu(){
+	if ( gflags.escapeSetup ) {
+//		if ( _parent == 0 || !gflags.inSetup )
+//			gflags.escapeSetup = false;
+		if ( gflags.inSetup ) {
+			if( _parent == 0 ) {
+				ESP_LOGI(FNAME,"Escape root menu");
+				gflags.escapeSetup = false;
+			} else {
+				ESP_LOGI(FNAME,"Escape to parent");
+			}
+		} else {
+			ESP_LOGI(FNAME,"Escape when not in menu?");
+			gflags.escapeSetup = false;
+			// fall through
+			//return;
+		}
+		highlight = -1;
+		pressed = true;
+		// and fall through
+#if 0
+		// or do it all explictly here:
+		if( _parent != 0 ){
+			ESP_LOGI(FNAME,"Escape to parent");
+			selected = _parent;
+			selected->highlight = -1;
+			selected->pressed = true;
+			delete_subtree();
+		} else {
+			gflags.escapeSetup = false;
+			ESP_LOGI(FNAME,"Escape Menu");
+			screens_init = INIT_DISPLAY_NULL;
+			_display->doMenu(false);
+			if( selected->get_restart() )
+				selected->restart();
+			gflags.inSetup=false;
+		}
+		return;
+#endif
+	}
 	// ESP_LOGI(FNAME,"showMenu() p:%d h:%d parent:%x", pressed, highlight, (int)_parent );
 	// default is not pressed, so just display, but we toogle pressed state at the end
 	// so next time we either step up to parent,
 	if( pressed )
 	{
 		if( highlight == -1 ) {
-#if defined(SUNTON28)
-			ESP_LOGI(FNAME,"SetupMenu to parent");
-#endif
 			// ESP_LOGI(FNAME,"SetupMenu to parent");
 			if( _parent != 0 ){
 				selected = _parent;
@@ -725,9 +763,6 @@ void SetupMenu::showMenu(){
 			}
 		}
 		else {
-#if defined(SUNTON28)
-			ESP_LOGI(FNAME,"SetupMenu to child");
-#endif
 			// ESP_LOGI(FNAME,"SetupMenu to child");
 			if( (highlight >=0) && (highlight < (int)(_childs.size()) ) ){
 				selected = _childs[highlight];
@@ -819,6 +854,10 @@ void SetupMenu::longPress(){
 //	}
 	if( menu_long_press.get() ){
         if ( !gflags.inSetup ){
+			showMenu();
+// a different approach:
+		} else {
+            gflags.escapeSetup = true;   // global
 			showMenu();
 /*
 Would be nice to be able to leave the menu completely with one long-press.
@@ -1819,17 +1858,17 @@ void SetupMenu::options_menu_create_horizon_screen( MenuEntry *top ){
 	plimit->setHelp( "If limited, some 'sky' and some 'ground' will always be visible" );
 	top->addEntry(plimit);
 
+	SetupMenuValFloat * offset = new SetupMenuValFloat( "Horizon Pitch Offset", "°", -10, 10, 0.5, 0, false, &horizon_offset );
+	offset->setPrecision( 1 );
+	offset->setHelp("Move displayed horizon up/down (also via rotary). Returns to zero on reboot. (Not related to autozero)");
+	top->addEntry( offset );
+
 	if (testmode.get()) {
 		SetupMenuSelect * nums = new SetupMenuSelect( "P&B Numbers", RST_NONE, 0, true, &horizon_nums );
 		nums->addEntry( "None");
 		nums->addEntry( "Show");
 		top->addEntry(nums);
 	}
-
-	SetupMenuValFloat * offset = new SetupMenuValFloat( "Horizon Pitch Offset", "°", -10, 10, 0.5, 0, false, &horizon_offset );
-	offset->setPrecision( 1 );
-	offset->setHelp("Move displayed horizon up/down (also via rotary). Returns to zero on reboot. (Not related to autozero)");
-	top->addEntry( offset );
 }
 
 void SetupMenu::options_menu_create_advanced( MenuEntry *top ){
@@ -2443,7 +2482,7 @@ void SetupMenu::system_menu_create_comm_wired( MenuEntry *top ){
 	if( hardwareRevision.get() >= XCVARIO_21 ) {
 		SetupMenu * rs232_2 = new SetupMenu( "RS232 Interface S2" );
 		top->addEntry( rs232_2 );
-		rs232_2->setHelp( "Configure serial interface S2 (reboots)");
+		rs232_2->setHelp( "Configure serial interface S2 (reboots)", 240);
 		rs232_2->addCreator(system_menu_create_interfaceS2);
 	}
 
@@ -2547,7 +2586,7 @@ void SetupMenu::system_menu_create_comm_routing( MenuEntry *top ){
 
 	SetupMenu * w3rt = new SetupMenu( "Port 2000 Routing" );
 	top->addEntry( w3rt );
-	w3rt->setHelp( "Select data sources to be routed from/to WiFi port 2000 (reboots)");
+	w3rt->setHelp( "Select data sources to be routed from/to WiFi port 2000 (reboots)", 220);
 	w3rt->addCreator( system_menu_create_interfaceW3_routing );
 
 	SetupMenuSelectCodes * datamon = new SetupMenuSelectCodes( "Monitor", RST_NONE, data_mon, true, &data_monitor );
