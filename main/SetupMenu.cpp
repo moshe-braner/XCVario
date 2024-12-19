@@ -503,7 +503,7 @@ void SetupMenu::catchFocus( bool activate ){
 }
 
 void SetupMenu::display( int mode ){
-	if( (selected != this) || !gflags.inSetup || focus )
+	if( (selected != this) || !gflags.inSetup || gflags.escapeSetup || focus )
 		return;
 #if defined(SUNTON28)
 	ESP_LOGI(FNAME,"SetupMenu::display %s", _title );
@@ -817,6 +817,8 @@ void SetupMenu::press(){
 
 void SetupMenu::longPress(){
 	if( (selected != this) )
+		return;
+	if( data_monitor.get() != MON_OFF )
 		return;
 	// ESP_LOGI(FNAME,"longPress()");
 	ESP_LOGI(FNAME,"longPress() active_srceen %d, pressed %d inSet %d", active_screen, pressed, gflags.inSetup );

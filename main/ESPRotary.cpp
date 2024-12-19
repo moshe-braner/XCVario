@@ -14,6 +14,7 @@
 #include <list>
 #include <algorithm>
 #include "Flarm.h"
+#include "sensor.h"
 
 #if defined(SUNTON28)
 
@@ -235,6 +236,8 @@ void ESPRotary::sendPress(){
 void ESPRotary::sendLongPress(){
 	// ESP_LOGI(FNAME,"Long pressed action");
 	if( Flarm::bincom )
+		return;
+	if( gflags.escapeSetup )    // ignore additional long presses until done escaping the menu
 		return;
 	for (auto &observer : observers)
 		observer->longPress();
