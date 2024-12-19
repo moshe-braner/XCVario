@@ -738,6 +738,9 @@ void IpsDisplay::drawHorizon( float p, float b, float yaw )   // ( pitch, roll, 
 	if( !gflags.ahrsKeyValid )    // static demo does not change
 		return;
 
+    // pitch sign is reversed in the latest sensor.cpp code
+    p = -p;
+
 	// periodically clean up and print some numbers
 
 	if ( (tick&0x1F) == 0 ) {
