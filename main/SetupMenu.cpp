@@ -710,50 +710,14 @@ void SetupMenu::up(int count){
 
 void SetupMenu::showMenu(){
 	if ( gflags.escapeSetup ) {
-// after debugging, concise:
-//		if ( _parent == 0 || !gflags.inSetup ) {
-//			gflags.escapeSetup = false;
-//		} else {
-//			pressed = true;
-//			ESP_LOGI(FNAME,"Escape to parent");
-//		}
-//		highlight = -1;
-//		// and fall through
-		if ( gflags.inSetup ) {
-			if( _parent == 0 ) {
-				ESP_LOGI(FNAME,"Escape root menu");
-				gflags.escapeSetup = false;
-			} else {
-				pressed = true;
-				ESP_LOGI(FNAME,"Escape to parent");
-			}
-		} else {
-			ESP_LOGI(FNAME,"Escape when not in menu?");
+		if ( _parent == 0 || !gflags.inSetup ) {
 			gflags.escapeSetup = false;
-			// fall through
-			//return;
+		} else {
+			pressed = true;
+			ESP_LOGI(FNAME,"Escape to parent");
 		}
 		highlight = -1;
 		// and fall through
-#if 0
-		// or do it all explictly here:
-		if( _parent != 0 ){
-			ESP_LOGI(FNAME,"Escape to parent");
-			selected = _parent;
-			selected->highlight = -1;
-			selected->pressed = true;
-			delete_subtree();
-		} else {
-			gflags.escapeSetup = false;
-			ESP_LOGI(FNAME,"Escape Menu");
-			screens_init = INIT_DISPLAY_NULL;
-			_display->doMenu(false);
-			if( selected->get_restart() )
-				selected->restart();
-			gflags.inSetup=false;
-		}
-		return;
-#endif
 	}
 	// ESP_LOGI(FNAME,"showMenu() p:%d h:%d parent:%x", pressed, highlight, (int)_parent );
 	// default is not pressed, so just display, but we toogle pressed state at the end
@@ -856,45 +820,13 @@ void SetupMenu::longPress(){
 		return;
 	// ESP_LOGI(FNAME,"longPress()");
 	ESP_LOGI(FNAME,"longPress() active_srceen %d, pressed %d inSet %d", active_screen, pressed, gflags.inSetup );
-//	if( menu_long_press.get() && !gflags.inSetup ){
-//		showMenu();
-//	}
-// a different approach:
 	if ( gflags.inSetup ) {
-		gflags.escapeSetup = true;   // global
-		showMenu();
+		if ( gflags.escapeSetup == false )
+			gflags.escapeSetup = true;    // return now, sensor.cpp drawDisplay() will call back in a loop
+		else
+			showMenu();                   // which will step to parent
 	} else if( menu_long_press.get() ) {
 		showMenu();
-
-//	if( menu_long_press.get() ){
-//        if ( !gflags.inSetup ){
-//			showMenu();
-//		} else {
-//          gflags.escapeSetup = true;   // global
-//			showMenu();
-/*
-Would be nice to be able to leave the menu completely with one long-press.
-The following code does not work though!
-It only goes up one step to parent - before letting go of the button.
-Calling escape() didn't work either - hard to get back into the setup menu.
-		} else {
-			// try and leave menu by going up step by step:
-			if( _parent != 0 ){
-				// ESP_LOGI(FNAME,"Long-press: to parent menu");
-				selected = _parent;
-				selected->highlight = -1;
-				selected->pressed = true;
-				delete_subtree();
-				return;
-			}
-			// ESP_LOGI(FNAME,"Long-press: End Setup Menu");
-			screens_init = INIT_DISPLAY_NULL;
-			_display->doMenu(false);
-			if( selected->get_restart() )
-				selected->restart();
-			gflags.inSetup=false;
-			//return;
-*/
 	}
 	if( pressed ){
 		pressed = false;

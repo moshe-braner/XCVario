@@ -32,15 +32,15 @@ uint8_t txValue = 0;
 static TaskHandle_t pid = nullptr;
 static DataLink *dlb;
 
+#if 0
 // See the following for generating UUIDs:
 // https://www.uuidgenerator.net/
-
-//#define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E" // UART service UUID
-//#define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
-//#define CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
-
-// To work with XCsoar, for now need to pretend to be an HM-10 BT adapter
-//
+#define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E" // UART service UUID
+#define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
+#define CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
+#else
+// To work with XCsoar, our UUIDs need to be in XCsoar's whitelist.
+// For now need to pretend to be an HM-10 BT adapter.
 // from XCSoar/android/src/BluetoothUuids.java:
 //  UUID HM10_SERVICE = "0000FFE0-0000-1000-8000-00805F9B34FB"
 // The HM-10 and compatible bluetooth modules use a (single) GATT characteristic
@@ -48,6 +48,7 @@ static DataLink *dlb;
 //  UUID HM10_RX_TX_CHARACTERISTIC = "0000FFE1-0000-1000-8000-00805F9B34FB"
 #define UART_SERVICE_UUID        "0000FFE0-0000-1000-8000-00805F9B34FB"
 #define UART_CHARACTERISTIC_UUID "0000FFE1-0000-1000-8000-00805F9B34FB"
+#endif
 
 class MyServerCallbacks: public BLEServerCallbacks {
 	void onConnect(BLEServer* pServer) {
@@ -150,7 +151,7 @@ void BLESender::begin(){
 	// Create a BLE Characteristic
 	pTxCharacteristic = pService->createCharacteristic(
 			CHARACTERISTIC_UUID_TX,
-			BLECharacteristic::PROPERTY_NOTIFY
+			BLECharacteristic::PROPERTY_NOTIFY            // may also need PROPERTY_WRITE_NR
 	);
 #else
 	pTxCharacteristic = pService->createCharacteristic(

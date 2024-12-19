@@ -201,7 +201,10 @@ void drawDisplay(void *pvParameters){
 	while (1) {
 		if ( gflags.escapeSetup ) {       // need to recursively back up out of the menus
 			while ( gflags.inSetup ) {
-				SetupMenu::selected->longPress();    // calls showMenu() which steps up to parent
+				SetupMenu::selected->longPress();
+				    // longPress() calls showMenu() which steps up to parent
+				    // - can't call showMenu() directly because "selected" points
+				    // to a MenuEntry class object, not the derived SetupMenu class
 				vTaskDelay(60/portTICK_PERIOD_MS);
 			}
 			gflags.escapeSetup = false;   // also already done in showMenu()
@@ -687,7 +690,7 @@ void readSensors(void *pvParameters){
 			pos=strlen(log);
 			sprintf( log+pos, "\n");
 			Router::sendXCV( log );
-			if (testmode.get())
+			if (testmode.get())                // otherwise allow less cluttered USB-serial output
 				ESP_LOGI(FNAME,"%s", log );
 		}
 		if( tok )
