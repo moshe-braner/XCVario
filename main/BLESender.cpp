@@ -232,7 +232,7 @@ void BLESender::begin(){
 
 #else
 	// like SoftRF, only set up one (here called TX) Characteristic, set its Callbacks:
-	pTXCharacteristic->setCallbacks(new MyCallbacks());
+	pTxCharacteristic->setCallbacks(new MyCallbacks());
 #endif
 
 	// Start the service
