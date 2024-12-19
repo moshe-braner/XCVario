@@ -199,9 +199,9 @@ bool do_factory_reset() {
 
 void drawDisplay(void *pvParameters){
 	while (1) {
-		if ( gflags.escapeSetup ) {       // need to step up all the way out of the menus
+		if ( gflags.escapeSetup ) {       // need to recursively back up out of the menus
 			while ( gflags.inSetup ) {
-				SetupMenu::selected->showMenu();         // will step up to parent menu
+				SetupMenu::selected->longPress();    // calls showMenu() which steps up to parent
 				vTaskDelay(60/portTICK_PERIOD_MS);
 			}
 			gflags.escapeSetup = false;   // also already done in showMenu()
