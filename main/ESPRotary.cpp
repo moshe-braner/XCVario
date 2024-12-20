@@ -380,9 +380,8 @@ void ESPRotary::informObservers( void * args )
 				if( !longPressed ){
 					longPressed = true;
 					sendLongPress();
-					//sendRelease();
+					sendRelease();     // display() is called upon release()
 				}
-				delay( 20 );
 			}
 		}
 		else{   // Push button is being released

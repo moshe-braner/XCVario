@@ -495,12 +495,15 @@ void SetupMenu::catchFocus( bool activate ){
 }
 
 void SetupMenu::display( int mode ){
-	if( (selected != this) || !gflags.inSetup || gflags.escapeSetup || focus )
+	if( (selected != this) || !gflags.inSetup || gflags.escapeSetup || focus ) {
+		ESP_LOGI(FNAME,"SetupMenu::display() returning  inset:%d escape:%d focus:%d", gflags.inSetup, gflags.escapeSetup, focus );
 		return;
+	}
 #if defined(SUNTON28)
-	ESP_LOGI(FNAME,"SetupMenu::display %s", _title );
+	//ESP_LOGI(FNAME,"SetupMenu::display %s", _title );
+#else
+	//ESP_LOGI(FNAME,"SetupMenu display( %s)", _title );
 #endif
-	// ESP_LOGI(FNAME,"SetupMenu display( %s)", _title );
 	xSemaphoreTake(display_mutex,portMAX_DELAY);
 	clear();
 #if defined(SUNTON28)
