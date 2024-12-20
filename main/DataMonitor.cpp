@@ -212,10 +212,10 @@ void DataMonitor::stop(){
 	mon_started = false;
 	delay( 200 );
 	ucg->scrollLines( 0 );
-	setup->setSelectCode( MON_OFF ); // causes setupMenu to stop ignoring longpress
-	data_monitor.set( MON_OFF )      // was also done by setSelectCode()
+	setup->setSelectCode( MON_OFF );    // causes setupMenu to stop ignoring longpress
+	data_monitor.set( MON_OFF );        // was also done by setSelectCode()
 	channel = MON_OFF;
-	//paused = false;                // let start() handle this
+	//paused = false;                  // let start() handle this
 	first = true;
 	//detach( this );
 	//gflags.escapeSetup = false;      // in case longpress observed by setup menu and not ignored

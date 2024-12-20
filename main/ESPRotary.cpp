@@ -240,8 +240,6 @@ void ESPRotary::sendLongPress(){
 	// ESP_LOGI(FNAME,"Long pressed action");
 	if( Flarm::bincom )
 		return;
-	if( gflags.escapeSetup )    // ignore additional long presses until done escaping the menu
-		return;
 	for (auto &observer : observers) {
 		observer->longPress();
 		if ( gflags.ignorePress )   // press has been consumed
