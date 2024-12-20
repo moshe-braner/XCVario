@@ -45,7 +45,7 @@ public:
 
 	friend class SetupMenuSelectCodes;  // to be able to access private variables below
 
-private:
+protected:
 	uint8_t  _select;       // limit to maximum 255 entries, as of today there are e.g. 134 different polars
 	uint8_t  _select_save;
 	uint8_t  _numval;
@@ -61,9 +61,10 @@ class SetupMenuSelectCodes: public SetupMenuSelect
 {
 public:
 	SetupMenuSelectCodes( const char* title, e_restart_mode_t restart=RST_NONE,
-	   int (*action)(SetupMenuSelectCodes *p) = 0, bool save=true, SetupNG<int> *anvs=0,
+	   int (*action)(SetupMenuSelect *p) = 0, bool save=true, SetupNG<int> *anvs=0,
 	   bool ext_handler=false, bool end_menu=false ) :
-	       SetupMenuSelect(title, restart, 0, save, anvs, ext_handler, end_menu){};
+	       SetupMenuSelect(title, restart, action, save, anvs, ext_handler, end_menu){};
+	// - this is a bit fishy, since SetupMenuSelect expects "action" to accept (SetupMenuSelect *p)
 	void addEntryCode( const char* ent, const int code );
 	void updateEntryCode( const char * ent, int num, const int code );
 	void setSelect( int sel );
@@ -73,7 +74,6 @@ public:
 	//void delEntry( const char* ent );
 	//void delEntryByCode( const int code );
 private:
-	int (*_action)( SetupMenuSelectCodes *p );
 	std::vector<int> _codes;
 };
 

@@ -220,12 +220,14 @@ int update_wifi_power(SetupMenuValFloat * p)
 	return 0;
 }
 
-int data_mon( SetupMenuSelectCodes * p ){
-	ESP_LOGI(FNAME,"data_mon( %d ) ", data_monitor.get() );
-	int channel = p->getSelectCode();
-	data_monitor.set( channel );
+int data_mon( SetupMenuSelect * p ){
+	int channel = data_monitor.get();        // updated before this action function is called
+	ESP_LOGI(FNAME,"data_mon( %d ) ( received pointer %ul )", channel, (unsigned long int) p );
 	if( channel != MON_OFF )
-		DM.start(p);
+		DM.start( (SetupMenuSelectCodes *) p);
+	// p was passed from SetupMenuSelect::press() calling (*_action)( this );
+	// but the "this" pointer is supposed to point to the derived class object
+	// - its only use is to set the selected option to "off" when stopping the monitor
 	return 0;
 }
 
@@ -2265,10 +2267,11 @@ void SetupMenu::system_menu_create_interfaceS1( MenuEntry *top ){
 #endif
 
 	SetupMenuSelect * datamon = new SetupMenuSelectCodes( "Monitor", RST_NONE, data_mon, true, &data_monitor );
+	ESP_LOGI(FNAME,"datamonS1 menu address: %ul", (unsigned long int) datamon );
 	top->addEntry( datamon );
 	datamon->setHelp( "Short press button to start/pause, long press to terminate data monitor", 260);
-	datamon->addEntry( "Disable", MON_OFF );
-	datamon->addEntry( "Start S1 RS232", MON_S1 );
+	datamon->addEntryCode( "Disable", MON_OFF );
+	datamon->addEntryCode( "Start S1 RS232", MON_S1 );
 }
 
 void SetupMenu::system_menu_create_interfaceS2_routing( MenuEntry *top ){
@@ -2335,10 +2338,11 @@ void SetupMenu::system_menu_create_interfaceS2( MenuEntry *top ){
 	stxdis2->addEntry( "Enable");
 
 	SetupMenuSelect * datamon = new SetupMenuSelectCodes( "Monitor", RST_NONE, data_mon, true, &data_monitor );
+	ESP_LOGI(FNAME,"datamonS2 menu address: %ul", (unsigned long int) datamon );
 	top->addEntry( datamon );
 	datamon->setHelp( "Short press button to start/pause, long press to terminate data monitor", 260);
-	datamon->addEntry( "Disable", MON_OFF );
-	datamon->addEntry( "Start S2 RS232", MON_S2 );
+	datamon->addEntryCode( "Disable", MON_OFF );
+	datamon->addEntryCode( "Start S2 RS232", MON_S2 );
 }
 
 void SetupMenu::system_menu_create_interfaceCAN_routing( MenuEntry *top ){
@@ -2527,6 +2531,7 @@ void SetupMenu::system_menu_create_comm_routing( MenuEntry *top ){
 	w3rt->addCreator( system_menu_create_interfaceW3_routing );
 
 	SetupMenuSelectCodes * datamon = new SetupMenuSelectCodes( "Monitor", RST_NONE, data_mon, true, &data_monitor );
+	ESP_LOGI(FNAME,"datamon menu address: %ul", (unsigned long int) datamon );
 	datamon->setHelp( "Short press to start/pause, long press to terminate", 280);
 	datamon->addEntryCode( "Disable", MON_OFF);
 	if ((wireless == WL_BLUETOOTH) || (wireless == WL_BLUETOOTH_LE)) {

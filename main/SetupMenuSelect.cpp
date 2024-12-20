@@ -189,7 +189,7 @@ void SetupMenuSelect::down(int count){
 	initSelect();
 	if( _numval > 9 ){
 		xSemaphoreTake(spiMutex,portMAX_DELAY );
-		while( count ) {
+		while( count < 0 ) {
 			if( (_select) > 0 )
 				(_select)--;
 			count--;
@@ -220,7 +220,7 @@ void SetupMenuSelect::up(int count){
 	if( _numval > 9 )
 	{
 		xSemaphoreTake(spiMutex,portMAX_DELAY );
-		while( count ) {
+		while( count > 0 ) {
 			if( (_select) <  _numval-1 )
 				(_select)++;
 			count--;
@@ -276,6 +276,8 @@ void SetupMenuSelect::press(){
 		if( _action != 0 ){
 			ESP_LOGI(FNAME,"calling action in press %d", _select );
 			(*_action)( this );
+			// - in the derived class, is "this" passing a pointer to
+			//      SetupMenuSelect or SetupMenuSelectCodes?
 		}
 		if( _select_save !=  getSelectCode() ) {
 			if( bits._restart == RST_ON_EXIT ) {
@@ -298,12 +300,6 @@ void SetupMenuSelect::press(){
 // ------------------------------------------------------------------------------
 
 // derived class that stores the specified codes (MB, 2024):
-
-SetupMenuSelectCodes::SetupMenuSelectCodes( const char* title, e_restart_mode_t restart,
-   int (*action)(SetupMenuSelectCodes *p), bool save, SetupNG<int> *anvs, bool ext_handler, bool end_menu )
-{
-	_action = action;   // pointer to this derived class - reason for different constructor
-}
 
 void SetupMenuSelectCodes::addEntryCode( const char* ent, int code ) {
 	_values.push_back( ent );

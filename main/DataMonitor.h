@@ -39,7 +39,7 @@ private:
 	AdaptUGC *ucg;
 	int scrollpos;
 	bool paused;
-	SetupMenuSelect * setup;
+	SetupMenuSelectCodes * setup;
 	int channel;
 	bool first;
 	int rx_total;
