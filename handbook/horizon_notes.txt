@@ -1,0 +1,16 @@
+Issues with the factory horizon screen:
+* ground color too dark
+* ticks on the edge not helpful and take up space
+* no "airplane icon" - harder to perceive pitch and bank
+* no adjustment for "pitch zero"
+* pitch depiction may not be sensitive enough
+* computationally inefficient: redraws too often and uses a lot of trig
+
+The alternative horizon display in the MBdev branch:
+* offers several schemes for colors and lines
+* is uncluttered, some elements are optional
+* easy to see 30, 45 and 60 degree bank angles
+* offers 2 sizes for an "airplane icon"
+* adjust pitch via the rotary knob
+* is highly optimized for computational efficiency, and thus
+* updates rapidly and without flickering

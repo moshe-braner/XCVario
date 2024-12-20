@@ -1,0 +1,94 @@
+Highlights of the menus:
+
+Top menu:  similar to the old menus, a little shorter:
+
+MC or volume
+QNH
+airfield elevation
+bugs
+ballast
+crew weight
+  - student mode here has only a partial audio menu & the entry for exiting student mode
+glider details
+audio
+options
+system
+
+Audio menu:
+
+volume
+mute
+cruise audio
+tone styles
+range
+exponent
+
+Options menu:
+
+units
+vario & s2f (moved from top menu)
+FLARM (alarm options)
+G-load display (submenu with thresholds, limits, etc)
+Horizon display (submenu with style options)
+advanced options
+
+advanced options menu:
+
+wind (but not compass which was moved to system/hardware)
+    - includes circling wind  (straight wind is under compass)
+altimeter, airspeed
+display setup
+rotary setup (does not include choice of screens, they are within the two below)
+enter student mode
+
+System menu:
+
+communications
+hardware
+software version & update
+factory reset
+
+Communications menu:
+
+master_mode (ideally sets mode, for now just reports mode)
+NMEA protocol
+wireless
+wired
+data routing
+
+For example the S1 submenu under "wired" includes:
+baud rate
+loops
+TX inversion
+RX inversion
+twist
+TX enable
+(but not routing!)
+
+data routing menu:
+
+wireless<>XCV routing enable/disable
+S1 routing
+S2 routing
+CAN routing
+Port 2000 routing
+data monitor (this is not just wireless)
+
+Each data route appears in only one place, for example the S1 routes are:
+    xcv
+    s2
+    wifi port 8881
+therefore the S2 routes do not list S1 again, they are:
+    xcv
+    wifi port 8882
+which leaves plenty of room for expansion.  For example:
+I intend to eventually add 8880 to S1 and 8880 and 8881 to S2
+
+Hardware menu:
+
+AS sensor
+flaps (submenu) (moved from main "options")
+gear warning
+compass (submenu) (moved from main "options")
+AHRS
+battery

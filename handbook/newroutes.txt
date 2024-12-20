@@ -1,0 +1,39 @@
+The rationale behind the suggestion for expanded routing
+========================================================
+
+By Moshe Braner,  last updated Dec 20, 2024
+
+Goals:
+* Port 2000 - for devices that cannot access WiFi ports 888x - e.g., (un-hacked) Tophat.
+* Additional data tunnels - for more flexibility in unusual configurations of devices.
+- I use the term "tunnel" here for a route that sends data from one external device to another external device.  E.g., the existing (in the factory firmware) routes S1<->S2 and S2<->8882.
+
+Impact on new installations:
+None, since default routings are the same, and new routings are inactive by default.
+
+Impact on existing installations:
+None, since existing settings will work exactly as before.
+
+Impact on the user interface:
+Small, since only added one possible route to S1 menu and two to S2 menu.
+The Port 2000 routing menu (with 5 entries) is separate, no need to look at it unless using it.
+
+Impact on hardware resources:
+Little to none, depending on routings chosen:
+Can be lower than current routing scheme, since startup of TCP tasks is more selective.
+E.g., if the only routing is S1<->S2, Wifi tasks 8881 and 8882 will not be started.
+Added receive-only option for port 2000 to minimize its impact with a transmit-only device, e.g., SoftRF.
+
+Impact on software complexity and size and debugging:
+Small, since the proposed version uses the same code, plus a few additional similar small sections.
+
+Routing menus:
+I found the current menus listing each (non-XCV) route *twice* (in different submenus) rather confusing.
+So in my view the menus need to be re-designed anyway.
+For example, in my menus the S1<>S2 routing only appears in the S1 routing menu, not in the S2 menu.
+The old menus have 16 entries in total, for 10 actual routes (of which 3 are "tunnels").
+My proposed new menus have only 10 entries if not expanding the routing scheme.
+Or 18 after the proposed expansion of routing - only 2 more than the old menus.
+Of these 18 routes, 5 are in the Port 2000 submenu, so only 13 elsewhere - less than the factory menus!
+
+See routes.xlsx Excel file for full list of factory and revised routes.
