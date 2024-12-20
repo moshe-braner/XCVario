@@ -222,7 +222,7 @@ int update_wifi_power(SetupMenuValFloat * p)
 
 int data_mon( SetupMenuSelect * p ){
 	int channel = data_monitor.get();        // updated before this action function is called
-	ESP_LOGI(FNAME,"data_mon( %d ) ( received pointer %ul )", channel, (unsigned long int) p );
+	ESP_LOGI(FNAME,"data_mon( %d ) ( received pointer %u )", channel, (unsigned int) p );
 	if( channel != MON_OFF )
 		DM.start( (SetupMenuSelectCodes *) p);
 	// p was passed from SetupMenuSelect::press() calling (*_action)( this );
@@ -2266,12 +2266,12 @@ void SetupMenu::system_menu_create_interfaceS1( MenuEntry *top ){
 	i2cpins->addEntry( "TX=27, SCL=21");    // 2
 #endif
 
-	SetupMenuSelect * datamon = new SetupMenuSelectCodes( "Monitor", RST_NONE, data_mon, true, &data_monitor );
-	ESP_LOGI(FNAME,"datamonS1 menu address: %ul", (unsigned long int) datamon );
+	SetupMenuSelectCodes * datamon = new SetupMenuSelectCodes( "Monitor S1", RST_NONE, data_mon, true, &data_monitor );
+	ESP_LOGI(FNAME,"datamonS1 menu address: %u", (unsigned int) datamon );
 	top->addEntry( datamon );
 	datamon->setHelp( "Short press button to start/pause, long press to terminate data monitor", 260);
 	datamon->addEntryCode( "Disable", MON_OFF );
-	datamon->addEntryCode( "Start S1 RS232", MON_S1 );
+	datamon->addEntryCode( "Start",   MON_S1 );
 }
 
 void SetupMenu::system_menu_create_interfaceS2_routing( MenuEntry *top ){
@@ -2337,12 +2337,12 @@ void SetupMenu::system_menu_create_interfaceS2( MenuEntry *top ){
 	stxdis2->addEntry( "Disable");
 	stxdis2->addEntry( "Enable");
 
-	SetupMenuSelect * datamon = new SetupMenuSelectCodes( "Monitor", RST_NONE, data_mon, true, &data_monitor );
-	ESP_LOGI(FNAME,"datamonS2 menu address: %ul", (unsigned long int) datamon );
+	SetupMenuSelectCodes * datamon = new SetupMenuSelectCodes( "Monitor S2", RST_NONE, data_mon, true, &data_monitor );
+	ESP_LOGI(FNAME,"datamonS2 menu address: %u", (unsigned int) datamon );
 	top->addEntry( datamon );
 	datamon->setHelp( "Short press button to start/pause, long press to terminate data monitor", 260);
 	datamon->addEntryCode( "Disable", MON_OFF );
-	datamon->addEntryCode( "Start S2 RS232", MON_S2 );
+	datamon->addEntryCode( "Start",   MON_S2 );
 }
 
 void SetupMenu::system_menu_create_interfaceCAN_routing( MenuEntry *top ){
@@ -2531,7 +2531,7 @@ void SetupMenu::system_menu_create_comm_routing( MenuEntry *top ){
 	w3rt->addCreator( system_menu_create_interfaceW3_routing );
 
 	SetupMenuSelectCodes * datamon = new SetupMenuSelectCodes( "Monitor", RST_NONE, data_mon, true, &data_monitor );
-	ESP_LOGI(FNAME,"datamon menu address: %ul", (unsigned long int) datamon );
+	ESP_LOGI(FNAME,"datamon menu address: %u", (unsigned int) datamon );
 	datamon->setHelp( "Short press to start/pause, long press to terminate", 280);
 	datamon->addEntryCode( "Disable", MON_OFF);
 	if ((wireless == WL_BLUETOOTH) || (wireless == WL_BLUETOOTH_LE)) {
