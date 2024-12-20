@@ -76,19 +76,19 @@ void DataMonitor::header( int ch, bool binary, int len, e_dir_t dir ){
 }
 
 void DataMonitor::monitorString( int ch, e_dir_t dir, const char *str, int len ){
+	bool binary = (data_monitor_mode.get() == MON_MOD_BINARY);
 	if( xSemaphoreTake(mutex,portMAX_DELAY ) ){
 		if( mon_started && ch == channel ) {
 			if( paused )
 				header( ch, binary, len, dir );     // just update header
 			else
-				printString( ch, dir, str, len );   // also calls header()
+				printString( ch, dir, str, binary, len );   // also calls header()
 		}
 		xSemaphoreGive(mutex);
 	}
 }
 
-void DataMonitor::printString( int ch, e_dir_t dir, const char *str, int len ){
-	bool binary = (data_monitor_mode.get() == MON_MOD_BINARY);
+void DataMonitor::printString( int ch, e_dir_t dir, const char *str, bool binary, int len ){
 	if (! binary)
 		ESP_LOGI(FNAME,"DM ch:%d dir:%d len:%d data:%s", ch, dir, len, str );
 	const int scroll_lines = 20;

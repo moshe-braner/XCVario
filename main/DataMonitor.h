@@ -32,7 +32,7 @@ public:
 	bool active() { return mon_started; };
 
 private:
-	void printString( int ch, e_dir_t dir, const char *s, int len );
+	void printString( int ch, e_dir_t dir, const char *s, bool binary, int len );
 	void header( int ch, bool binary=false, int len=0, e_dir_t dir=DIR_RX );
 	void scroll(int scroll);
 	bool mon_started;
