@@ -49,10 +49,18 @@ void SetupMenuSelect::updateEntry( const char * ent, int num ) {
 	_values.at(num) = ent;
 }
 
-void SetupMenuSelect::setSelect( int sel ) {
-	_select = (int16_t)sel;
+void SetupMenuSelect::setSelectNVS( int sel ) {
 	if( _nvs )
-		_select = _nvs->set( sel );   // <<< why does this change _select?
+		_select = _nvs->set( sel );
+}
+
+void SetupMenuSelect::setSelect( int sel ) {
+	if (sel < 0)
+		sel = 0;
+	if (sel > _numval-1)
+		sel = _numval-1;
+	_select = (int16_t)sel;
+	setSelectNVS( sel );
 }
 
 int SetupMenuSelect::getSelect() {
@@ -62,7 +70,7 @@ int SetupMenuSelect::getSelect() {
 }
 
 int SetupMenuSelect::getSelectCode() {
-	return _select;   // the value of the index is also the code for NG
+	return _select;   // the value of the index is also the code for nvs
 }
 
 // >>> what is the meaning of the [4]?  The strings must be 4-chars-long?
@@ -189,7 +197,7 @@ void SetupMenuSelect::down(int count){
 	initSelect();
 	if( _numval > 9 ){
 		xSemaphoreTake(spiMutex,portMAX_DELAY );
-		while( count ) {
+		while( count > 0 ) {
 			if( (_select) > 0 )
 				(_select)--;
 			count--;
@@ -220,7 +228,7 @@ void SetupMenuSelect::up(int count){
 	if( _numval > 9 )
 	{
 		xSemaphoreTake(spiMutex,portMAX_DELAY );
-		while( count ) {
+		while( count > 0 ) {
 			if( (_select) <  _numval-1 )
 				(_select)++;
 			count--;
@@ -249,7 +257,7 @@ void SetupMenuSelect::longPress(){
 }
 
 void SetupMenuSelect::press(){
-	if( selected != this )
+	if( (selected != this) || !gflags.inSetup  )
 		return;
 	initSelect();
 	ESP_LOGI(FNAME,"press() ext handler: %d press: %d _select: %d selected %p", bits._ext_handler, pressed, _select, selected );
@@ -276,6 +284,9 @@ void SetupMenuSelect::press(){
 		if( _action != 0 ){
 			ESP_LOGI(FNAME,"calling action in press %d", _select );
 			(*_action)( this );
+			// - in the derived class SetupMenuSelectCodes,
+			//   "this" points to the derived class object
+			// - tested working
 		}
 		if( _select_save !=  getSelectCode() ) {
 			if( bits._restart == RST_ON_EXIT ) {
@@ -316,9 +327,23 @@ void SetupMenuSelectCodes::updateEntryCode( const char * ent, int num, int code 
 }
 
 void SetupMenuSelectCodes::setSelect( int sel ) {
+	if (sel < 0)
+		sel = 0;
+	if (sel > _numval-1)
+		sel = _numval-1;
 	_select = (int16_t)sel;
-	if( _nvs )
-		_nvs->set( _codes.at(sel) );
+	setSelectNVS( _codes.at(_select) );
+}
+
+void SetupMenuSelectCodes::setSelectCode( int code ) {
+	_select = 0;
+	for (int i=0; i<_numval; i++) {
+		if (_codes.at(i) == code) {
+			_select = i;
+			break;
+		}
+	}
+	setSelectNVS( _codes.at(_select) );
 }
 
 int SetupMenuSelectCodes::getSelect() {

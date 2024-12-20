@@ -36,12 +36,13 @@ public:
 	void longPress();
 	void escape() {};
 	const char *value();
+	void setSelectNVS( int sel );
 	virtual int getSelect();
+	virtual int getSelectCode();
 	virtual void setSelect( int sel );
 	void initSelect();
 	const char * getEntry() const ;
 	int numEntries() { return _numval; };
-	virtual int getSelectCode();
 
 	friend class SetupMenuSelectCodes;  // to be able to access private variables below
 
@@ -64,9 +65,11 @@ public:
 	   int (*action)(SetupMenuSelect *p) = 0, bool save=true, SetupNG<int> *anvs=0,
 	   bool ext_handler=false, bool end_menu=false ) :
 	       SetupMenuSelect(title, restart, action, save, anvs, ext_handler, end_menu){};
+	// - this is a bit fishy, since SetupMenuSelect expects "action" to accept (SetupMenuSelect *p)
 	void addEntryCode( const char* ent, const int code );
 	void updateEntryCode( const char * ent, int num, const int code );
 	void setSelect( int sel );
+	void setSelectCode( int code );
 	int getSelect();
 	int getSelectCode();
 	//void addEntryList( const char ent[][4], int size );
