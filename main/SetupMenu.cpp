@@ -221,21 +221,13 @@ int update_wifi_power(SetupMenuValFloat * p)
 }
 
 int data_mon( SetupMenuSelect * p ){
-	ESP_LOGI(FNAME,"data_mon( %d ) ", data_monitor.get() );
-	if( data_monitor.get() != MON_OFF ){
-		DM.start(p);
-	}
+	int channel = data_monitor.get();        // updated before this action function is called
+	//ESP_LOGI(FNAME,"data_mon( %d ) ( received pointer %u )", channel, (unsigned int) p );
+	SetupMenuSelectCodes * q = (SetupMenuSelectCodes *) p;
+	// - its only use is to set the selected option to "off" when stopping the monitor
+	if( channel != MON_OFF )
+		DM.start( q );
 	return 0;
-}
-
-int data_monS1( SetupMenuSelect * p ){
-	data_monitor.set( MON_S1 );
-	return( data_mon(p) );
-}
-
-int data_monS2( SetupMenuSelect * p ){
-	data_monitor.set( MON_S2 );
-	return( data_mon(p) );
 }
 
 int update_id( SetupMenuChar * p){
@@ -503,12 +495,11 @@ void SetupMenu::catchFocus( bool activate ){
 }
 
 void SetupMenu::display( int mode ){
-	if( (selected != this) || !gflags.inSetup || focus )
+	if( (selected != this) || !gflags.inSetup || gflags.escapeSetup || focus ) {
+		//ESP_LOGI(FNAME,"SetupMenu::display() returning  inset:%d escape:%d focus:%d", gflags.inSetup, gflags.escapeSetup, focus );
 		return;
-#if defined(SUNTON28)
-	ESP_LOGI(FNAME,"SetupMenu::display %s", _title );
-#endif
-	// ESP_LOGI(FNAME,"SetupMenu display( %s)", _title );
+	}
+	//ESP_LOGI(FNAME,"SetupMenu display( %s)", _title );
 	xSemaphoreTake(display_mutex,portMAX_DELAY);
 	clear();
 #if defined(SUNTON28)
@@ -615,6 +606,7 @@ void SetupMenu::down(int count){
 	else
 		highlight = (int)(_childs.size() -1 );
 #else
+	count &= 7;
 	while( /* (highlight  >= -1) && */ count > 0 ){
 		highlight--;
 		count--;
@@ -693,6 +685,7 @@ void SetupMenu::up(int count){
 	else
 		highlight = -1;
 #else
+	count &= 7;
 	while( /* highlight <= (int)(_childs.size()-1) && */ count > 0 ){
 		highlight++;
 		count--;
@@ -707,15 +700,27 @@ void SetupMenu::up(int count){
 }
 
 void SetupMenu::showMenu(){
+	if ( gflags.escapeSetup ) {
+		if ( !gflags.inSetup || data_monitor.get() != MON_OFF ) {
+			gflags.escapeSetup = false;
+			return;
+		}
+		if ( _parent == 0 ) {
+			gflags.escapeSetup = false;
+			ESP_LOGI(FNAME,"Escape root menu");
+		} else {
+			pressed = true;
+			ESP_LOGI(FNAME,"Escape to parent");
+		}
+		highlight = -1;
+		// and fall through
+	}
 	// ESP_LOGI(FNAME,"showMenu() p:%d h:%d parent:%x", pressed, highlight, (int)_parent );
 	// default is not pressed, so just display, but we toogle pressed state at the end
 	// so next time we either step up to parent,
 	if( pressed )
 	{
 		if( highlight == -1 ) {
-#if defined(SUNTON28)
-			ESP_LOGI(FNAME,"SetupMenu to parent");
-#endif
 			// ESP_LOGI(FNAME,"SetupMenu to parent");
 			if( _parent != 0 ){
 				selected = _parent;
@@ -725,9 +730,6 @@ void SetupMenu::showMenu(){
 			}
 		}
 		else {
-#if defined(SUNTON28)
-			ESP_LOGI(FNAME,"SetupMenu to child");
-#endif
 			// ESP_LOGI(FNAME,"SetupMenu to child");
 			if( (highlight >=0) && (highlight < (int)(_childs.size()) ) ){
 				selected = _childs[highlight];
@@ -812,38 +814,19 @@ void SetupMenu::press(){
 void SetupMenu::longPress(){
 	if( (selected != this) )
 		return;
+	if( data_monitor.get() != MON_OFF ) {   // longpress intended to stop the data monitor
+		//gflags.escapeSetup = false;
+		return;
+	}
 	// ESP_LOGI(FNAME,"longPress()");
-	ESP_LOGI(FNAME,"longPress() active_srceen %d, pressed %d inSet %d", active_screen, pressed, gflags.inSetup );
-//	if( menu_long_press.get() && !gflags.inSetup ){
-//		showMenu();
-//	}
-	if( menu_long_press.get() ){
-        if ( !gflags.inSetup ){
-			showMenu();
-/*
-Would be nice to be able to leave the menu completely with one long-press.
-The following code does not work though!
-It only goes up one step to parent - before letting go of the button.
-Calling escape() didn't work either - hard to get back into the setup menu.
-		} else {
-			// try and leave menu by going up step by step:
-			if( _parent != 0 ){
-				// ESP_LOGI(FNAME,"Long-press: to parent menu");
-				selected = _parent;
-				selected->highlight = -1;
-				selected->pressed = true;
-				delete_subtree();
-				return;
-			}
-			// ESP_LOGI(FNAME,"Long-press: End Setup Menu");
-			screens_init = INIT_DISPLAY_NULL;
-			_display->doMenu(false);
-			if( selected->get_restart() )
-				selected->restart();
-			gflags.inSetup=false;
-			//return;
-*/
-		}
+	//ESP_LOGI(FNAME,"longPress() active_srceen %d, pressed %d inSet %d", active_screen, pressed, gflags.inSetup );
+	if ( gflags.inSetup ) {
+		if ( gflags.escapeSetup == false )
+			gflags.escapeSetup = true;    // return now, sensor.cpp drawDisplay() will call back in a loop
+		else
+			showMenu();                   // which will step to parent
+	} else if( menu_long_press.get() ) {
+		showMenu();                       // enter setup menu
 	}
 	if( pressed ){
 		pressed = false;
@@ -1895,7 +1878,7 @@ void SetupMenu::options_menu_create( MenuEntry *top ){
 
 void SetupMenu::system_menu_create_software( MenuEntry *top ){
 	Version V;
-	SetupMenuSelect * ver = new SetupMenuSelect( "Software Vers.", RST_NONE, 0, false );
+	SetupMenuSelect * ver = new SetupMenuSelect( "Version", RST_NONE, 0, false );
 	ver->addEntry( V.version() );
 	top->addEntry( ver );
 
@@ -2288,11 +2271,12 @@ void SetupMenu::system_menu_create_interfaceS1( MenuEntry *top ){
 	i2cpins->addEntry( "TX=27, SCL=21");    // 2
 #endif
 
-	SetupMenuSelect * datamon = new SetupMenuSelect( "Monitor", RST_NONE, data_monS1, true, &data_monitor );
+	SetupMenuSelectCodes * datamon = new SetupMenuSelectCodes( "Monitor S1", RST_NONE, data_mon, true, &data_monitor );
+	//ESP_LOGI(FNAME,"datamonS1 menu address: %u", (unsigned int) datamon );
 	top->addEntry( datamon );
 	datamon->setHelp( "Short press button to start/pause, long press to terminate data monitor", 260);
-	datamon->addEntry( "Disable");
-	datamon->addEntry( "Start S1 RS232");
+	datamon->addEntryCode( "Disable", MON_OFF );
+	datamon->addEntryCode( "Start",   MON_S1 );
 }
 
 void SetupMenu::system_menu_create_interfaceS2_routing( MenuEntry *top ){
@@ -2358,11 +2342,12 @@ void SetupMenu::system_menu_create_interfaceS2( MenuEntry *top ){
 	stxdis2->addEntry( "Disable");
 	stxdis2->addEntry( "Enable");
 
-	SetupMenuSelect * datamon = new SetupMenuSelect( "Monitor", RST_NONE, data_monS2, true, &data_monitor );
+	SetupMenuSelectCodes * datamon = new SetupMenuSelectCodes( "Monitor S2", RST_NONE, data_mon, true, &data_monitor );
+	//ESP_LOGI(FNAME,"datamonS2 menu address: %u", (unsigned int) datamon );
 	top->addEntry( datamon );
 	datamon->setHelp( "Short press button to start/pause, long press to terminate data monitor", 260);
-	datamon->addEntry( "Disable");
-	datamon->addEntry( "Start S2 RS232");
+	datamon->addEntryCode( "Disable", MON_OFF );
+	datamon->addEntryCode( "Start",   MON_S2 );
 }
 
 void SetupMenu::system_menu_create_interfaceCAN_routing( MenuEntry *top ){
@@ -2551,6 +2536,7 @@ void SetupMenu::system_menu_create_comm_routing( MenuEntry *top ){
 	w3rt->addCreator( system_menu_create_interfaceW3_routing );
 
 	SetupMenuSelectCodes * datamon = new SetupMenuSelectCodes( "Monitor", RST_NONE, data_mon, true, &data_monitor );
+	//ESP_LOGI(FNAME,"datamon menu address: %u", (unsigned int) datamon );
 	datamon->setHelp( "Short press to start/pause, long press to terminate", 280);
 	datamon->addEntryCode( "Disable", MON_OFF);
 	if ((wireless == WL_BLUETOOTH) || (wireless == WL_BLUETOOTH_LE)) {
@@ -2566,7 +2552,7 @@ void SetupMenu::system_menu_create_comm_routing( MenuEntry *top ){
 	datamon->addEntryCode( "CAN Bus", MON_CAN);
 	top->addEntry( datamon );
 
-	SetupMenuSelect * datamonmod = new SetupMenuSelect( "Monitor Mode", RST_NONE, data_mon, true, &data_monitor_mode );
+	SetupMenuSelect * datamonmod = new SetupMenuSelect( "Monitor Mode", RST_NONE, 0, true, &data_monitor_mode );
 	datamonmod->setHelp( "Select data display as ASCII text or as binary hexdump");
 	datamonmod->addEntry( "ASCII");
 	datamonmod->addEntry( "Binary");
@@ -2638,12 +2624,12 @@ void SetupMenu::system_menu_create( MenuEntry *sye ){
 	sye->addEntry( comm );
 	comm->addCreator(system_menu_create_comm);
 
-	SetupMenu * hardware = new SetupMenu( "Hardware Setup" );
+	SetupMenu * hardware = new SetupMenu( "Hardware" );
 	hardware->setHelp( "Setup variometer hardware e.g. display, rotary, AS and AHRS sensor, voltmeter, etc", 240 );
 	sye->addEntry( hardware );
 	hardware->addCreator(system_menu_create_hardware);
 
-	SetupMenu * soft = new SetupMenu( "Software Update" );
+	SetupMenu * soft = new SetupMenu( "Software" );
 	sye->addEntry( soft );
 	soft->addCreator(system_menu_create_software);
 }

@@ -14,6 +14,7 @@
 #include <list>
 #include <algorithm>
 #include "Flarm.h"
+#include "sensor.h"
 
 #if defined(SUNTON28)
 
@@ -226,18 +227,25 @@ void ESPRotary::sendPress(){
 	// ESP_LOGI(FNAME,"Pressed action");
 	if( Flarm::bincom )
 		return;
-	for (auto &observer : observers)
+	for (auto &observer : observers) {
 		observer->press();
+		if ( gflags.ignorePress )   // press has been consumed
+			break;
+	}
+	gflags.ignorePress = false;
 	// ESP_LOGI(FNAME,"End pressed action");
-
 }
 
 void ESPRotary::sendLongPress(){
 	// ESP_LOGI(FNAME,"Long pressed action");
 	if( Flarm::bincom )
 		return;
-	for (auto &observer : observers)
+	for (auto &observer : observers) {
 		observer->longPress();
+		if ( gflags.ignorePress )   // press has been consumed
+			break;
+	}
+	gflags.ignorePress = false;
 	// ESP_LOGI(FNAME,"End long pressed action");
 }
 
@@ -372,8 +380,7 @@ void ESPRotary::informObservers( void * args )
 				if( !longPressed ){
 					longPressed = true;
 					sendLongPress();
-					sendRelease();
-
+					sendRelease();     // display() is called upon release()
 				}
 			}
 		}
@@ -382,7 +389,7 @@ void ESPRotary::informObservers( void * args )
 				// ESP_LOGI(FNAME,"timer=%d", timer );
 				longPressed = false;
 				//if( timer < 20 ){  // > 400 mS
-				if( timer < 20/5 ){  // > 400 mS
+				if( timer < 20/5 ){  // < 400 mS
 					if( !pressed ){
 						pressed = true;
 						sendPress();

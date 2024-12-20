@@ -199,6 +199,17 @@ bool do_factory_reset() {
 
 void drawDisplay(void *pvParameters){
 	while (1) {
+		if ( gflags.escapeSetup ) {       // need to recursively back up out of the menus
+			while ( gflags.inSetup && data_monitor.get()==MON_OFF ) {
+				//ESP_LOGI(FNAME,"drawDisplay() calling selected->longPress()");
+				SetupMenu::selected->longPress();
+				    // longPress() calls showMenu() which steps up to parent
+				    // - can't (?) call showMenu() directly because "selected" points
+				    // to a MenuEntry class object, not the derived SetupMenu class
+				vTaskDelay(20/portTICK_PERIOD_MS);
+			}
+			gflags.escapeSetup = false;   // also already done in showMenu()
+		}
 		if( Flarm::bincom ) {
 			if( gflags.flarmDownload == false ) {
 				gflags.flarmDownload = true;
@@ -419,7 +430,7 @@ void drawDisplay(void *pvParameters){
 			}
 
 			// Vario Screen
-			if( !(gflags.stall_warning_active || gflags.gear_warning_active || gflags.flarmVisual || gflags.gLoadDisplay || gflags.horizon )  ) {
+			if( !(gflags.stall_warning_active || gflags.gear_warning_active || gflags.flarmVisual || gflags.gLoadDisplay || gflags.horizon) ) {
 				// ESP_LOGI(FNAME,"TE=%2.3f", te_vario.get() );
 				display->drawDisplay( airspeed, te_vario.get(), aTE, polar_sink, altitude.get(), t, battery, s2f_delta, as2f, average_climb.get(), Switch::getCruiseState(), gflags.standard_setting, flap_pos.get() );
 			}
@@ -680,7 +691,8 @@ void readSensors(void *pvParameters){
 			pos=strlen(log);
 			sprintf( log+pos, "\n");
 			Router::sendXCV( log );
-			ESP_LOGI(FNAME,"%s", log );
+			if ( testmode.get() )            // otherwise allow less cluttered USB-serial output
+				ESP_LOGI(FNAME,"%s", log );
 		}
 		if( tok )
 			teP = tp;
