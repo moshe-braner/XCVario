@@ -71,7 +71,7 @@ void DataMonitor::monitorString( int ch, e_dir_t dir, const char *str, int len )
 			xSemaphoreGive(mutex);
 			return;
 		}
-		printString( ch, dir, str, binary, len );
+		printString( ch, dir, str, len );
 		xSemaphoreGive(mutex);
 	}
 }

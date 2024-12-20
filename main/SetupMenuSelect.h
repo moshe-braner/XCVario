@@ -61,9 +61,9 @@ class SetupMenuSelectCodes: public SetupMenuSelect
 {
 public:
 	SetupMenuSelectCodes( const char* title, e_restart_mode_t restart=RST_NONE,
-	   int (*action)(SetupMenuSelect *p) = 0, bool save=true, SetupNG<int> *anvs=0,
+	   int (*action)(SetupMenuSelectCodes *p) = 0, bool save=true, SetupNG<int> *anvs=0,
 	   bool ext_handler=false, bool end_menu=false ) :
-	       SetupMenuSelect(title, restart, action, save, anvs, ext_handler, end_menu){};
+	       SetupMenuSelect(title, restart, 0, save, anvs, ext_handler, end_menu){};
 	void addEntryCode( const char* ent, const int code );
 	void updateEntryCode( const char * ent, int num, const int code );
 	void setSelect( int sel );
@@ -73,6 +73,7 @@ public:
 	//void delEntry( const char* ent );
 	//void delEntryByCode( const int code );
 private:
+	int (*_action)( SetupMenuSelectCodes *p );
 	std::vector<int> _codes;
 };
 
