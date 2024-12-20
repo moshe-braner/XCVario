@@ -12,7 +12,8 @@ DataMonitor::DataMonitor(){
 	mon_started = false;
 	ucg = 0;
 	scrollpos = SCROLL_BOTTOM;
-	paused = true;
+	//paused = true;
+	paused = false;
 	setup = 0;
 	channel = MON_OFF;
 	mutex = xSemaphoreCreateMutex();
@@ -42,7 +43,12 @@ int DataMonitor::maxChar( const char *str, int pos, int len, bool binary ){
 	return i;
 }
 
-void DataMonitor::header( int ch, bool binary ){
+void DataMonitor::header( int ch, bool binary, int len, e_dir_t dir ){
+	if( dir == DIR_RX )
+		rx_total += len;
+	else
+		tx_total += len;
+	ESP_LOGI(FNAME,"header() %d %d %d ", len, rx_total, tx_total );
 	const char * what;
 	switch( ch ) {
 		case MON_BLUETOOTH: what = "BT"; break;
@@ -60,18 +66,23 @@ void DataMonitor::header( int ch, bool binary ){
 		b = "B-";
 	else
 		b = "";
+	ucg->setColor( COLOR_WHITE );
+	ucg->setFont(ucg_font_fub11_tr, true );
 	ucg->setPrintPos( 20, SCROLL_TOP );
-	ucg->printf( "%s%s: RX:%d TX:%d bytes   ", b, what, rx_total, tx_total );
+	if( paused )
+		ucg->printf( "%s%s: RX:%d TX:%d hold    ", b, what, rx_total, tx_total );
+	else
+		ucg->printf( "%s%s: RX:%d TX:%d bytes   ", b, what, rx_total, tx_total );
 }
 
 void DataMonitor::monitorString( int ch, e_dir_t dir, const char *str, int len ){
 	if( xSemaphoreTake(mutex,portMAX_DELAY ) ){
-		if( !mon_started || paused || (ch != channel) ){
-			// ESP_LOGI(FNAME,"not active, return started:%d paused:%d", mon_started, paused );
-			xSemaphoreGive(mutex);
-			return;
+		if( mon_started && ch == channel ) {
+			if( paused )
+				header( ch, binary, len, dir );     // just update header
+			else
+				printString( ch, dir, str, len );   // also calls header()
 		}
-		printString( ch, dir, str, len );
 		xSemaphoreGive(mutex);
 	}
 }
@@ -81,15 +92,11 @@ void DataMonitor::printString( int ch, e_dir_t dir, const char *str, int len ){
 	if (! binary)
 		ESP_LOGI(FNAME,"DM ch:%d dir:%d len:%d data:%s", ch, dir, len, str );
 	const int scroll_lines = 20;
-	char dirsym = 0;
-	if( dir == DIR_RX ){
+	char dirsym;
+	if( dir == DIR_RX )
 		dirsym = '>';
-		rx_total += len;
-	}
-	else{
+	else
 		dirsym = '<';
-		tx_total += len;
-	}
 	xSemaphoreTake(spiMutex,portMAX_DELAY );
 	if( first ){
 		first = false;
@@ -97,7 +104,7 @@ void DataMonitor::printString( int ch, e_dir_t dir, const char *str, int len ){
 		ucg->drawBox( 0,SCROLL_TOP,240,320 );
 	}
 	ucg->setColor( COLOR_WHITE );
-    header( ch, binary );
+    header( ch, binary, len, dir );
 	//if( !binary )
 	// 	len = len-1;  // ignore the \n in ASCII mode
 	int hunklen = 0;
@@ -148,22 +155,26 @@ void DataMonitor::scroll(int scroll){
 }
 
 void DataMonitor::press(){
+	if( !mon_started ){
+		ESP_LOGI(FNAME,"Press, but not started, return" );
+		return;
+	}
 	ESP_LOGI(FNAME,"press paused: %d", paused );
-	if( !Rotary.readSwitch() ){ // only process press here
+	//if( !Rotary.readSwitch() ){ // only process press here
 	if( paused )
 		paused = false;
 	else
 		paused = true;
-	}
+	//}
 	delay( 100 );
 }
 
 void DataMonitor::longPress(){
-	ESP_LOGI(FNAME,"longPress" );
 	if( !mon_started ){
 		ESP_LOGI(FNAME,"longPress, but not started, return" );
 		return;
 	}
+	ESP_LOGI(FNAME,"longPress" );
 	stop();
 	delay( 100 );
 }
@@ -188,9 +199,11 @@ void DataMonitor::start(SetupMenuSelectCodes * p){
 		ucg->scrollSetMargins( 0, SCROLL_TOP );
 	else
 		ucg->scrollSetMargins( SCROLL_TOP, 0 );
-	mon_started = true;
-	paused = true; // will resume with press()
 	xSemaphoreGive(spiMutex);
+	delay(300);
+	mon_started = true;
+	//paused = true; // will resume with press()
+	paused = false;
 	ESP_LOGI(FNAME,"started");
 }
 
@@ -202,7 +215,8 @@ void DataMonitor::stop(){
 	setup->setSelectCode( MON_OFF );
 	//data_monitor.set( MON_OFF )   // was done by setSelectCode()
 	mon_started = false;
-	paused = false;
+	//paused = false;
+	first = true;
 	//detach( this );
 	ucg->scrollLines( 0 );
 	SetupMenu::catchFocus( false );
