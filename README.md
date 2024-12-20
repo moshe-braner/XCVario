@@ -63,5 +63,7 @@ Possible future features for use in a 2-seater include:
 In the source code, parts to be skipped are enclosed in #if !defined(NOSENSORS).  Parts that are specific to the Sunton board are enclosed in #ifdef SUNTON28 (since there are other board models from the same and other brands).
 
 To compile this version for the Sunton board, add these definitions of NOSENSORS and SUNTON28 to the end of the file main/CMakeLists.txt (not the CMakeLists.txt in the root folder of the repo):
+~~~text
 target_compile_definitions(${COMPONENT_TARGET} PUBLIC "-DNOSENSORS")
 target_compile_definitions(${COMPONENT_TARGET} PUBLIC "-DSUNTON28")
+~~~
