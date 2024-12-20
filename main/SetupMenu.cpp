@@ -702,8 +702,13 @@ void SetupMenu::up(int count){
 
 void SetupMenu::showMenu(){
 	if ( gflags.escapeSetup ) {
-		if ( _parent == 0 || !gflags.inSetup ) {
+		if ( !gflags.inSetup || data_monitor.get() != MON_OFF ) {
 			gflags.escapeSetup = false;
+			return;
+		}
+		if ( _parent == 0 ) {
+			gflags.escapeSetup = false;
+			ESP_LOGI(FNAME,"Escape root menu");
 		} else {
 			pressed = true;
 			ESP_LOGI(FNAME,"Escape to parent");
@@ -810,8 +815,10 @@ void SetupMenu::press(){
 void SetupMenu::longPress(){
 	if( (selected != this) )
 		return;
-	if( data_monitor.get() != MON_OFF )    // longpress was intended to stop the data monitor
+	if( data_monitor.get() != MON_OFF ) {   // longpress intended to stop the data monitor
+		//gflags.escapeSetup = false;
 		return;
+	}
 	// ESP_LOGI(FNAME,"longPress()");
 	ESP_LOGI(FNAME,"longPress() active_srceen %d, pressed %d inSet %d", active_screen, pressed, gflags.inSetup );
 	if ( gflags.inSetup ) {
@@ -820,7 +827,7 @@ void SetupMenu::longPress(){
 		else
 			showMenu();                   // which will step to parent
 	} else if( menu_long_press.get() ) {
-		showMenu();
+		showMenu();                       // enter setup menu
 	}
 	if( pressed ){
 		pressed = false;

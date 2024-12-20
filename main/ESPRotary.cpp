@@ -227,10 +227,13 @@ void ESPRotary::sendPress(){
 	// ESP_LOGI(FNAME,"Pressed action");
 	if( Flarm::bincom )
 		return;
-	for (auto &observer : observers)
+	for (auto &observer : observers) {
 		observer->press();
+		if ( gflags.ignorePress )   // press has been consumed
+			break;
+	}
+	gflags.ignorePress = false;
 	// ESP_LOGI(FNAME,"End pressed action");
-
 }
 
 void ESPRotary::sendLongPress(){
@@ -239,8 +242,12 @@ void ESPRotary::sendLongPress(){
 		return;
 	if( gflags.escapeSetup )    // ignore additional long presses until done escaping the menu
 		return;
-	for (auto &observer : observers)
+	for (auto &observer : observers) {
 		observer->longPress();
+		if ( gflags.ignorePress )   // press has been consumed
+			break;
+	}
+	gflags.ignorePress = false;
 	// ESP_LOGI(FNAME,"End long pressed action");
 }
 
@@ -375,9 +382,9 @@ void ESPRotary::informObservers( void * args )
 				if( !longPressed ){
 					longPressed = true;
 					sendLongPress();
-					sendRelease();
-
+					//sendRelease();
 				}
+				delay( 20 );
 			}
 		}
 		else{   // Push button is being released
@@ -385,7 +392,7 @@ void ESPRotary::informObservers( void * args )
 				// ESP_LOGI(FNAME,"timer=%d", timer );
 				longPressed = false;
 				//if( timer < 20 ){  // > 400 mS
-				if( timer < 20/5 ){  // > 400 mS
+				if( timer < 20/5 ){  // < 400 mS
 					if( !pressed ){
 						pressed = true;
 						sendPress();

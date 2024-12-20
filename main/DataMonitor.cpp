@@ -175,8 +175,8 @@ void DataMonitor::longPress(){
 		return;
 	}
 	ESP_LOGI(FNAME,"longPress" );
+	gflags.ignorePress = true;    // so setup menu will not receive longpress
 	stop();
-	delay( 100 );
 }
 
 void DataMonitor::start(SetupMenuSelectCodes * p){
@@ -210,15 +210,16 @@ void DataMonitor::start(SetupMenuSelectCodes * p){
 void DataMonitor::stop(){
 	ESP_LOGI(FNAME,"stop");
 	mon_started = false;
-	delay(700);                      // time for longpress to be observed and ignored by setup menu
+	delay( 200 );
 	ucg->scrollLines( 0 );
-	gflags.escapeSetup = false;      // in case longpress observed by setup menu and not ignored
-	channel = MON_OFF;
 	setup->setSelectCode( MON_OFF ); // causes setupMenu to stop ignoring longpress
-	//data_monitor.set( MON_OFF )    // was done by setSelectCode()
+	data_monitor.set( MON_OFF )      // was also done by setSelectCode()
+	channel = MON_OFF;
 	//paused = false;                // let start() handle this
 	first = true;
 	//detach( this );
+	//gflags.escapeSetup = false;      // in case longpress observed by setup menu and not ignored
 	SetupMenu::catchFocus( false );
+	delay( 100 );
 }
 

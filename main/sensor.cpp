@@ -201,9 +201,10 @@ void drawDisplay(void *pvParameters){
 	while (1) {
 		if ( gflags.escapeSetup ) {       // need to recursively back up out of the menus
 			while ( gflags.inSetup && data_monitor.get()==MON_OFF ) {
+				//ESP_LOGI(FNAME,"drawDisplay() calling selected->longPress()");
 				SetupMenu::selected->longPress();
 				    // longPress() calls showMenu() which steps up to parent
-				    // - can't call showMenu() directly because "selected" points
+				    // - can't (?) call showMenu() directly because "selected" points
 				    // to a MenuEntry class object, not the derived SetupMenu class
 				vTaskDelay(20/portTICK_PERIOD_MS);
 			}
