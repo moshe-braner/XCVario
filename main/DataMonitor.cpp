@@ -76,14 +76,14 @@ void DataMonitor::header( int ch, bool binary, int len, e_dir_t dir ){
 }
 
 void DataMonitor::monitorString( int ch, e_dir_t dir, const char *str, int len ){
+	if( !mon_started || ch != channel )
+		return;
 	bool binary = (data_monitor_mode.get() == MON_MOD_BINARY);
 	if( xSemaphoreTake(mutex,portMAX_DELAY ) ){
-		if( mon_started && ch == channel ) {
-			if( paused )
-				header( ch, binary, len, dir );     // just update header
-			else
-				printString( ch, dir, str, binary, len );   // also calls header()
-		}
+		if( paused )
+			header( ch, binary, len, dir );     // just update header
+		else
+			printString( ch, dir, str, binary, len );   // also calls header()
 		xSemaphoreGive(mutex);
 	}
 }
@@ -209,14 +209,14 @@ void DataMonitor::start(SetupMenuSelectCodes * p){
 
 void DataMonitor::stop(){
 	ESP_LOGI(FNAME,"stop");
-	delay(700);                    // time for longpress to be observed and ignored by setup menu
-	ucg->scrollLines( 0 );
-	gflags.escapeSetup = false;    // in case longpress observed by setup menu and not ignored
-	channel = MON_OFF;
-	setup->setSelectCode( MON_OFF );
-	//data_monitor.set( MON_OFF )   // was done by setSelectCode()
 	mon_started = false;
-	//paused = false;
+	delay(700);                      // time for longpress to be observed and ignored by setup menu
+	ucg->scrollLines( 0 );
+	gflags.escapeSetup = false;      // in case longpress observed by setup menu and not ignored
+	channel = MON_OFF;
+	setup->setSelectCode( MON_OFF ); // causes setupMenu to stop ignoring longpress
+	//data_monitor.set( MON_OFF )    // was done by setSelectCode()
+	//paused = false;                // let start() handle this
 	first = true;
 	//detach( this );
 	SetupMenu::catchFocus( false );
