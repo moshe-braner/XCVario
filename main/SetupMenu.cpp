@@ -1872,7 +1872,7 @@ void SetupMenu::options_menu_create( MenuEntry *top ){
 
 void SetupMenu::system_menu_create_software( MenuEntry *top ){
 	Version V;
-	SetupMenuSelect * ver = new SetupMenuSelect( "Software Vers.", RST_NONE, 0, false );
+	SetupMenuSelect * ver = new SetupMenuSelect( "Version", RST_NONE, 0, false );
 	ver->addEntry( V.version() );
 	top->addEntry( ver );
 
@@ -2618,12 +2618,12 @@ void SetupMenu::system_menu_create( MenuEntry *sye ){
 	sye->addEntry( comm );
 	comm->addCreator(system_menu_create_comm);
 
-	SetupMenu * hardware = new SetupMenu( "Hardware Setup" );
+	SetupMenu * hardware = new SetupMenu( "Hardware" );
 	hardware->setHelp( "Setup variometer hardware e.g. display, rotary, AS and AHRS sensor, voltmeter, etc", 240 );
 	sye->addEntry( hardware );
 	hardware->addCreator(system_menu_create_hardware);
 
-	SetupMenu * soft = new SetupMenu( "Software Update" );
+	SetupMenu * soft = new SetupMenu( "Software" );
 	sye->addEntry( soft );
 	soft->addCreator(system_menu_create_software);
 }

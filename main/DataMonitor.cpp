@@ -210,6 +210,7 @@ void DataMonitor::start(SetupMenuSelectCodes * p){
 void DataMonitor::stop(){
 	ESP_LOGI(FNAME,"stop");
 	delay(700);                    // time for longpress to be observed and ignored by setup menu
+	ucg->scrollLines( 0 );
 	gflags.escapeSetup = false;    // in case longpress observed by setup menu and not ignored
 	channel = MON_OFF;
 	setup->setSelectCode( MON_OFF );
@@ -218,7 +219,6 @@ void DataMonitor::stop(){
 	//paused = false;
 	first = true;
 	//detach( this );
-	ucg->scrollLines( 0 );
 	SetupMenu::catchFocus( false );
 }
 
