@@ -222,10 +222,8 @@ int update_wifi_power(SetupMenuValFloat * p)
 
 int data_mon( SetupMenuSelect * p ){
 	int channel = data_monitor.get();        // updated before this action function is called
-	ESP_LOGI(FNAME,"data_mon( %d ) ( received pointer %u )", channel, (unsigned int) p );
+	//ESP_LOGI(FNAME,"data_mon( %d ) ( received pointer %u )", channel, (unsigned int) p );
 	SetupMenuSelectCodes * q = (SetupMenuSelectCodes *) p;
-	// p was passed from SetupMenuSelect::press() calling (*_action)( this );
-	// but the "this" pointer is supposed to point to the derived class object
 	// - its only use is to set the selected option to "off" when stopping the monitor
 	if( channel != MON_OFF )
 		DM.start( q );
@@ -812,7 +810,7 @@ void SetupMenu::press(){
 void SetupMenu::longPress(){
 	if( (selected != this) )
 		return;
-	if( data_monitor.get() != MON_OFF )
+	if( data_monitor.get() != MON_OFF )    // longpress was intended to stop the data monitor
 		return;
 	// ESP_LOGI(FNAME,"longPress()");
 	ESP_LOGI(FNAME,"longPress() active_srceen %d, pressed %d inSet %d", active_screen, pressed, gflags.inSetup );
@@ -2268,7 +2266,7 @@ void SetupMenu::system_menu_create_interfaceS1( MenuEntry *top ){
 #endif
 
 	SetupMenuSelectCodes * datamon = new SetupMenuSelectCodes( "Monitor S1", RST_NONE, data_mon, true, &data_monitor );
-	ESP_LOGI(FNAME,"datamonS1 menu address: %u", (unsigned int) datamon );
+	//ESP_LOGI(FNAME,"datamonS1 menu address: %u", (unsigned int) datamon );
 	top->addEntry( datamon );
 	datamon->setHelp( "Short press button to start/pause, long press to terminate data monitor", 260);
 	datamon->addEntryCode( "Disable", MON_OFF );
@@ -2339,7 +2337,7 @@ void SetupMenu::system_menu_create_interfaceS2( MenuEntry *top ){
 	stxdis2->addEntry( "Enable");
 
 	SetupMenuSelectCodes * datamon = new SetupMenuSelectCodes( "Monitor S2", RST_NONE, data_mon, true, &data_monitor );
-	ESP_LOGI(FNAME,"datamonS2 menu address: %u", (unsigned int) datamon );
+	//ESP_LOGI(FNAME,"datamonS2 menu address: %u", (unsigned int) datamon );
 	top->addEntry( datamon );
 	datamon->setHelp( "Short press button to start/pause, long press to terminate data monitor", 260);
 	datamon->addEntryCode( "Disable", MON_OFF );
@@ -2532,7 +2530,7 @@ void SetupMenu::system_menu_create_comm_routing( MenuEntry *top ){
 	w3rt->addCreator( system_menu_create_interfaceW3_routing );
 
 	SetupMenuSelectCodes * datamon = new SetupMenuSelectCodes( "Monitor", RST_NONE, data_mon, true, &data_monitor );
-	ESP_LOGI(FNAME,"datamon menu address: %u", (unsigned int) datamon );
+	//ESP_LOGI(FNAME,"datamon menu address: %u", (unsigned int) datamon );
 	datamon->setHelp( "Short press to start/pause, long press to terminate", 280);
 	datamon->addEntryCode( "Disable", MON_OFF);
 	if ((wireless == WL_BLUETOOTH) || (wireless == WL_BLUETOOTH_LE)) {

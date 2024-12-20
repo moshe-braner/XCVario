@@ -284,8 +284,9 @@ void SetupMenuSelect::press(){
 		if( _action != 0 ){
 			ESP_LOGI(FNAME,"calling action in press %d", _select );
 			(*_action)( this );
-			// - in the derived class, is "this" passing a pointer to
-			//      SetupMenuSelect or SetupMenuSelectCodes?
+			// - in the derived class SetupMenuSelectCodes,
+			//   "this" points to the derived class object
+			// - tested working
 		}
 		if( _select_save !=  getSelectCode() ) {
 			if( bits._restart == RST_ON_EXIT ) {
