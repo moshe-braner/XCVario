@@ -19,7 +19,7 @@ class DataMonitor: public RotaryObserver
 public:
 	DataMonitor();
 	void monitorString( int ch, e_dir_t dir, const char *s, int len );
-	void start(SetupMenuSelect * p);
+	void start(SetupMenuSelectCodes * p);
 	void stop();
 	void press();
 	void release() {};
@@ -32,7 +32,7 @@ public:
 	bool active() { return mon_started; };
 
 private:
-	void printString( int ch, e_dir_t dir, const char *s, bool binary, int len );
+	void printString( int ch, e_dir_t dir, const char *s, int len );
 	void header( int ch, bool binary=false );
 	void scroll(int scroll);
 	bool mon_started;

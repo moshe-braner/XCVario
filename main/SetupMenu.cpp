@@ -220,22 +220,13 @@ int update_wifi_power(SetupMenuValFloat * p)
 	return 0;
 }
 
-int data_mon( SetupMenuSelect * p ){
+int data_mon( SetupMenuSelectCodes * p ){
 	ESP_LOGI(FNAME,"data_mon( %d ) ", data_monitor.get() );
-	if( data_monitor.get() != MON_OFF ){
+	int channel = p->getSelectCode();
+	data_monitor.set( channel );
+	if( channel != MON_OFF )
 		DM.start(p);
-	}
 	return 0;
-}
-
-int data_monS1( SetupMenuSelect * p ){
-	data_monitor.set( MON_S1 );
-	return( data_mon(p) );
-}
-
-int data_monS2( SetupMenuSelect * p ){
-	data_monitor.set( MON_S2 );
-	return( data_mon(p) );
 }
 
 int update_id( SetupMenuChar * p){
@@ -2273,11 +2264,11 @@ void SetupMenu::system_menu_create_interfaceS1( MenuEntry *top ){
 	i2cpins->addEntry( "TX=27, SCL=21");    // 2
 #endif
 
-	SetupMenuSelect * datamon = new SetupMenuSelect( "Monitor", RST_NONE, data_monS1, true, &data_monitor );
+	SetupMenuSelect * datamon = new SetupMenuSelectCodes( "Monitor", RST_NONE, data_mon, true, &data_monitor );
 	top->addEntry( datamon );
 	datamon->setHelp( "Short press button to start/pause, long press to terminate data monitor", 260);
-	datamon->addEntry( "Disable");
-	datamon->addEntry( "Start S1 RS232");
+	datamon->addEntry( "Disable", MON_OFF );
+	datamon->addEntry( "Start S1 RS232", MON_S1 );
 }
 
 void SetupMenu::system_menu_create_interfaceS2_routing( MenuEntry *top ){
@@ -2343,11 +2334,11 @@ void SetupMenu::system_menu_create_interfaceS2( MenuEntry *top ){
 	stxdis2->addEntry( "Disable");
 	stxdis2->addEntry( "Enable");
 
-	SetupMenuSelect * datamon = new SetupMenuSelect( "Monitor", RST_NONE, data_monS2, true, &data_monitor );
+	SetupMenuSelect * datamon = new SetupMenuSelectCodes( "Monitor", RST_NONE, data_mon, true, &data_monitor );
 	top->addEntry( datamon );
 	datamon->setHelp( "Short press button to start/pause, long press to terminate data monitor", 260);
-	datamon->addEntry( "Disable");
-	datamon->addEntry( "Start S2 RS232");
+	datamon->addEntry( "Disable", MON_OFF );
+	datamon->addEntry( "Start S2 RS232", MON_S2 );
 }
 
 void SetupMenu::system_menu_create_interfaceCAN_routing( MenuEntry *top ){
@@ -2551,7 +2542,7 @@ void SetupMenu::system_menu_create_comm_routing( MenuEntry *top ){
 	datamon->addEntryCode( "CAN Bus", MON_CAN);
 	top->addEntry( datamon );
 
-	SetupMenuSelect * datamonmod = new SetupMenuSelect( "Monitor Mode", RST_NONE, data_mon, true, &data_monitor_mode );
+	SetupMenuSelect * datamonmod = new SetupMenuSelect( "Monitor Mode", RST_NONE, 0, true, &data_monitor_mode );
 	datamonmod->setHelp( "Select data display as ASCII text or as binary hexdump");
 	datamonmod->addEntry( "ASCII");
 	datamonmod->addEntry( "Binary");

@@ -71,14 +71,15 @@ void DataMonitor::monitorString( int ch, e_dir_t dir, const char *str, int len )
 			xSemaphoreGive(mutex);
 			return;
 		}
-		bool binary = data_monitor_mode.get() == MON_MOD_BINARY;
 		printString( ch, dir, str, binary, len );
 		xSemaphoreGive(mutex);
 	}
 }
 
-void DataMonitor::printString( int ch, e_dir_t dir, const char *str, bool binary, int len ){
-	ESP_LOGI(FNAME,"DM ch:%d dir:%d len:%d data:%s", ch, dir, len, str );
+void DataMonitor::printString( int ch, e_dir_t dir, const char *str, int len ){
+	bool binary = (data_monitor_mode.get() == MON_MOD_BINARY);
+	if (! binary)
+		ESP_LOGI(FNAME,"DM ch:%d dir:%d len:%d data:%s", ch, dir, len, str );
 	const int scroll_lines = 20;
 	char dirsym = 0;
 	if( dir == DIR_RX ){
@@ -129,7 +130,7 @@ void DataMonitor::printString( int ch, e_dir_t dir, const char *str, bool binary
 				hpos += sprintf( txt+hpos, "%s", hunk );
 				txt[hpos] = 0;
 				ucg->print( txt );
-				ESP_LOGI(FNAME,"DM ascii ch:%d dir:%d data:%s", ch, dir, txt );
+				//ESP_LOGI(FNAME,"DM ascii ch:%d dir:%d data:%s", ch, dir, txt );
 			}
 			pos+=hunklen;
 			// ESP_LOGI(FNAME,"DM 3 pos: %d", pos );
@@ -167,15 +168,15 @@ void DataMonitor::longPress(){
 	delay( 100 );
 }
 
-void DataMonitor::start(SetupMenuSelect * p){
+void DataMonitor::start(SetupMenuSelectCodes * p){
 	ESP_LOGI(FNAME,"start");
-	//if( !setup )
-		attach( this );
+	if( !setup )
+		attach( this );     // maybe attach() on each start() and detach() at stop()?
 	setup = p;
 	tx_total = 0;
 	rx_total = 0;
-	//channel = p->getSelect();    this doesn't work right with data_monS1 etc
-	channel = data_monitor.get();
+	//channel = p->getSelectCode();
+	channel = data_monitor.get();     // action function SetupMenu.cpp data_mon() set it
 	xSemaphoreTake(spiMutex,portMAX_DELAY );
 	SetupMenu::catchFocus( true );
 	ucg->setColor( COLOR_BLACK );
@@ -196,13 +197,13 @@ void DataMonitor::start(SetupMenuSelect * p){
 void DataMonitor::stop(){
 	ESP_LOGI(FNAME,"stop");
 	channel = MON_OFF;
-	data_monitor.set( MON_OFF );
-	detach( this );
+	setup->setSelect( 0 );          // only works because "off" is always first choice
+	//data_monitor.set( MON_OFF )   // was done by setSelect()
 	mon_started = false;
 	paused = false;
+	//detach( this );                seems to have caused a crash?
 	delay(1000);
 	ucg->scrollLines( 0 );
-	//setup->setSelect( MON_OFF );   this doesn't work right with data_monS1 etc
 	SetupMenu::catchFocus( false );
 }
 

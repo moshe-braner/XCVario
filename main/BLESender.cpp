@@ -68,8 +68,8 @@ class MyCallbacks: public BLECharacteristicCallbacks {
 		if (rx.length()) {
 			dlb->process( rx.c_str(), rx.length(), 7 );
 			DM.monitorString( MON_BLUETOOTH, DIR_RX, rx.c_str(), rx.length() );
+			ESP_LOGI(FNAME,">BT LE RX: %d bytes",  rx.length()  );
 			if ( testmode.get() ) {
-				ESP_LOGI(FNAME,">BT LE RX: %d bytes",  rx.length()  );
 				ESP_LOG_BUFFER_HEXDUMP(FNAME,rx.c_str(), rx.length() , ESP_LOG_INFO);
 			}
 		}
@@ -110,8 +110,8 @@ void BLESender::progress(){
 				int sent=min( len, 20 );
 				pTxCharacteristic->setValue((uint8_t*)&buf[pos], (size_t)sent);
 				pTxCharacteristic->notify();
+				ESP_LOGI(FNAME,"<BT LE TX %d bytes", sent );
 				if ( testmode.get() ) {
-					ESP_LOGI(FNAME,"<BT LE TX %d bytes", sent );
 					ESP_LOG_BUFFER_HEXDUMP(FNAME,&buf[pos],len, ESP_LOG_INFO);
 				}
 				DM.monitorString( MON_BLUETOOTH, DIR_TX, &buf[pos], sent );
