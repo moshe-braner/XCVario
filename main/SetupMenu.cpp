@@ -223,11 +223,12 @@ int update_wifi_power(SetupMenuValFloat * p)
 int data_mon( SetupMenuSelect * p ){
 	int channel = data_monitor.get();        // updated before this action function is called
 	ESP_LOGI(FNAME,"data_mon( %d ) ( received pointer %u )", channel, (unsigned int) p );
-	if( channel != MON_OFF )
-		DM.start( (SetupMenuSelectCodes *) p);
+	SetupMenuSelectCodes * q = (SetupMenuSelectCodes *) p;
 	// p was passed from SetupMenuSelect::press() calling (*_action)( this );
 	// but the "this" pointer is supposed to point to the derived class object
 	// - its only use is to set the selected option to "off" when stopping the monitor
+	if( channel != MON_OFF )
+		DM.start( q );
 	return 0;
 }
 

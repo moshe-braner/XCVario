@@ -36,16 +36,17 @@ public:
 	void longPress();
 	void escape() {};
 	const char *value();
+	void setSelectNVS( int sel );
 	virtual int getSelect();
+	virtual int getSelectCode();
 	virtual void setSelect( int sel );
 	void initSelect();
 	const char * getEntry() const ;
 	int numEntries() { return _numval; };
-	virtual int getSelectCode();
 
 	friend class SetupMenuSelectCodes;  // to be able to access private variables below
 
-protected:
+private:
 	uint8_t  _select;       // limit to maximum 255 entries, as of today there are e.g. 134 different polars
 	uint8_t  _select_save;
 	uint8_t  _numval;
@@ -68,6 +69,7 @@ public:
 	void addEntryCode( const char* ent, const int code );
 	void updateEntryCode( const char * ent, int num, const int code );
 	void setSelect( int sel );
+	void setSelectCode( int code );
 	int getSelect();
 	int getSelectCode();
 	//void addEntryList( const char ent[][4], int size );
