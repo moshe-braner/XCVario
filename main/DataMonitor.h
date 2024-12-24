@@ -11,6 +11,7 @@
 #include <AdaptUGC.h>
 #include "ESPRotary.h"
 #include "SetupMenuSelect.h"
+#include "SetupMenuSelectCodes.h"
 
 typedef enum e_dir { DIR_RX, DIR_TX } e_dir_t;
 
