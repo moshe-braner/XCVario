@@ -20,11 +20,8 @@ public:
 	    bool ext_handler=false, bool end_menu=false );
 	virtual ~SetupMenuSelectCodes();
 	void display( int mode=0 );
-	//bool existsEntry( std::string ent );
 	void addEntry( const char* ent, const int code=-1 );
 	void addEntryList( const char ent[][4], int size );
-	//void delEntry( const char * ent );
-	//void delEntryByCode( const int code );
 	void delLastEntry();
 	void updateEntry( const char * ent, int num, const int code=-1 );
 	void up( int count );  // step up to parent
@@ -39,6 +36,11 @@ public:
 	void setSelectCode( int code );
 	const char * getEntry() const ;
 	int numEntries() { return _entries; };
+
+// remove these later
+	bool existsEntry( std::string ent );
+	void delEntry( const char * ent );
+	void delEntryByCode( const int code );
 
 private:
 	uint8_t  _select;
