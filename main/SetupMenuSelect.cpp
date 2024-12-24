@@ -69,10 +69,6 @@ int SetupMenuSelect::getSelect() {
 	return (int)_select;
 }
 
-int SetupMenuSelect::getSelectCode() {
-	return _select;   // the value of the index is also the code for nvs
-}
-
 // >>> what is the meaning of the [4]?  The strings must be 4-chars-long?
 void SetupMenuSelect::addEntryList( const char ent[][4], int size )
 {
@@ -262,7 +258,7 @@ void SetupMenuSelect::press(){
 	initSelect();
 	ESP_LOGI(FNAME,"press() ext handler: %d press: %d _select: %d selected %p", bits._ext_handler, pressed, _select, selected );
 	if ( pressed ){
-		if( _select_save != getSelectCode() )
+		if( _select_save != getSelect() )
 			display( 1 );
 		//else
 		//	display();
@@ -277,25 +273,22 @@ void SetupMenuSelect::press(){
 		selected->highlight = -1;
 		selected->pressed = true;
 		if( _nvs ){
-			_nvs->set( getSelectCode(), false );   // do sync in next step
+			_nvs->set( getSelect(), false );   // do sync in next step
 			_nvs->commit();
 		}
 		pressed = false;
 		if( _action != 0 ){
 			ESP_LOGI(FNAME,"calling action in press %d", _select );
 			(*_action)( this );
-			// - in the derived class SetupMenuSelectCodes,
-			//   "this" points to the derived class object
-			// - tested working
 		}
-		if( _select_save !=  getSelectCode() ) {
+		if( _select_save !=  getSelect() ) {
 			if( bits._restart == RST_ON_EXIT ) {
 				_restart = true;
 			}else if( bits._restart == RST_IMMEDIATE ){
 				_nvs->commit();
 				MenuEntry::restart();
 			}
-			_select_save = getSelectCode();
+			_select_save = getSelect();
 		}
 		if( bits._end_menu ){
 			selected->press();
@@ -306,126 +299,3 @@ void SetupMenuSelect::press(){
 	}
 }
 
-// ------------------------------------------------------------------------------
-
-// derived class that stores the specified codes (MB, 2024):
-
-void SetupMenuSelectCodes::addEntryCode( const char* ent, int code ) {
-	_values.push_back( ent );
-	if (code < 0)
-		_codes.push_back( _numval );   // code is same as index into vector
-	else
-		_codes.push_back( code );      // code was specified
-	_numval++;
-}
-
-void SetupMenuSelectCodes::updateEntryCode( const char * ent, int num, int code ) {
-	ESP_LOGI(FNAME,"updateEntry ent:%s  num:%d total%d", ent, num, _numval );
-	_values.at(num) = ent;
-	if (code >= 0)      // code was specified
-		_codes.at(num) = code;
-}
-
-void SetupMenuSelectCodes::setSelect( int sel ) {
-	if (sel < 0)
-		sel = 0;
-	if (sel > _numval-1)
-		sel = _numval-1;
-	_select = (int16_t)sel;
-	setSelectNVS( _codes.at(_select) );
-}
-
-void SetupMenuSelectCodes::setSelectCode( int code ) {
-	_select = 0;
-	for (int i=0; i<_numval; i++) {
-		if (_codes.at(i) == code) {
-			_select = i;
-			break;
-		}
-	}
-	setSelectNVS( _codes.at(_select) );
-}
-
-int SetupMenuSelectCodes::getSelect() {
-	_select = 0;
-	if( _nvs ) {
-		int code = _nvs->get();
-		for (int i=0; i<_numval; i++) {
-			if (_codes.at(i) == code) {
-				_select = i;
-				break;
-			}
-		}
-	}
-	return (int)_select;
-}
-
-int SetupMenuSelectCodes::getSelectCode() {
-	return _codes.at(_select);
-}
-
-#if 0    // the functions below are not likely to be actually used
-
-void SetupMenuSelectCodes::addEntryList( const char ent[][4], int size )
-{
-	// ESP_LOGI(FNAME,"addEntryList() char ent[][4]");
-	for( int i=0; i<size; i++ ) {
-		_values.push_back( (char *)ent[i] );
-		_codes.push_back( _numval );    // note: code=position, like the base class
-		_numval++;
-	}
-}
-
-void SetupMenuSelectCodes::delEntry( const char* ent ) {
-	int i=0;
-	for( std::vector<const char *>::iterator iter = _values.begin(); iter != _values.end(); ++iter ) {
-		if( std::string(*iter) == std::string(ent) )
-		{
-			bool found = false;
-			int code = _codes.at(i);
-			for( std::vector<int>::iterator iter2 = _codes.begin(); iter2 != _codes.end(); ++iter2 ) {
-				if ( *iter2 == code ) {
-					_codes.erase( iter2 );
-					found = true;
-					break;
-				}
-			}
-			if (! found)
-				return;
-			_values.erase( iter );
-			_numval--;
-			if( _select >= _numval )
-				_select = _numval-1;
-			break;
-		}
-		++i;
-	}
-}
-
-void SetupMenuSelectCodes::delEntryByCode( const int code ) {
-	int i=0;
-	for( std::vector<int>::iterator iter = _codes.begin(); iter != _codes.end(); ++iter ) {
-		if( *iter == code )
-		{
-			bool found = false;
-			const char *p = _values.at(i);
-			for( std::vector<const char *>::iterator iter2 = _values.begin(); iter2 != _values.end(); ++iter2 ) {
-				if ( std::string(*iter2) == std::string(p) ) {
-					_values.erase( iter2 );
-					found = true;
-					break;
-				}
-			}
-			if (! found)
-				return;
-			_codes.erase( iter );
-			_numval--;
-			if( _select >= _numval )
-				_select = _numval-1;
-			break;
-		}
-		++i;
-	}
-}
-
-#endif
