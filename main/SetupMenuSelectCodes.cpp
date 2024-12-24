@@ -340,7 +340,7 @@ void SetupMenuSelectCodes::delEntry( const char* ent ) {
 	for( std::vector<const char *>::iterator iter = _labels.begin(); iter != _labels.end(); ++iter ) {
 		if( std::string(*iter) == std::string(ent) ) {
 			int j = 0;
-			for( std::vector<int>::iterator iter2 = _codes.begin(); iter2 != _codes.end(); ++iter2 ) {
+			for( std::vector<uint8_t>::iterator iter2 = _codes.begin(); iter2 != _codes.end(); ++iter2 ) {
 				if ( j == i ) {
 					_codes.erase( iter2 );
 					break;
@@ -359,7 +359,7 @@ void SetupMenuSelectCodes::delEntry( const char* ent ) {
 
 void SetupMenuSelectCodes::delEntryByCode( const int code ) {
 	int i=0;
-	for( std::vector<int>::iterator iter = _codes.begin(); iter != _codes.end(); ++iter ) {
+	for( std::vector<uint8_t>::iterator iter = _codes.begin(); iter != _codes.end(); ++iter ) {
 		if( *iter == code ) {
 			int j = 0;
 			for( std::vector<const char *>::iterator iter2 = _labels.begin(); iter2 != _labels.end(); ++iter2 ) {
