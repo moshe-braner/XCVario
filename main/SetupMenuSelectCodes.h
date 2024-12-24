@@ -7,6 +7,7 @@
 
 #ifndef _SetupMenuSelectCodes_H_
 #define _SetupMenuSelectCodes_H_
+
 #include "SetupNG.h"
 #include "MenuEntry.h"
 #include "SetupMenuValCommon.h"
@@ -14,7 +15,7 @@
 class SetupMenuSelectCodes:  public MenuEntry
 {
 public:
-	SetupMenuSelect( const char* title, e_restart_mode_t restart=RST_NONE,
+	SetupMenuSelectCodes( const char* title, e_restart_mode_t restart=RST_NONE,
 	    int (*action)(SetupMenuSelectCodes *p) = 0, bool save=true, SetupNG<int> *anvs=0,
 	    bool ext_handler=false, bool end_menu=false );
 	virtual ~SetupMenuSelectCodes();
@@ -52,3 +53,5 @@ private:
 	int (*_action)( SetupMenuSelectCodes *p );
 	SetupNG<int> *_nvs;
 };
+
+#endif  // _SetupMenuSelectCodes_H_
