@@ -31,7 +31,6 @@
 #include "WifiClient.h"
 #include "Blackboard.h"
 #include "DataMonitor.h"
-#include "DataMonitor.h"
 #include "KalmanMPU6050.h"
 #include "sensor.h"
 #include "SetupNG.h"
@@ -220,13 +219,10 @@ int update_wifi_power(SetupMenuValFloat * p)
 	return 0;
 }
 
-int data_mon( SetupMenuSelect * p ){
+int data_mon( SetupMenuSelectCodes * p ){
 	int channel = data_monitor.get();        // updated before this action function is called
-	//ESP_LOGI(FNAME,"data_mon( %d ) ( received pointer %u )", channel, (unsigned int) p );
-	SetupMenuSelectCodes * q = (SetupMenuSelectCodes *) p;
-	// - its only use is to set the selected option to "off" when stopping the monitor
 	if( channel != MON_OFF )
-		DM.start( q );
+		DM.start( p );
 	return 0;
 }
 
@@ -241,16 +237,29 @@ int update_id( SetupMenuChar * p){
 	return 0;
 }
 
-int add_key( SetupMenuSelect * p )
+int add_key( SetupMenuSelectCodes * p )
 {
+/*
 	ESP_LOGI(FNAME,"add_key( %d ) ", p->getSelect() );
+	const char *lbl = "Enable";
+	bool haslbl = mpu->existsEntry(lbl);
 	if( Cipher::checkKeyAHRS() ){
-		if( !mpu->existsEntry( "Enable") )
-			mpu->addEntry( "Enable");
+		if( !haslbl )
+			mpu->addEntry(lbl);
 	}
 	else{
-		if( mpu->existsEntry( "Enable") )
-			mpu->delEntry( "Enable");
+		if( haslbl )
+			mpu->delEntry(lbl);
+	}
+*/
+	bool hasEnable = (mpu->numEntries() > 1);
+	if( Cipher::checkKeyAHRS() ){
+		if( !hasEnable )
+			mpu->addEntry("Enable");
+	}
+	else{
+		if( hasEnable )
+			mpu->delLastEntry();
 	}
 	return 0;
 }
@@ -2085,7 +2094,7 @@ void SetupMenu::system_menu_create_ahrs( MenuEntry *top ){
 	ahrsid->addEntry( Cipher::id() );
 	top->addEntry( ahrsid );
 
-	mpu = new SetupMenuSelect( "AHRS Option", RST_ON_EXIT , 0, true, &attitude_indicator );
+	mpu = new SetupMenuSelectCodes( "AHRS Option", RST_ON_EXIT , 0, true, &attitude_indicator );
 	top->addEntry( mpu );
 	mpu->setHelp( "Enable High Accuracy Attitude Sensor (AHRS) NMEA messages (need valid license key entered, reboots)");
 	mpu->addEntry( "Disable");
@@ -2272,7 +2281,6 @@ void SetupMenu::system_menu_create_interfaceS1( MenuEntry *top ){
 #endif
 
 	SetupMenuSelectCodes * datamon = new SetupMenuSelectCodes( "Monitor S1", RST_NONE, data_mon, true, &data_monitor );
-	//ESP_LOGI(FNAME,"datamonS1 menu address: %u", (unsigned int) datamon );
 	top->addEntry( datamon );
 	datamon->setHelp( "Short press button to start/pause, long press to terminate data monitor", 260);
 	datamon->addEntryCode( "Disable", MON_OFF );
@@ -2343,7 +2351,6 @@ void SetupMenu::system_menu_create_interfaceS2( MenuEntry *top ){
 	stxdis2->addEntry( "Enable");
 
 	SetupMenuSelectCodes * datamon = new SetupMenuSelectCodes( "Monitor S2", RST_NONE, data_mon, true, &data_monitor );
-	//ESP_LOGI(FNAME,"datamonS2 menu address: %u", (unsigned int) datamon );
 	top->addEntry( datamon );
 	datamon->setHelp( "Short press button to start/pause, long press to terminate data monitor", 260);
 	datamon->addEntryCode( "Disable", MON_OFF );
@@ -2536,7 +2543,6 @@ void SetupMenu::system_menu_create_comm_routing( MenuEntry *top ){
 	w3rt->addCreator( system_menu_create_interfaceW3_routing );
 
 	SetupMenuSelectCodes * datamon = new SetupMenuSelectCodes( "Monitor", RST_NONE, data_mon, true, &data_monitor );
-	//ESP_LOGI(FNAME,"datamon menu address: %u", (unsigned int) datamon );
 	datamon->setHelp( "Short press to start/pause, long press to terminate", 280);
 	datamon->addEntryCode( "Disable", MON_OFF);
 	if ((wireless == WL_BLUETOOTH) || (wireless == WL_BLUETOOTH_LE)) {
