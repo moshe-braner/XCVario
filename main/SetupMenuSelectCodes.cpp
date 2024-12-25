@@ -261,11 +261,13 @@ void SetupMenuSelectCodes::press(){
 			display( 1 );
 		//else
 		//	display();
-		if( _end_menu ){
+		if( _end_menu ){                        // only used by FLARM Simulation?
 			ESP_LOGI(FNAME,"press() end_menu");
-			selected = root;
+			//selected = root;                  // <<< is this a memory leak?
+			gflags.escapeSetup = true;          // alternative method to leave setup menu
 		}
-		else if( _parent != 0) {
+		// else
+		if( _parent != 0) {
 			ESP_LOGI(FNAME,"go to parent");
 			selected = _parent;
 		}
