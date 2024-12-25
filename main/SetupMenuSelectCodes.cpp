@@ -120,7 +120,7 @@ SetupMenuSelectCodes::SetupMenuSelectCodes( const char* title, e_restart_mode_t 
 		// ESP_LOGI(FNAME,"_nvs->key(): %s val: %d", _nvs->key(), (int)(_nvs->get()) );
 		_select_save = (uint8_t)_nvs->get();
 	}
-// Before any entries are added, there is really nothing valid to set _select (and _select_save) to!
+// Before any entries are added, there is really nothing valid to set _select to!
 // Instead initialize later, upon adding entries, by calling getSelect()
 }
 
@@ -316,15 +316,10 @@ void SetupMenuSelectCodes::delLastEntry() {
 	_labels.pop_back();
 	_codes.pop_back();
 	_entries--;
-	if( _select >= _entries ) {
-		if (_entries)
-			_select = _entries-1;
-		else
-			_select = 0;
-	}
+	setSelect( _select );   // if last entry was selected, change to last-1
 }
 
-#if 1
+#if 0
 
 // the following functions not currently used, so can skip
 
@@ -378,4 +373,5 @@ void SetupMenuSelectCodes::delEntryByCode( const int code ) {
 		++i;
 	}
 }
+
 #endif
