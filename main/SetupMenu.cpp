@@ -43,7 +43,7 @@
 #include <string>
 
 SetupMenuSelect * audio_range_sm = 0;
-SetupMenuSelectCodes * mpu = 0;
+SetupMenuSelect * mpu = 0;
 
 SetupMenuSelect *show_mode_menu = 0;
 void update_show_mode_menu() {
@@ -219,7 +219,7 @@ int update_wifi_power(SetupMenuValFloat * p)
 	return 0;
 }
 
-int data_mon( SetupMenuSelectCodes * p ){
+int data_mon( SetupMenuSelect * p ){
 	int channel = data_monitor.get();        // updated before this action function is called
 	if( channel != MON_OFF )
 		DM.start( p );
@@ -2094,7 +2094,7 @@ void SetupMenu::system_menu_create_ahrs( MenuEntry *top ){
 	ahrsid->addEntry( Cipher::id() );
 	top->addEntry( ahrsid );
 
-	mpu = new SetupMenuSelectCodes( "AHRS Option", RST_ON_EXIT , 0, true, &attitude_indicator );
+	mpu = new SetupMenuSelect( "AHRS Option", RST_ON_EXIT , 0, true, &attitude_indicator );
 	top->addEntry( mpu );
 	mpu->setHelp( "Enable High Accuracy Attitude Sensor (AHRS) NMEA messages (need valid license key entered, reboots)");
 	mpu->addEntry( "Disable");
@@ -2280,7 +2280,7 @@ void SetupMenu::system_menu_create_interfaceS1( MenuEntry *top ){
 	i2cpins->addEntry( "TX=27, SCL=21");    // 2
 #endif
 
-	SetupMenuSelectCodes * datamon = new SetupMenuSelectCodes( "Monitor S1", RST_NONE, data_mon, true, &data_monitor );
+	SetupMenuSelect * datamon = new SetupMenuSelect( "Monitor S1", RST_NONE, data_mon, true, &data_monitor );
 	top->addEntry( datamon );
 	datamon->setHelp( "Short press button to start/pause, long press to terminate data monitor", 260);
 	datamon->addEntry( "Disable", MON_OFF );
@@ -2350,7 +2350,7 @@ void SetupMenu::system_menu_create_interfaceS2( MenuEntry *top ){
 	stxdis2->addEntry( "Disable");
 	stxdis2->addEntry( "Enable");
 
-	SetupMenuSelectCodes * datamon = new SetupMenuSelectCodes( "Monitor S2", RST_NONE, data_mon, true, &data_monitor );
+	SetupMenuSelect * datamon = new SetupMenuSelect( "Monitor S2", RST_NONE, data_mon, true, &data_monitor );
 	top->addEntry( datamon );
 	datamon->setHelp( "Short press button to start/pause, long press to terminate data monitor", 260);
 	datamon->addEntry( "Disable", MON_OFF );
@@ -2397,7 +2397,7 @@ void SetupMenu::system_menu_create_comm_wireless( MenuEntry *top ){
 	top->addEntry( wlm );
 
 if (testmode.get()) {
-	SetupMenuSelectCodes * btm = new SetupMenuSelectCodes( "WL (old)", RST_ON_EXIT, 0, true, &wireless_type );
+	SetupMenuSelect * btm = new SetupMenuSelect( "WL (old)", RST_ON_EXIT, 0, true, &wireless_type );
 	btm->addEntry( "Disable", WL_DISABLE);                   // 0
 	btm->addEntry( "Bluetooth", WL_BLUETOOTH);               // 1
 	btm->addEntry( "Bluetooth LE", WL_BLUETOOTH_LE);         // 5
@@ -2542,7 +2542,7 @@ void SetupMenu::system_menu_create_comm_routing( MenuEntry *top ){
 	w3rt->setHelp( "Select data sources to be routed from/to WiFi port 2000 (reboots)", 220);
 	w3rt->addCreator( system_menu_create_interfaceW3_routing );
 
-	SetupMenuSelectCodes * datamon = new SetupMenuSelectCodes( "Monitor", RST_NONE, data_mon, true, &data_monitor );
+	SetupMenuSelect * datamon = new SetupMenuSelect( "Monitor", RST_NONE, data_mon, true, &data_monitor );
 	datamon->setHelp( "Short press to start/pause, long press to terminate", 280);
 	datamon->addEntry( "Disable", MON_OFF);
 	if ((wireless == WL_BLUETOOTH) || (wireless == WL_BLUETOOTH_LE)) {
@@ -2567,7 +2567,7 @@ void SetupMenu::system_menu_create_comm_routing( MenuEntry *top ){
 
 void SetupMenu::system_menu_create_comm( MenuEntry *top ){
 
-	SetupMenuSelectCodes * mm = new SetupMenuSelectCodes( "Mode", RST_ON_EXIT, 0, true, &master_mode );
+	SetupMenuSelect * mm = new SetupMenuSelect( "Mode", RST_ON_EXIT, 0, true, &master_mode );
 	mm->setHelp( "XCVario operation: standalone (can connect to nav devices), or connected to another XCVario. (Reboots)");
 	mm->addEntry( "Standalone", MODE_STANDALONE);               // 0
 	if( hardwareRevision.get() >= XCVARIO_22 ){

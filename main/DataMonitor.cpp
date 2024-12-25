@@ -179,7 +179,7 @@ void DataMonitor::longPress(){
 	stop();
 }
 
-void DataMonitor::start(SetupMenuSelectCodes * p){
+void DataMonitor::start(SetupMenuSelect * p){
 	ESP_LOGI(FNAME,"start");
 	if( !setup )
 		attach( this );     // maybe attach() on each start() and detach() at stop()?
