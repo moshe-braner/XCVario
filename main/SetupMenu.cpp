@@ -31,7 +31,6 @@
 #include "WifiClient.h"
 #include "Blackboard.h"
 #include "DataMonitor.h"
-#include "DataMonitor.h"
 #include "KalmanMPU6050.h"
 #include "sensor.h"
 #include "SetupNG.h"
@@ -222,11 +221,8 @@ int update_wifi_power(SetupMenuValFloat * p)
 
 int data_mon( SetupMenuSelect * p ){
 	int channel = data_monitor.get();        // updated before this action function is called
-	//ESP_LOGI(FNAME,"data_mon( %d ) ( received pointer %u )", channel, (unsigned int) p );
-	SetupMenuSelectCodes * q = (SetupMenuSelectCodes *) p;
-	// - its only use is to set the selected option to "off" when stopping the monitor
 	if( channel != MON_OFF )
-		DM.start( q );
+		DM.start( p );
 	return 0;
 }
 
@@ -243,14 +239,27 @@ int update_id( SetupMenuChar * p){
 
 int add_key( SetupMenuSelect * p )
 {
+/*
 	ESP_LOGI(FNAME,"add_key( %d ) ", p->getSelect() );
+	const char *lbl = "Enable";
+	bool haslbl = mpu->existsEntry(lbl);
 	if( Cipher::checkKeyAHRS() ){
-		if( !mpu->existsEntry( "Enable") )
-			mpu->addEntry( "Enable");
+		if( !haslbl )
+			mpu->addEntry(lbl);
 	}
 	else{
-		if( mpu->existsEntry( "Enable") )
-			mpu->delEntry( "Enable");
+		if( haslbl )
+			mpu->delEntry(lbl);
+	}
+*/
+	bool hasEnable = (mpu->numEntries() > 1);
+	if( Cipher::checkKeyAHRS() ){
+		if( !hasEnable )
+			mpu->addEntry("Enable");
+	}
+	else{
+		if( hasEnable )
+			mpu->delLastEntry();
 	}
 	return 0;
 }
@@ -2271,12 +2280,11 @@ void SetupMenu::system_menu_create_interfaceS1( MenuEntry *top ){
 	i2cpins->addEntry( "TX=27, SCL=21");    // 2
 #endif
 
-	SetupMenuSelectCodes * datamon = new SetupMenuSelectCodes( "Monitor S1", RST_NONE, data_mon, true, &data_monitor );
-	//ESP_LOGI(FNAME,"datamonS1 menu address: %u", (unsigned int) datamon );
+	SetupMenuSelect * datamon = new SetupMenuSelect( "Monitor S1", RST_NONE, data_mon, true, &data_monitor );
 	top->addEntry( datamon );
 	datamon->setHelp( "Short press button to start/pause, long press to terminate data monitor", 260);
-	datamon->addEntryCode( "Disable", MON_OFF );
-	datamon->addEntryCode( "Start",   MON_S1 );
+	datamon->addEntry( "Disable", MON_OFF );
+	datamon->addEntry( "Start",   MON_S1 );
 }
 
 void SetupMenu::system_menu_create_interfaceS2_routing( MenuEntry *top ){
@@ -2342,12 +2350,11 @@ void SetupMenu::system_menu_create_interfaceS2( MenuEntry *top ){
 	stxdis2->addEntry( "Disable");
 	stxdis2->addEntry( "Enable");
 
-	SetupMenuSelectCodes * datamon = new SetupMenuSelectCodes( "Monitor S2", RST_NONE, data_mon, true, &data_monitor );
-	//ESP_LOGI(FNAME,"datamonS2 menu address: %u", (unsigned int) datamon );
+	SetupMenuSelect * datamon = new SetupMenuSelect( "Monitor S2", RST_NONE, data_mon, true, &data_monitor );
 	top->addEntry( datamon );
 	datamon->setHelp( "Short press button to start/pause, long press to terminate data monitor", 260);
-	datamon->addEntryCode( "Disable", MON_OFF );
-	datamon->addEntryCode( "Start",   MON_S2 );
+	datamon->addEntry( "Disable", MON_OFF );
+	datamon->addEntry( "Start",   MON_S2 );
 }
 
 void SetupMenu::system_menu_create_interfaceCAN_routing( MenuEntry *top ){
@@ -2390,13 +2397,13 @@ void SetupMenu::system_menu_create_comm_wireless( MenuEntry *top ){
 	top->addEntry( wlm );
 
 if (testmode.get()) {
-	SetupMenuSelectCodes * btm = new SetupMenuSelectCodes( "WL (old)", RST_ON_EXIT, 0, true, &wireless_type );
-	btm->addEntryCode( "Disable", WL_DISABLE);                   // 0
-	btm->addEntryCode( "Bluetooth", WL_BLUETOOTH);               // 1
-	btm->addEntryCode( "Bluetooth LE", WL_BLUETOOTH_LE);         // 5
-	btm->addEntryCode( "WiFi (Standalone)", WL_WLAN_STANDALONE); // 4
-	btm->addEntryCode( "WiFi (Master)", WL_WLAN_MASTER);         // 2
-	btm->addEntryCode( "WiFi (Client)", WL_WLAN_CLIENT);         // 3
+	SetupMenuSelect * btm = new SetupMenuSelect( "WL (old)", RST_ON_EXIT, 0, true, &wireless_type );
+	btm->addEntry( "Disable", WL_DISABLE);                   // 0
+	btm->addEntry( "Bluetooth", WL_BLUETOOTH);               // 1
+	btm->addEntry( "Bluetooth LE", WL_BLUETOOTH_LE);         // 5
+	btm->addEntry( "WiFi (Standalone)", WL_WLAN_STANDALONE); // 4
+	btm->addEntry( "WiFi (Master)", WL_WLAN_MASTER);         // 2
+	btm->addEntry( "WiFi (Client)", WL_WLAN_CLIENT);         // 3
 	btm->setHelp( "Select wireless mode (using the obsolete setting variable). (Reboots)", 220 );
 	top->addEntry( btm );
 }
@@ -2535,21 +2542,20 @@ void SetupMenu::system_menu_create_comm_routing( MenuEntry *top ){
 	w3rt->setHelp( "Select data sources to be routed from/to WiFi port 2000 (reboots)", 220);
 	w3rt->addCreator( system_menu_create_interfaceW3_routing );
 
-	SetupMenuSelectCodes * datamon = new SetupMenuSelectCodes( "Monitor", RST_NONE, data_mon, true, &data_monitor );
-	//ESP_LOGI(FNAME,"datamon menu address: %u", (unsigned int) datamon );
+	SetupMenuSelect * datamon = new SetupMenuSelect( "Monitor", RST_NONE, data_mon, true, &data_monitor );
 	datamon->setHelp( "Short press to start/pause, long press to terminate", 280);
-	datamon->addEntryCode( "Disable", MON_OFF);
+	datamon->addEntry( "Disable", MON_OFF);
 	if ((wireless == WL_BLUETOOTH) || (wireless == WL_BLUETOOTH_LE)) {
-		datamon->addEntryCode( "Bluetooth", MON_BLUETOOTH);
+		datamon->addEntry( "Bluetooth", MON_BLUETOOTH);
 	} else if (wireless != WL_DISABLE) {
-		datamon->addEntryCode( "Wifi 8880", MON_WIFI_8880);
-		datamon->addEntryCode( "Wifi 8881", MON_WIFI_8881);
-		datamon->addEntryCode( "Wifi 8882", MON_WIFI_8882);
-		datamon->addEntryCode( "Wifi 2000", MON_WIFI_2000);
+		datamon->addEntry( "Wifi 8880", MON_WIFI_8880);
+		datamon->addEntry( "Wifi 8881", MON_WIFI_8881);
+		datamon->addEntry( "Wifi 8882", MON_WIFI_8882);
+		datamon->addEntry( "Wifi 2000", MON_WIFI_2000);
 	}
-	datamon->addEntryCode( "RS232 S1", MON_S1);
-	datamon->addEntryCode( "RS232 S2", MON_S2);
-	datamon->addEntryCode( "CAN Bus", MON_CAN);
+	datamon->addEntry( "RS232 S1", MON_S1);
+	datamon->addEntry( "RS232 S2", MON_S2);
+	datamon->addEntry( "CAN Bus", MON_CAN);
 	top->addEntry( datamon );
 
 	SetupMenuSelect * datamonmod = new SetupMenuSelect( "Monitor Mode", RST_NONE, 0, true, &data_monitor_mode );
@@ -2561,15 +2567,15 @@ void SetupMenu::system_menu_create_comm_routing( MenuEntry *top ){
 
 void SetupMenu::system_menu_create_comm( MenuEntry *top ){
 
-	SetupMenuSelectCodes * mm = new SetupMenuSelectCodes( "Mode", RST_ON_EXIT, 0, true, &master_mode );
+	SetupMenuSelect * mm = new SetupMenuSelect( "Mode", RST_ON_EXIT, 0, true, &master_mode );
 	mm->setHelp( "XCVario operation: standalone (can connect to nav devices), or connected to another XCVario. (Reboots)");
-	mm->addEntryCode( "Standalone", MODE_STANDALONE);               // 0
+	mm->addEntry( "Standalone", MODE_STANDALONE);               // 0
 	if( hardwareRevision.get() >= XCVARIO_22 ){
-		mm->addEntryCode( "Master (via CAN)", MODE_CAN_MASTER);     // 3
-		mm->addEntryCode( "Client (via CAN)", MODE_CAN_CLIENT);     // 4
+		mm->addEntry( "Master (via CAN)", MODE_CAN_MASTER);     // 3
+		mm->addEntry( "Client (via CAN)", MODE_CAN_CLIENT);     // 4
 	}
-	mm->addEntryCode( "Master (via WiFi)", MODE_WL_MASTER);         // 1
-	mm->addEntryCode( "Client (via WiFi)", MODE_WL_CLIENT);         // 2
+	mm->addEntry( "Master (via WiFi)", MODE_WL_MASTER);         // 1
+	mm->addEntry( "Client (via WiFi)", MODE_WL_CLIENT);         // 2
 	top->addEntry( mm );
 
   if (testmode.get()) {

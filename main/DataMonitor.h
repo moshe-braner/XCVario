@@ -19,7 +19,7 @@ class DataMonitor: public RotaryObserver
 public:
 	DataMonitor();
 	void monitorString( int ch, e_dir_t dir, const char *s, int len );
-	void start(SetupMenuSelectCodes * p);
+	void start(SetupMenuSelect * p);
 	void stop();
 	void press();
 	void release() {};
@@ -39,7 +39,7 @@ private:
 	AdaptUGC *ucg;
 	int scrollpos;
 	bool paused;
-	SetupMenuSelectCodes * setup;
+	SetupMenuSelect * setup;
 	int channel;
 	bool first;
 	int rx_total;

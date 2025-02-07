@@ -74,11 +74,11 @@ void SetupMenuChar::delEntry( const char* ent ) {
 SetupMenuChar::SetupMenuChar( const char* title, e_restart_mode_t restart, int (*action)(SetupMenuChar *p), bool save, char *achar, uint32_t index, bool ext_handler, bool end_menu ) {
 	ESP_LOGI(FNAME,"SetupMenuChar( %s ), char: %c", title, *achar );
 	attach(this);
-	bits._ext_handler = ext_handler;
+	_ext_handler = ext_handler;
 	_title = title;
 	_select = 0;
 	_select_save = 0;
-	bits._end_menu = end_menu;
+	_end_menu = end_menu;
 	highlight = -1;
 	_mychar = 0;
 	_char_index = index;
@@ -86,10 +86,9 @@ SetupMenuChar::SetupMenuChar( const char* title, e_restart_mode_t restart, int (
 		_mychar = achar+_char_index;
 	}
 	_numval = 0;
-	bits._restart = restart;
+	_restart_mode = restart;
 	_action = action;
-	bits._save = save;
-
+	_save = save;
 }
 
 SetupMenuChar::~SetupMenuChar()
@@ -102,7 +101,7 @@ void SetupMenuChar::display( int mode ){
 		return;
 	ESP_LOGI(FNAME,"display() pressed:%d title:%s action: %x hl:%d", pressed, _title, (int)(_action), highlight );
 	clear();
-	if( bits._ext_handler ){  // handling is done only in action method
+	if( _ext_handler ){  // handling is done only in action method
 		ESP_LOGI(FNAME,"ext handler");
 		selected = _parent;
 	}else
@@ -131,7 +130,7 @@ void SetupMenuChar::display( int mode ){
 
 		int y=_numval*25+50;
 		showhelp( y );
-		if(mode == 1 && bits._save == true ){
+		if(mode == 1 && _save == true ){
 			xSemaphoreTake(spiMutex,portMAX_DELAY );
 			ucg->setColor( COLOR_BLACK );
 			ucg->drawBox( 0,280,240,40 );
@@ -206,10 +205,10 @@ void SetupMenuChar::longPress(){
 void SetupMenuChar::press(){
 	if( selected != this )
 		return;
-	ESP_LOGI(FNAME,"press() ext handler: %d press: %d _select: %d", bits._ext_handler, pressed, _select );
+	ESP_LOGI(FNAME,"press() ext handler: %d press: %d _select: %d", _ext_handler, pressed, _select );
 	if ( pressed ){
 		display( 1 );
-		if( bits._end_menu ){
+		if( _end_menu ){
 			ESP_LOGI(FNAME,"press() end_menu");
 			selected = root;
 		}
@@ -225,10 +224,10 @@ void SetupMenuChar::press(){
 			(*_action)( this );
 		}
 		if( _select_save != _select )
-			if( bits._restart ) {
+			if( _restart_mode ) {
 				_restart = true;
 			}
-		if( bits._end_menu ){
+		if( _end_menu ){
 			selected->press();
 		}
 	}

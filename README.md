@@ -50,6 +50,7 @@ This branch also aims to run on the Sunton ESP32-2432S028 board, which:
 * has a touch sensor overlaying the display
 * has a (different) audio output module (but without the "poti")
 * has an SD card slot
+
 Implemented use of the touch screen in lieu of the missing rotary switch:  Touch near the middle of the screen to mimic the rotary pushbutton.  Touch near the top or the bottom of the screen to navigate through menu items or to change values.
 
 The purpose of compiling for this hardware is:

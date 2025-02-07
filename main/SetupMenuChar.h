@@ -40,7 +40,10 @@ private:
 	uint8_t  _select_save;
 	uint8_t  _numval;
 	uint8_t  _char_index;   // position of character to be altered
-	bitfield_select bits;
+	e_restart_mode_t _restart_mode;
+	bool _ext_handler;
+	bool _save;
+	bool _end_menu;
 	std::vector<const char *> _values;
 	int (*_action)( SetupMenuChar *p );
 	char *_mychar;
