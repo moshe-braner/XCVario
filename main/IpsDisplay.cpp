@@ -314,7 +314,7 @@ PolarIndicator::PolarIndicator() :
 {
 	color = needlecolor[1];
 	//base_val_offset = (int)(atan(static_cast<float>(h_width)/base)*sincosScale);
-	base_val_offset = (int)D2R(atan2_approx(static_cast<float>base,static_cast<float>h_width)*sincosScale);
+	base_val_offset = (int)D2R(atan2_approx(static_cast<float>(base),static_cast<float>(h_width))*sincosScale);
 	prev.x_0 = gaugeCos(prev_needle_pos+base_val_offset, base); // top shoulder
 	prev.y_0 = gaugeSin(prev_needle_pos+base_val_offset, base);
 	prev.x_1 = gaugeCos(prev_needle_pos-base_val_offset, base); // lower shoulder
@@ -329,7 +329,7 @@ void PolarIndicator::setGeometry(int16_t base_p, int16_t tip_p, int16_t half_wid
 	tip = tip_p;
 	h_width = half_width_p;
 	//base_val_offset = (int)(atan(static_cast<float>(h_width)/base)*sincosScale);
-	base_val_offset = (int)D2R(atan2_approx(static_cast<float>base,static_cast<float>h_width)*sincosScale);
+	base_val_offset = (int)D2R(atan2_approx(static_cast<float>(base),static_cast<float>(h_width))*sincosScale);
 	prev.x_0 = gaugeCos(prev_needle_pos+base_val_offset, base); // top shoulder
 	prev.y_0 = gaugeSin(prev_needle_pos+base_val_offset, base);
 	prev.x_1 = gaugeCos(prev_needle_pos-base_val_offset, base); // lower shoulder
