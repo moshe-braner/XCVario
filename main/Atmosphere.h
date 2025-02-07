@@ -27,6 +27,9 @@ class Atmosphere {
 	Atmosphere() {};
 	~Atmosphere() {};
 public:
+	static inline float calcPressure(float alti) {
+			return ( 1013.25 * pow( (1.0 - (6.5 * alti / 288150.0)), 5.255 ));
+	};
 	static inline float TAS( float ias, float baro, float temp ) {
 		//return( ias * sqrt( 1.225 / ( baro*100.0 / (287.058 * (273.15+temp)))));
 		return( ias * sqrt((0.01 * 1.225 * 287.058) * (273.15+temp) / baro ));
@@ -54,14 +57,11 @@ public:
 		return (kmh*kmh * (1.225/2.0/3.6/3.6));
 	};
 
-// These are not actually used?  Instead there are versions in PressureSensor
+// This are not actually used?  Instead there is a version in PressureSensor
 // calcPressure() is used in client loop and also in TAS2() and IAS() above
 
 //	static inline double calcAltitude(double SeaLevel_Pres, double pressure) {
 //			return ( 44330.0 * (1.0 - pow(pressure / SeaLevel_Pres, (1.0/5.255))) );
-//	};
-//	static inline double calcPressure(double alti) {
-//			return ( 1013.25 * pow( (1.0 - (6.5 * alti / 288150.0)), 5.255 ));
 //	};
 
 };
