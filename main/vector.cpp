@@ -18,6 +18,7 @@
 #include "Units.h"
 #include "vector.h"
 #include "logdef.h"
+#include "ApproxMath.h"
 
 Vector::Vector() :
 _angle(0.0),
