@@ -1,5 +1,6 @@
 #include "DataMonitor.h"
 #include "sensor.h"
+#include "SetupNG.h"
 #include "logdef.h"
 #include "Flarm.h"
 
@@ -186,7 +187,7 @@ void DataMonitor::start(SetupMenuSelect * p){
 	setup = p;
 	tx_total = 0;
 	rx_total = 0;
-	//channel = p->getSelectCode();
+	//channel = p->getSelect();       // broken, for S1 & S2 menus with only 0,1 choices
 	channel = data_monitor.get();     // action function SetupMenu.cpp data_mon() set it
 	xSemaphoreTake(spiMutex,portMAX_DELAY );
 	SetupMenu::catchFocus( true );

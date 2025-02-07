@@ -615,7 +615,7 @@ void SetupMenu::down(int count){
 	else
 		highlight = (int)(_childs.size() -1 );
 #else
-	count &= 7;
+	count &= 7;     // limit to some maximum
 	while( /* (highlight  >= -1) && */ count > 0 ){
 		highlight--;
 		count--;
@@ -694,7 +694,7 @@ void SetupMenu::up(int count){
 	else
 		highlight = -1;
 #else
-	count &= 7;
+	count &= 7;     // limit to some maximum
 	while( /* highlight <= (int)(_childs.size()-1) && */ count > 0 ){
 		highlight++;
 		count--;
