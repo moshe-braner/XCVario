@@ -47,14 +47,12 @@ Vector::Vector(const float angle, const float speed )
 
 float Vector::normalize(float angle)
 {
-	//perhaps use something similar here?
-	if (angle < 0)
-		return normalize (angle + PI2);
-
-	if (angle >= PI2)
-		return normalize (angle - PI2);
-
-	return angle;
+	float a=angle;
+	while( a < 0.0 )
+		a += PI2;
+	while( a >= PI2 )
+		a -= PI2;
+	return a;
 }
 
 float Vector::normalizeDeg(float angle)
@@ -87,6 +85,7 @@ float Vector::normalizeDeg180(float angle)
 	return a;
 }
 
+// note this expects degrees not radians
 float Vector::reverse( float angle ){
 	float opposite = 0;
 	normalizeDeg( angle );
@@ -109,10 +108,14 @@ float Vector::polar(float y, float x)
 			return ( 0 );
 	}
 	// Punkt liegt auf der neg. X-Achse
+#if 0
 	if(x < 0.0)
 		angle = atan( y / x ) + M_PI;
 	else
 		angle = atan( y / x );
+#else
+		angle = atan2_approx( x, y );
+#endif
 
 	// Normalize
 	if(angle < 0.0)
@@ -144,7 +147,7 @@ float Vector::getAngleDeg()
 		recalcDR();
 	}
 
-	return (_angle * 180.0/M_PI);
+	return (_angle * (180.0/M_PI));
 }
 
 /** Get angle in radian. */
@@ -166,7 +169,7 @@ void Vector::setAngle(const float angle)
 		recalcDR();
 	}
 
-	_angle = normalize( angle*M_PI/180.0 );
+	_angle = normalize( angle*(M_PI/180.0) );
 	flags.dirtyXY = true;
 	flags._isValid = true;
 	// ESP_LOGI(FNAME, "New angle ang:%f", _angle );
@@ -260,7 +263,11 @@ float Vector::getSpeedMps()
 void Vector::recalcDR()
 {
 	_angle = normalize( polar( _y, _x ) );
+#if 0
 	_speed = hypot( _y, _x );
+#else
+	_speed = hypot_approx( _y, _x );
+#endif
 	flags.dirtyDR = false;
 }
 
@@ -268,8 +275,13 @@ void Vector::recalcDR()
 /** Recalculates the X and Y values from the known angle and speed. */
 void Vector::recalcXY()
 {
+#if 0
 	_y = _speed * sin( _angle );
 	_x = _speed * cos( _angle );
+#else
+	_y = _speed * sin_approx( _angle );
+	_x = _speed * cos_approx( _angle );
+#endif
 	flags.dirtyXY = false;
 }
 

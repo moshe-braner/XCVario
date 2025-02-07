@@ -21,6 +21,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
  *
+ * MB 2025: Replaced double with float throughout.
+ *
  */
 
 
@@ -68,18 +70,18 @@ public:
 	};
 
 protected:
-	std::vector<double> m_x,m_y;            // x,y coordinates of points
+	std::vector<float> m_x,m_y;            // x,y coordinates of points
 	// interpolation parameters
 	// f(x) = a_i + b_i*(x-x_i) + c_i*(x-x_i)^2 + d_i*(x-x_i)^3
 	// where a_i = y_i, or else it won't go through grid points
-	std::vector<double> m_b,m_c,m_d;        // spline coefficients
-	double m_c0;                            // for left extrapolation
+	std::vector<float> m_b,m_c,m_d;        // spline coefficients
+	float m_c0;                            // for left extrapolation
 	spline_type m_type;
 	bd_type m_left, m_right;
-	double  m_left_value, m_right_value;
+	float  m_left_value, m_right_value;
 	bool m_made_monotonic;
 	void set_coeffs_from_b();               // calculate c_i, d_i from b_i
-	size_t find_closest(double x) const;    // closest idx so that m_x[idx]<=x
+	size_t find_closest(float x) const;    // closest idx so that m_x[idx]<=x
 
 public:
 	// default constructor: set boundary condition to be zero curvature
@@ -90,11 +92,11 @@ public:
 	{
 		;
 	}
-	spline(const std::vector<double>& X, const std::vector<double>& Y,
+	spline(const std::vector<float>& X, const std::vector<float>& Y,
 			spline_type type = cspline,
 			bool make_monotonic = false,
-			bd_type left  = second_deriv, double left_value  = 0.0,
-			bd_type right = second_deriv, double right_value = 0.0
+			bd_type left  = second_deriv, float left_value  = 0.0,
+			bd_type right = second_deriv, float right_value = 0.0
 	):
 		m_type(type),
 		m_left(left), m_right(right),
@@ -109,12 +111,12 @@ public:
 
 
 	// modify boundary conditions: if called it must be before set_points()
-	void set_boundary(bd_type left, double left_value,
-			bd_type right, double right_value);
+	void set_boundary(bd_type left, float left_value,
+			bd_type right, float right_value);
 
 	// set all data points (cubic_spline=false means linear interpolation)
-	void set_points(const std::vector<double>& x,
-			const std::vector<double>& y,
+	void set_points(const std::vector<float>& x,
+			const std::vector<float>& y,
 			spline_type type=cspline);
 
 	// adjust coefficients so that the spline becomes piecewise monotonic
@@ -127,14 +129,14 @@ public:
 	bool make_monotonic();
 
 	// evaluates the spline at point x
-	double operator() (double x) const;
-	double deriv(int order, double x) const;
+	float operator() (float x) const;
+	float deriv(int order, float x) const;
 
 	// returns the input data points
-	std::vector<double> get_x() const { return m_x; }
-	std::vector<double> get_y() const { return m_y; }
-	double get_x_min() const { assert(!m_x.empty()); return m_x.front(); }
-	double get_x_max() const { assert(!m_x.empty()); return m_x.back(); }
+	std::vector<float> get_x() const { return m_x; }
+	std::vector<float> get_y() const { return m_y; }
+	float get_x_min() const { assert(!m_x.empty()); return m_x.front(); }
+	float get_x_max() const { assert(!m_x.empty()); return m_x.back(); }
 
 #ifdef HAVE_SSTREAM
 	// spline info string, i.e. spline type, boundary conditions etc.
@@ -152,8 +154,8 @@ namespace internal
 class band_matrix
 {
 private:
-	std::vector< std::vector<double> > m_upper;  // upper band
-	std::vector< std::vector<double> > m_lower;  // lower band
+	std::vector< std::vector<float> > m_upper;  // upper band
+	std::vector< std::vector<float> > m_lower;  // lower band
 public:
 	band_matrix() {};                             // constructor
 	band_matrix(int dim, int n_u, int n_l);       // constructor
@@ -169,15 +171,15 @@ public:
 		return (int)m_lower.size()-1;
 	}
 	// access operator
-	double & operator () (int i, int j);            // write
-	double   operator () (int i, int j) const;      // read
+	float & operator () (int i, int j);            // write
+	float   operator () (int i, int j) const;      // read
 	// we can store an additional diagonal (in m_lower)
-	double& saved_diag(int i);
-	double  saved_diag(int i) const;
+	float& saved_diag(int i);
+	float  saved_diag(int i) const;
 	void lu_decompose();
-	std::vector<double> r_solve(const std::vector<double>& b) const;
-	std::vector<double> l_solve(const std::vector<double>& b) const;
-	std::vector<double> lu_solve(const std::vector<double>& b,
+	std::vector<float> r_solve(const std::vector<float>& b) const;
+	std::vector<float> l_solve(const std::vector<float>& b) const;
+	std::vector<float> lu_solve(const std::vector<float>& b,
 			bool is_lu_decomposed=false);
 
 };

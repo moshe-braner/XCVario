@@ -11,12 +11,28 @@ public:
 	virtual bool  setBus( I2C_t *theBus ) = 0;
 	virtual bool  begin() = 0;
 	virtual bool  selfTest( float& p, float &t ) = 0;
-	virtual double readPressure(bool &success) = 0;
-	virtual double readTemperature( bool& success ) = 0;
-	virtual double readAltitude( double qnh, bool &success ) = 0;
-	virtual double calcAltitudeSTD( double p ) = 0;
-	virtual double calcAltitude( double qnh, double p ) = 0;
-    double calcPressure(double SeaLevel_Pres, double altitude) { return SeaLevel_Pres * pow(1.0 - (altitude / 44330.171), 5.255); }
+	virtual float readPressure(bool &success) = 0;
+	virtual float readTemperature( bool& success ) = 0;
+	virtual float readAltitude( float qnh, bool &success ) = 0;
+//	virtual float calcAltitude( float qnh, float p ) = 0;
+    float calcAltitude(float SeaLevel_Pres, float pressure) {
+        // polynomial approximation of altitude as a function of pressure ratio
+        // - courtesy of Rick Sheppe
+        // - faster to compute than with pow()
+        float ratio = pressure / SeaLevel_Pres;
+        float altitude = ratio * -1.752317e+04;
+        altitude = ratio * (altitude + 6.801427e+04);
+        altitude = ratio * (altitude - 1.087470e+05);
+        altitude = ratio * (altitude + 9.498147e+04);
+        altitude = ratio * (altitude - 5.669573e+04);
+        altitude += 1.997137e+04;
+        return altitude;
+    }
+//	virtual float calcAltitudeSTD( float p ) = 0;
+	inline float calcAltitudeSTD( float p ) { return calcAltitude( 1013.25, p ); };
+    // we don't yet have an alternative to pow() for this:
+    // - but it's apparently only called from client loop, and can do less often?
+    float calcPressure(float SeaLevel_Pres, float altitude) { return SeaLevel_Pres * pow(1.0 - (altitude / 44330.171), 5.255); }
 };
 
 #endif

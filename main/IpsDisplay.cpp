@@ -32,6 +32,7 @@
 #include <cstring>
 #include "CenterAid.h"
 #include "Rotate.h"
+#include "ApproxMath.h"
 
 
 ////////////////////////////
@@ -289,10 +290,10 @@ static void initGauge(const float max, const bool log)
 	static bool initialized = false;
 	if ( initialized ) return;
 
-	for ( int i=0; i<SINCOS_OVER_110; i++ ) {
-		precalc_sin[i] = sin(i/sincosScale);
-		precalc_cos[i] = cos(i/sincosScale);
-	}
+//	for ( int i=0; i<SINCOS_OVER_110; i++ ) {
+//		precalc_sin[i] = sin(i/sincosScale);
+//		precalc_cos[i] = cos(i/sincosScale);
+//	}
 	initialized = true;
 }
 // inverse to xxGaugeIdx. Get the value for an indicator position
@@ -312,7 +313,8 @@ PolarIndicator::PolarIndicator() :
 					h_width(9)
 {
 	color = needlecolor[1];
-	base_val_offset = (int)(atan(static_cast<float>(h_width)/base)*sincosScale);
+	//base_val_offset = (int)(atan(static_cast<float>(h_width)/base)*sincosScale);
+	base_val_offset = (int)D2R(atan2_approx(static_cast<float>base,static_cast<float>h_width)*sincosScale);
 	prev.x_0 = gaugeCos(prev_needle_pos+base_val_offset, base); // top shoulder
 	prev.y_0 = gaugeSin(prev_needle_pos+base_val_offset, base);
 	prev.x_1 = gaugeCos(prev_needle_pos-base_val_offset, base); // lower shoulder
@@ -326,7 +328,8 @@ void PolarIndicator::setGeometry(int16_t base_p, int16_t tip_p, int16_t half_wid
 	base = base_p;
 	tip = tip_p;
 	h_width = half_width_p;
-	base_val_offset = (int)(atan(static_cast<float>(h_width)/base)*sincosScale);
+	//base_val_offset = (int)(atan(static_cast<float>(h_width)/base)*sincosScale);
+	base_val_offset = (int)D2R(atan2_approx(static_cast<float>base,static_cast<float>h_width)*sincosScale);
 	prev.x_0 = gaugeCos(prev_needle_pos+base_val_offset, base); // top shoulder
 	prev.y_0 = gaugeSin(prev_needle_pos+base_val_offset, base);
 	prev.x_1 = gaugeCos(prev_needle_pos-base_val_offset, base); // lower shoulder
@@ -583,6 +586,12 @@ void IpsDisplay::setup()
 	_pixpmd = (int)((  (DISPLAY_H-(2*VARBARGAP) )/2) /_range);
 	// ESP_LOGI(FNAME,"Pixel per m/s %d", _pixpmd );
 	_range_clip = _range;
+
+// moved here from initGauge():
+	for ( int i=0; i<SINCOS_OVER_110; i++ ) {
+		precalc_sin[i] = sin(i/sincosScale);
+		precalc_cos[i] = cos(i/sincosScale);
+	}
 }
 
 void IpsDisplay::drawGaugeTriangle( int y, int r, int g, int b, bool s2f ) {
@@ -1159,8 +1168,8 @@ void IpsDisplay::drawOneScaleLine( float a, int16_t l1, int16_t l2, int16_t w, u
 {
 	if( _menu ) return;
 
-	float si=sin(a);
-	float co=cos(a);
+	float si=sin_approx(R2D(a));
+	float co=cos_approx(R2D(a));
 	int16_t w0 = w/2;
 	w = w - w0; // total width := w + w0
 	int16_t xn_0 = AMIDX-l1*co+w0*si;
@@ -1417,8 +1426,8 @@ void IpsDisplay::drawWindArrow( float a, float speed, int type ){
 		return;
 	const int X=75;
 	const int Y=215;
-	float si=sin(D2R(a));
-	float co=cos(D2R(a));
+	float si=sin_approx(a);
+	float co=cos_approx(a);
 	const int b=9; // width of the arrow
 	int s=speed*0.6;
 	int s2=s;

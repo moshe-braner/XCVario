@@ -8,6 +8,7 @@
 #include "CircleWind.h"
 #include "Router.h"
 #include "SetupMenu.h"
+#include "ApproxMath.h"
 
 #include <time.h>
 #include <sys/time.h>
@@ -435,8 +436,8 @@ void Flarm::setColorByAlt( int rel_alt ) {
 }
 
 void Flarm::drawTriangle( int x, int y, int rb, int dist, int size, int factor, int rel_alt, bool erase ) {
-	float s = sin( DTR(rb) );
-	float c = cos( DTR(rb) );
+	float s = sin_approx( rb );
+	float c = cos_approx( rb );
 	int tipx = (int)(x + s*dist );
 	int tipy = (int)(y - c*dist );
 	float mx =  x + s*(dist+size);

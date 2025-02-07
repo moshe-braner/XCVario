@@ -20,26 +20,26 @@ public:
 	bool  selfTest( float &t, float &p );
 	bool  setBus( I2C_t *theBus ) {  bus = theBus; return true; };
 	bool  setSPIBus(gpio_num_t _sclk, gpio_num_t _mosi, gpio_num_t _miso, gpio_num_t _cs, uint32_t _freq ) { return true; };
-	double get_altitude(double pressure, double seaLevelhPa);	// get altitude in meters
-	inline double calcAltitudeSTD( double p ) { return get_altitude( p, 1013.25 ); };
-	inline double calcAltitude( double sl, double p ) { return get_altitude( p, sl ); };
-	double readAltitude( double qnh, bool &ok );
-	double get_temp_c( bool &ok );
-	double get_temp_f();
-	double readTemperature( bool& success );
+//	float get_altitude(float pressure, float seaLevelhPa);	// get altitude in meters
+//	inline float calcAltitudeSTD( float p ) { return get_altitude( p, 1013.25 ); };
+//	inline float calcAltitude( float sl, float p ) { return get_altitude( p, sl ); };
+	float readAltitude( float qnh, bool &ok );
+	float get_temp_c( bool &ok );
+	float get_temp_f();
+	float readTemperature( bool& success );
 
-	double get_pcomp( bool &ok );
-	double get_pressure(bool &ok);
-	inline double readPressure(bool &ok){ return get_pressure(ok); };
+	float get_pcomp( bool &ok );
+	float get_pressure(bool &ok);
+	inline float readPressure(bool &ok){ return get_pressure(ok); };
 
 private:
 	int32_t get_praw( bool &ok );
-	double get_praw_sc( bool &ok );
+	float get_praw_sc( bool &ok );
 
 	int32_t get_traw( bool &ok );
-	double get_traw_sc( bool &ok );
+	float get_traw_sc( bool &ok );
 
-	double get_scale_factor( int reg );
+	float get_scale_factor( int reg );
 
 	inline uint8_t get_spl_id(){ return i2c_read_uint8( 0x0D ); }		    // Get ID Register 		0x0D
 	inline uint8_t get_spl_prs_cfg(){ return i2c_read_uint8( 0x06 ); };	// Get PRS_CFG Register	0x06
@@ -67,15 +67,15 @@ private:
 
 	I2C_t *bus;
 	char   address;
-	double _scale_factor_p;
-	double _scale_factor_t;
+	float _scale_factor_p;
+	float _scale_factor_t;
 	int    errors;
 	int32_t _praw;
 	int32_t last_praw;
 	int32_t _traw;
 	int32_t last_traw;
 	uint32_t tick;
-	double last_p;
+	float last_p;
 };
 
 #endif

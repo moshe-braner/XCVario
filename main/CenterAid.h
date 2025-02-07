@@ -11,7 +11,7 @@
 #include "CircleWind.h"
 
 #define CA_NUM_DIRS 24  // every 15°
-#define CA_STEP (360/CA_NUM_DIRS) // 15
+#define CA_STEP (360.0/CA_NUM_DIRS) // 15
 #define CA_STEP_2 (CA_STEP/2.0)   // 30
 #define MAX_DISK_RAD 6
 #define PEAK_STORAGE 120

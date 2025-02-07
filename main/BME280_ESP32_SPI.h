@@ -45,13 +45,14 @@ public:
 	bool begin();
     bool selfTest( float& p, float& t );
 
-	double readTemperature( bool& success );
-	double readPressure(bool &ok);
-	double readPressureAVG( float alpha=0.1 );
-	double readHumidity();
-	double readAltitude(double SeaLevel_Pres, bool &ok);
-	inline double calcAltitude(double SeaLevel_Pres, double pressure) { return ( 44330.0 * (1.0 - pow(pressure / SeaLevel_Pres, (1.0/5.255))) ); }
-	double calcAltitudeSTD( double p );
+	float readTemperature( bool& success );
+	float readPressure(bool &ok);
+	float readPressureAVG( float alpha=0.1 );
+	float readHumidity();
+	float readAltitude(float SeaLevel_Pres, bool &ok);
+//	inline float calcAltitude(float SeaLevel_Pres, float pressure) { return ( 44330.0 * (1.0 - pow(pressure / SeaLevel_Pres, (1.0/5.255))) ); }
+//	float calcAltitude(float SeaLevel_Pres, float pressure);
+//	float calcAltitudeSTD( float p );
 	uint8_t readID();
 
 private:
@@ -62,8 +63,8 @@ private:
 	uint32_t compensate_H(int32_t adc_H);
 	uint16_t read16bit(uint8_t reg);
 	uint8_t read8bit(uint8_t reg);
-	double _avg_alt;
-	double _avg_alt_std;
+	float _avg_alt;
+	float _avg_alt_std;
 
 
 private:
@@ -92,7 +93,7 @@ private:
 	int16_t _dig_H4;
 	int16_t _dig_H5;
 	int8_t  _dig_H6;
-	double exponential_average;
+	float exponential_average;
 	bool init_err;
 	SPISettings spis;
 };

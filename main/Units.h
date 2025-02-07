@@ -48,7 +48,7 @@ public:
 	};
 
 	static float kmh2knots( float kmh ){
-			return( kmh / 1.852 );
+			return( kmh * (1.0 / 1.852) );
 	};
 
 	static float kmh2ms( float kmh ){
@@ -67,9 +67,9 @@ public:
 		if( ias_unit.get() == SPEED_UNIT_KMH ) // km/h
 			return( as );
 		else if( ias_unit.get() == SPEED_UNIT_MPH ) // mph
-			return( as/0.621371 );
+			return( as * (1.0/0.621371) );
 		else if( ias_unit.get() == SPEED_UNIT_KNOTS ) // knots
-			return( as/0.539957 );
+			return( as * (1.0/0.539957) );
 		else
 			ESP_LOGE(FNAME,"Wrong unit for AS");
 		return 0;
@@ -164,10 +164,10 @@ public:
 	};
 
 	static float hPa2inHg( float hpa ){   // standard is m/s
-		return( hpa * 0.02952998597817832 );
+		return( hpa * (float) 0.02952998597817832 );
 	};
 	static float inHg2hPa( float inhg ){   // standard is m/s
-		return( inhg / 0.02952998597817832 );
+		return( inhg * (float) (1.0 / 0.02952998597817832) );
 	};
 
 	static float knots2ms( float knots ){   // if we got it in knots
@@ -190,9 +190,9 @@ public:
 		if( vario_unit.get() == VARIO_UNIT_MS )
 			return( var );
 		else if(  vario_unit.get() == VARIO_UNIT_FPM )
-			return( var/196.85 );
+			return( var*(1.0/196.85) );
 		else if( vario_unit.get() == VARIO_UNIT_KNOTS )
-			return( var/1.94384 );         // knots
+			return( var*(1.0/1.94384) );         // knots
 		else
 			ESP_LOGE(FNAME,"Wrong unit for Vario");
 		return 0;
@@ -273,7 +273,7 @@ public:
 	};
 
 	static float feet2meters( float f ){
-			return( f/3.28084 );
+			return( f*(1.0/3.28084) );
 	};
 
 	static float meters2FL( float m ){

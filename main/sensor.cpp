@@ -246,10 +246,10 @@ void drawDisplay(void *pvParameters){
 					float acceleration=IMU::getGliderAccelZ();
 					if( acceleration < 0.3 )
 						acceleration = 0.3;  // limit acceleration effect to minimum 30% of 1g
-					float acc_stall= stall_speed.get() * sqrt( acceleration + ( ballast.get()/100));  // accelerated and ballast(ed) stall speed
+					float acc_stall= stall_speed.get() * sqrt( acceleration + ballast.get()*0.01 );  // accelerated and ballast(ed) stall speed
 					if( ias.get() < acc_stall && ias.get() > acc_stall*0.7 ){
 						if( !gflags.stall_warning_active ){
-							Audio::alarm( true, max_volume.get() );
+							Audio::alarm( true );
 							display->drawWarning( "! STALL !", true );
 							gflags.stall_warning_active = true;
 						}
@@ -301,7 +301,7 @@ void drawDisplay(void *pvParameters){
 							SetupMenu::catchFocus( false );
 						}
 						else if( !gflags.gear_warning_active && !gflags.stall_warning_active ){
-							Audio::alarm( true, max_volume.get() );
+							Audio::alarm( true );
 							display->drawWarning( "! GEAR !", false );
 							gflags.gear_warning_active = true;
 							SetupMenu::catchFocus( true );
@@ -1480,12 +1480,10 @@ void system_startup(void *args){
 			ESP_LOGE(FNAME,"CAN Bus selftest (%sRS): OK", CAN->hasSlopeSupport() ? "" : "no ");
 			logged_tests += "OK\n";
 			if ( CAN->hasSlopeSupport() ) {
-				if( hardwareRevision.get() < XCVARIO_22)
-					hardwareRevision.set(XCVARIO_22);  // XCV-22, CAN but no AHRS temperature control
+				hardwareRevision.set(XCVARIO_22);  // XCV-22, CAN but no AHRS temperature control
 			} else {
-				ESP_LOGI(FNAME,"CAN Bus selftest without RS control OK: set hardwareRevision (XCV-23)");
-				if( hardwareRevision.get() < XCVARIO_23)
-					hardwareRevision.set(XCVARIO_23);  // XCV-23, including AHRS temperature control
+				ESP_LOGI(FNAME,"CAN Bus selftest without RS control OK: set hardwareRevision 5 (XCV-23)");
+				hardwareRevision.set(XCVARIO_23);  // XCV-23, including AHRS temperature control
 			}
 		}
 		else {
@@ -1500,14 +1498,6 @@ void system_startup(void *args){
 #if defined(NOSENSORS)
 	float bat = 12.8;
 #else
-	if( gflags.haveMPU ){
-		if( MPU.whoAmI() == 0x12 ){
-			if( hardwareRevision.get() < XCVARIO_25){
-				hardwareRevision.set(XCVARIO_25);  // XCV-25: ICL20602
-				ESP_LOGI(FNAME,"MPU ICM-20602 -> hardwareRevision (XCV-25)");
-			}
-		}
-	}
 	float bat = Battery.get(true);
 #endif
 	if( bat < 1 || bat > 28.0 ){

@@ -71,7 +71,7 @@ float Deviation::getDeviation( float heading )
 	if( !deviationSpline )
 		return 0.0;
 	xSemaphoreTake(splineMutex,portMAX_DELAY );
-	float dev=(*deviationSpline)((double)heading);
+	float dev=(*deviationSpline)(heading);
 	// ESP_LOGI( FNAME, "RawHeading=%.1f : deviation=%0.2f", heading, dev );
 	xSemaphoreGive(splineMutex);
 	return( dev );
@@ -93,7 +93,7 @@ bool Deviation::newDeviation( float measured_heading, float desired_heading, boo
 		return false;
 	}
 
-	double deviation = Vector::angleDiffDeg( desired_heading , measured_heading );
+	float deviation = Vector::angleDiffDeg( desired_heading , measured_heading );
 	ESP_LOGI( FNAME, "New deviation: measured hdg: %.2f, desired hdg: %.2f => Deviation=%.3f, Sample:%d", measured_heading, desired_heading, deviation, samples );
 	if( (abs(deviation) > wind_max_deviation.get()) && !force ){ // data is not plausible/useful
 		ESP_LOGW( FNAME, "new Deviation out of bounds: %3.3f: Drop this deviation", deviation );
@@ -112,7 +112,7 @@ bool Deviation::newDeviation( float measured_heading, float desired_heading, boo
 #endif
 		float lowest_diff = 1000.0;
 
-		float diff = Vector::angleDiffDeg( measured_heading, (float)(it->first*0.1) );
+		float diff = Vector::angleDiffDeg( measured_heading, (it->first*0.1) );
 		if( (abs(diff) < spacing) && (diff < lowest_diff) ){
 			// ESP_LOGI( FNAME, "Found lower diff in devmap for heading=%.1f, diff=%.3f", it->first*0.1, diff );
 			tbe = it;
@@ -127,7 +127,7 @@ bool Deviation::newDeviation( float measured_heading, float desired_heading, boo
 	tbe = std::end(devmap);
 	for(auto it = std::begin(devmap); it != std::end(devmap); it++ ){
 		float lowest_diff = 1000.0;
-		float diff = Vector::angleDiffDeg( measured_heading, (float)(it->first*0.1) );
+		float diff = Vector::angleDiffDeg( measured_heading, (it->first*0.1) );
 		if( (abs(diff) < spacing) && (diff < lowest_diff) ){
 			// ESP_LOGI( FNAME, "Found lower diff in devmap for heading=%.1f, diff=%.3f", it->first*0.1, diff );
 			tbe = it;
@@ -139,10 +139,10 @@ bool Deviation::newDeviation( float measured_heading, float desired_heading, boo
 		devmap.erase(tbe);
 	}
 
-	double old_dev = (*deviationSpline)((double)measured_heading);
+	float old_dev = (*deviationSpline)(measured_heading);
 	// ESP_LOGI( FNAME, "OLD Spline Deviation for measured heading: %.1f Dev: %f", measured_heading, old_dev );
 
-	double delta = Vector::angleDiffDeg( deviation, old_dev );
+	float delta = Vector::angleDiffDeg( deviation, old_dev );
 	ESP_LOGI( FNAME, "Deviation Delta: %f (old_dev: %f, deviation: %f )", delta, old_dev, deviation );
 	float k=wind_dev_filter.get();
 	if(old_dev == 0.0) {
@@ -183,7 +183,7 @@ void Deviation::recalcInterpolationSpline()
 #ifdef VERBOSE_LOG
 	if( deviationSpline ){
 		for( int dir=0; dir <= 360; dir+=45 ){
-			ESP_LOGI( FNAME, "OLD DEV Heading=%d  dev=%f", dir, (float)( (*deviationSpline)((double)dir) ));
+			ESP_LOGI( FNAME, "OLD DEV Heading=%d  dev=%f", dir, ( (*deviationSpline)(dir) ));
 		}
 	}
 #endif
@@ -196,20 +196,20 @@ void Deviation::recalcInterpolationSpline()
 	for(auto it = std::begin(devmap); it != std::end(devmap); ++it ){
 		if( it->first*0.1 >= 210 ){  // 360° - 140°
 			// ESP_LOGI( FNAME, "Pre  X/Y Vector Head: %.1f Dev: %3.2f", it->first*0.1-360, it->second );
-			X.push_back( (double)(it->first*0.1)-360.0 );
+			X.push_back( (it->first*0.1)-360.0 );
 			Y.push_back( it->second );
 		}
 	}
 	for(auto it = std::begin(devmap); it != std::end(devmap); ++it ){
 		// ESP_LOGI( FNAME, "Main X/Y Vector Head: %.1f Dev: %3.2f", it->first*0.1, it->second );
-		X.push_back( (double)(it->first*0.1) );
+		X.push_back( (it->first*0.1) );
 		Y.push_back( it->second );
 	}
 	// take care for tail of spline by extrapolation
 	for(auto it = std::begin(devmap); it != std::end(devmap); ++it ){
 		if( it->first*0.1 <= 140 ){  // 140°
 			// ESP_LOGI( FNAME, "Post  X/Y Vector Head: %.1f Dev: %3.2f", it->first*0.1+360, it->second );
-			X.push_back( (double)(it->first*0.1)+360.0 );
+			X.push_back( (it->first*0.1)+360.0 );
 			Y.push_back( it->second );
 		}
 	}
@@ -218,7 +218,7 @@ void Deviation::recalcInterpolationSpline()
 	xSemaphoreGive(splineMutex );
 #ifdef VERBOSE_LOG
 	for( int dir=0; dir <= 360; dir+=45 ){
-		ESP_LOGI( FNAME, "NEW DEV Heading=%d  dev=%f", dir, (float)( (*deviationSpline)((double)dir) ));
+		ESP_LOGI( FNAME, "NEW DEV Heading=%d  dev=%f", dir, ( (*deviationSpline)(dir) ));
 	}
 #endif
 
@@ -252,7 +252,7 @@ void Deviation::saveDeviation(){
 #ifdef VERBOSE_LOG
 	for( int dir=0; dir < 360; dir+=45 ){
 		// ipd[dir] = (float)( deviationSpline((double)dir) );
-		ESP_LOGI( FNAME, "OLD DEV Heading=%d  dev=%f", dir, (float)( (*deviationSpline)((double)dir) ));
+		ESP_LOGI( FNAME, "OLD DEV Heading=%d  dev=%f", dir, ( (*deviationSpline)(dir) ));
 	}
 #endif
 	ESP_LOGI( FNAME, "DEV Flash(0) - Spline(0) %3.3f",  abs( compass_dev_0.get() - (*deviationSpline)(0)) );
@@ -275,7 +275,7 @@ void Deviation::saveDeviation(){
 
 	for( int dir=0; dir < 360; dir+=45 ){
 		// ipd[dir] = (float)( deviationSpline((double)dir) );
-		ESP_LOGI( FNAME, "NEW DEV Heading=%d  dev=%f", dir, (float)( (*deviationSpline)((double)dir) ));
+		ESP_LOGI( FNAME, "NEW DEV Heading=%d  dev=%f", dir, ( (*deviationSpline)(dir) ));
 	}
 	xSemaphoreGive(splineMutex);
 }
