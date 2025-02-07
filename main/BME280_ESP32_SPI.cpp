@@ -365,7 +365,6 @@ float BME280_ESP32_SPI::calcAltitude(float SeaLevel_Pres, float pressure) {
     altitude += 1.997137e+04;
     return altitude;
 }
-#endif
 
 float BME280_ESP32_SPI::calcAltitudeSTD( float pressure ) {
 	if( init_err )
@@ -375,6 +374,7 @@ float BME280_ESP32_SPI::calcAltitudeSTD( float pressure ) {
 	// ESP_LOGI(FNAME,"--BME280 readAVGAltitudeSTD qnh: %0.1f p=%0.1f avlt=%0.1f alt=%0.1f", 1013.25, pressure, _avg_alt_std, alt );
 	return alt;
 }
+#endif
 
 bool BME280_ESP32_SPI::selfTest( float& t, float &p ) {
 #if defined(NOSENSORS)
