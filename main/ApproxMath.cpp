@@ -3,6 +3,7 @@
  * by Moshe Braner, 2022, 2024
  */
 
+#include <math.h>
 #include "ApproxMath.h"
 
 /* For the purposes used here, trig functions don't need much precision */
