@@ -35,7 +35,6 @@
 #include "sensor.h"
 #include "KalmanMPU6050.h"
 #include "vector.h"  // D2R, R2D
-#include "ApproxMath.h"
 
 
 StraightWind::StraightWind() :
@@ -213,11 +212,8 @@ void StraightWind::calculateSpeedAndAngle( float angle1, float speed1, float ang
 	float tcrad = D2R( angle1 );
 	float thrad = D2R( angle2 );
 	float wca = Vector::angleDiff( thrad, tcrad );
-	float wca_deg = R2D(wca);
-	//float s2wca = speed2 * cos( wca );
-	float s2wca = speed2 * cos_approx( wca_deg );
-	//float ang = tcrad + atan2( speed2 * sin( wca ), s2wca - speed1 );
-	float ang = tcrad + D2R( atan2_approx( s2wca - speed1, speed2 * sin_approx( wca_deg ) ) );
+	float s2wca = speed2 * cos( wca );
+	float ang = tcrad + atan2( speed2 * sin( wca ), s2wca - speed1 );
 	// Cosinus sentence: c^2 = a^2 + b^2 − 2 * a * b * cos( α ) for wind speed in km/h
 	speed = sqrt( (speed2 * speed2) + (speed1 * speed1 ) - ( 2 * s2wca * speed1  ) );
 	angle = Vector::normalizeDeg( R2D( ang ) );  // convert radian to degree
@@ -308,7 +304,7 @@ void StraightWind::calculateWind( float tc, float gs, float th, float tas, float
 	// ESP_LOGI( FNAME, "Calculated raw windspeed %.1f jitter:%.1f", newWindSpeed, jitter );
 
 	Vector v;
-	v.setAngle( newWindDir );
+	v.setAngleDeg( newWindDir );
 	v.setSpeedKmh( newWindSpeed );
 
 	windVectors.push_back( v );
