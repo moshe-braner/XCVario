@@ -6,8 +6,6 @@
 #ifndef APPROXMATH_H
 #define APPROXMATH_H
 
-#include "windsim.h"
-
 float atan2_approx(float, float);
 float atan2_better(float, float);
 float sin_approx(float);
