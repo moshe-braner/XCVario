@@ -6,7 +6,7 @@
 #ifndef APPROXMATH_H
 #define APPROXMATH_H
 
-#include "math.h"
+#include <inttypes.h>
 
 float atan2_approx(float, float);
 float atan2_better(float, float);
