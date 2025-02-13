@@ -182,16 +182,18 @@ bool StraightWind::calculateWind()
 		deviation = compass->getDeviation( averageTH );
 	}
 
-	if( (wind_logging.get() != WLOG_DISABLE) && compass_ok ){
+	if( wind_logging.get() != WLOG_DISABLE ){
 		char log[SSTRLEN];
 		sprintf( log, "$WIND;");
 		int pos = strlen(log);
 		if( wind_logging.get() & WLOG_WIND ){
-			sprintf( log+pos, "%d;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;%d;%d;%.1f;%1.1f", _tick, averageTC, cgs, averageTH, ctas, newWindDir, newWindSpeed, windDir, windSpeed, circlingWindDir, circlingWindSpeed,
-					                                                                                       (airspeedCorrection-1)*100, CircleWind::getFlightMode(), gpsStatus, deviation, slipAngle );
+			sprintf( log+pos, "%d;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;%.1f;%d;%d;%.1f;%1.1f",
+			 _tick, averageTC, cgs, averageTH, ctas, newWindDir, newWindSpeed,
+			  swindDir, swindSpeed, circlingWindDir, circlingWindSpeed,
+			   (airspeedCorrection-1)*100, CircleWind::getFlightMode(), gpsStatus, deviation, slipAngle );
 		}
 		pos=strlen(log);
-		if( wind_logging.get() & WLOG_GYRO_MAG ){
+		if( wind_logging.get() & WLOG_GYRO_MAG && compass_ok ){
 			sprintf( log+pos, ";%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f",
 					compass->rawX()/16384.0,compass->rawY()/16384.0,compass->rawZ()/16384.0,
 					IMU::getGliderAccelX(), IMU::getGliderAccelY(), IMU::getGliderAccelZ(),
@@ -312,6 +314,9 @@ bool StraightWind::calculatezWind( float tc, float gs, float tas ){
 	newwind.add( oldwind );                   // gives approximate wind correction angle
 	newwind.setSpeedKmh( tas );               // same direction, but the actual TAS
 	newwind.subtract( vgs );                  // this is the new wind estimate
+
+	newWindDir   = newwind.getAngleDeg();
+	newWindSpeed = newwind.getSpeed();
 	ESP_LOGI(FNAME,"New zWind: %3.1f deg,  %3.1f km/h", newwind.getAngleDeg(), newwind.getSpeed() );
 
 	// as long as TAS, heading, and wind stay the same,
@@ -349,7 +354,7 @@ bool StraightWind::calculatezWind( float tc, float gs, float tas ){
 	return true;
 }
 
-void StraightWind::calculateWind( float tc, float gs, float th, float tas, float deviation, bool use_compass ){
+void StraightWind::calculateWind( float tc, float gs, float th, float tas, float deviation ){
 	// ESP_LOGI(FNAME,"calculateWind: TC:%3.1f GS:%3.1f TH:%3.1f TAS:%3.1f Dev:%2.2f", tc, gs, th, tas, deviation );
 	if( gs < 5 )
 		tc = th;   // what will deliver heading and airspeed for wind
