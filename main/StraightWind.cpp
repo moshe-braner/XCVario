@@ -433,16 +433,16 @@ void StraightWind::calculateWind( float tc, float gs, float th, float tas, float
 		windVectors.pop_front();
 	}
 
-	windDir   = result.getAngleDeg(); // Vector::normalizeDeg( result.getAngleDeg()/circle_wind_lowpass.get() );
-	windSpeed = result.getSpeed() / windVectors.size();
+	swindDir   = result.getAngleDeg(); // Vector::normalizeDeg( result.getAngleDeg()/circle_wind_lowpass.get() );
+	swindSpeed = result.getSpeed() / windVectors.size();
 
 	// ESP_LOGI(FNAME,"New AVG WindDirection: %3.1f deg,  Strength: %3.1f km/h JI:%2.1f", windDir, windSpeed, jitter );
 	_age = 0;
-	if( (int)windDir != (int)swind_dir.get()  ){
-		swind_dir.set( windDir );
+	if( (int)swindDir != (int)swind_dir.get()  ){
+		swind_dir.set( swindDir );
 	}
-	if( (int)windSpeed != (int)swind_speed.get() ){
-		swind_speed.set( windSpeed );
+	if( (int)swindSpeed != (int)swind_speed.get() ){
+		swind_speed.set( swindSpeed );
 	}
 }
 
