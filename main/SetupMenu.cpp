@@ -1605,6 +1605,14 @@ void SetupMenu::options_menu_create_wind( MenuEntry *top ){
 	SetupMenu * cirWindM = new SetupMenu( "Circling Wind" );
 	top->addEntry( cirWindM );
 	cirWindM->addCreator( options_menu_create_wind_circlingwind );
+
+	SetupMenuSelect * windlog = new SetupMenuSelect( "Wind Logging", RST_NONE, 0, true, &wind_logging );
+	windlog->addEntry( "Disable");
+	windlog->addEntry( "Enable WIND");
+	windlog->addEntry( "Enable GYRO/MAG");
+	windlog->addEntry( "Enable Both");
+	windlog->setHelp("Enable Wind logging NMEA output, e.g. to WIFI port");
+	top->addEntry( windlog );
 }
 
 void SetupMenu::options_menu_create_wireless_custom_id( MenuEntry *top ){
