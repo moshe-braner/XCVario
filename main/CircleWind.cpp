@@ -230,7 +230,7 @@ void CircleWind::_calcWind()
 		return;
 
 	// Invert maxVector angle
-	maxVector.setAngle( maxVector.getAngleDeg() + 180 );
+	maxVector.setAngleDeg( maxVector.getAngleDeg() + 180 );
 
 	float aDiff = Vector::angleDiffDeg( minVector.getAngleDeg(), maxVector.getAngleDeg() );
 	ESP_LOGI(FNAME,"calcWind, min/max diff %3.2f", aDiff );
@@ -251,7 +251,7 @@ void CircleWind::_calcWind()
 
 
 	// the direction of the wind is the direction where the greatest speed occurred
-	result.setAngle( Vector::normalizeDeg((Vector::normalizeDeg180(maxVector.getAngleDeg()) + Vector::normalizeDeg180(minVector.getAngleDeg())) / 2.0) );
+	result.setAngleDeg( Vector::normalizeDeg((Vector::normalizeDeg180(maxVector.getAngleDeg()) + Vector::normalizeDeg180(minVector.getAngleDeg())) / 2.0) );
 
 	// The speed of the wind is half the difference between the minimum and the maximum speeds.
 	result.setSpeedKmh( (maxVector.getSpeed() - minVector.getSpeed()) / 2.0 );

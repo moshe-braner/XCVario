@@ -143,7 +143,8 @@ float ABPMRR::getAirSpeed(void){        // calculates and returns the airspeed i
 	/* +/- 1PSI, approximately 100 m/s */
 	const float rhom = (2.0*100)/1.225; // density of air plus multiplier
 	// velocity = sqrt( (2*psi) / rho )   or sqt( psi /
-	float velocity = abs( sqrt(psi*rhom) );
+	//float velocity = abs( sqrt(psi*rhom) );
+	float velocity = sqrt(psi*rhom);
 	// ESP_LOGI(FNAME,"velocity %f", velocity );
 	return velocity;
 }

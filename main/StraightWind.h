@@ -24,6 +24,7 @@ public:
 
 	void tick();
 
+#if 0
 	/**
 	 * Get time in ms since 1.1.1970
 	 */
@@ -33,6 +34,7 @@ public:
 		gettimeofday( &tv, nullptr );
 		return ( tv.tv_sec * 1000 ) + ( tv.tv_usec / 1000 );
 	}
+#endif
 
 	/**
 	 * Measurement cycle for wind calculation in straight flight. Should be

@@ -21,6 +21,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
  *
+ * MB 2025: Replaced float with float throughout.
+ *
  */
 
 #include "spline.h"
@@ -32,8 +34,8 @@ namespace tk
 {
 
 
-void spline::set_boundary(spline::bd_type left, double left_value,
-		spline::bd_type right, double right_value)
+void spline::set_boundary(spline::bd_type left, float left_value,
+		spline::bd_type right, float right_value)
 {
 	assert(m_x.size()==0);          // set_points() must not have happened yet
 	m_left=left;
@@ -55,7 +57,7 @@ void spline::set_coeffs_from_b()
 		m_d.resize(n);
 
 	for(size_t i=0; i<n-1; i++) {
-		const double h  = m_x[i+1]-m_x[i];
+		const float h  = m_x[i+1]-m_x[i];
 		// from continuity and differentiability condition
 		m_c[i] = ( 3.0*(m_y[i+1]-m_y[i])/h - (2.0*m_b[i]+m_b[i+1]) ) / h;
 		// from differentiability condition
@@ -66,8 +68,8 @@ void spline::set_coeffs_from_b()
 	m_c0 = (m_left==first_deriv) ? 0.0 : m_c[0];
 }
 
-void spline::set_points(const std::vector<double>& x,
-		const std::vector<double>& y,
+void spline::set_points(const std::vector<float>& x,
+		const std::vector<float>& y,
 		spline_type type)
 {
 	assert(x.size()==y.size());
@@ -104,7 +106,7 @@ void spline::set_points(const std::vector<double>& x,
 		// setting up the matrix and right hand side of the equation system
 		// for the parameters b[]
 		internal::band_matrix A(n,1,1);
-		std::vector<double>  rhs(n);
+		std::vector<float>  rhs(n);
 		for(int i=1; i<n-1; i++) {
 			A(i,i-1)=1.0/3.0*(x[i]-x[i-1]);
 			A(i,i)=2.0/3.0*(x[i+1]-x[i-1]);
@@ -155,7 +157,7 @@ void spline::set_points(const std::vector<double>& x,
 		}
 		// for the right extrapolation coefficients (zero cubic term)
 		// f_{n-1}(x) = y_{n-1} + b*(x-x_{n-1}) + c*(x-x_{n-1})^2
-		double h=x[n-1]-x[n-2];
+		float h=x[n-1]-x[n-2];
 		// m_c[n-1] is determined by the boundary condition
 		m_d[n-1]=0.0;
 		m_b[n-1]=3.0*m_d[n-2]*h*h+2.0*m_c[n-2]*h+m_b[n-2];   // = f'_{n-2}(x_{n-1})
@@ -171,8 +173,8 @@ void spline::set_points(const std::vector<double>& x,
 		m_d.resize(n);
 		// set b to match 1st order derivative finite difference
 		for(int i=1; i<n-1; i++) {
-			const double h  = m_x[i+1]-m_x[i];
-			const double hl = m_x[i]-m_x[i-1];
+			const float h  = m_x[i+1]-m_x[i];
+			const float hl = m_x[i]-m_x[i-1];
 			m_b[i] = -h/(hl*(hl+h))*m_y[i-1] + (h-hl)/(hl*h)*m_y[i]
 																 +  hl/(h*(hl+h))*m_y[i+1];
 		}
@@ -180,7 +182,7 @@ void spline::set_points(const std::vector<double>& x,
 		if(m_left==first_deriv) {
 			m_b[0]=m_left_value;
 		} else if(m_left==second_deriv) {
-			const double h = m_x[1]-m_x[0];
+			const float h = m_x[1]-m_x[0];
 			m_b[0]=0.5*(-m_b[1]-0.5*m_left_value*h+3.0*(m_y[1]-m_y[0])/h);
 		} else {
 			assert(false);
@@ -189,7 +191,7 @@ void spline::set_points(const std::vector<double>& x,
 			m_b[n-1]=m_right_value;
 			m_c[n-1]=0.0;
 		} else if(m_right==second_deriv) {
-			const double h = m_x[n-1]-m_x[n-2];
+			const float h = m_x[n-1]-m_x[n-2];
 			m_b[n-1]=0.5*(-m_b[n-2]+0.5*m_right_value*h+3.0*(m_y[n-1]-m_y[n-2])/h);
 			m_c[n-1]=0.5*m_right_value;
 		} else {
@@ -230,8 +232,8 @@ bool spline::make_monotonic()
 	// ensure a sufficient criteria for monotonicity is satisfied:
 	//     sqrt(b[i]^2+b[i+1]^2) <= 3 |avg|, with avg=(y[i+1]-y[i])/h,
 	for(int i=0; i<n-1; i++) {
-		double h = m_x[i+1]-m_x[i];
-		double avg = (m_y[i+1]-m_y[i])/h;
+		float h = m_x[i+1]-m_x[i];
+		float avg = (m_y[i+1]-m_y[i])/h;
 		if( avg==0.0 && (m_b[i]!=0.0 || m_b[i+1]!=0.0) ) {
 			modified=true;
 			m_b[i]=0.0;
@@ -239,7 +241,7 @@ bool spline::make_monotonic()
 		} else if( (m_b[i]>=0.0 && m_b[i+1]>=0.0 && avg>0.0) ||
 				(m_b[i]<=0.0 && m_b[i+1]<=0.0 && avg<0.0) ) {
 			// input data is monotonic
-			double r = sqrt(m_b[i]*m_b[i]+m_b[i+1]*m_b[i+1])/std::fabs(avg);
+			float r = sqrt(m_b[i]*m_b[i]+m_b[i+1]*m_b[i+1])/std::fabs(avg);
 			if(r>3.0) {
 				// sufficient criteria for monotonicity: r<=3
 				// adjust b[i] and b[i+1]
@@ -259,15 +261,15 @@ bool spline::make_monotonic()
 }
 
 // return the closest idx so that m_x[idx] <= x (return 0 if x<m_x[0])
-size_t spline::find_closest(double x) const
+size_t spline::find_closest(float x) const
 {
-	std::vector<double>::const_iterator it;
+	std::vector<float>::const_iterator it;
 	it=std::upper_bound(m_x.begin(),m_x.end(),x);       // *it > x
 	size_t idx = std::max( int(it-m_x.begin())-1, 0);   // m_x[idx] <= x
 	return idx;
 }
 
-double spline::operator() (double x) const
+float spline::operator() (float x) const
 {
 	// polynomial evaluation using Horner's scheme
 	// TODO: consider more numerically accurate algorithms, e.g.:
@@ -277,8 +279,8 @@ double spline::operator() (double x) const
 	size_t n=m_x.size();
 	size_t idx=find_closest(x);
 
-	double h=x-m_x[idx];
-	double interpol;
+	float h=x-m_x[idx];
+	float interpol;
 	if(x<m_x[0]) {
 		// extrapolation to the left
 		interpol=(m_c0*h + m_b[0])*h + m_y[0];
@@ -292,14 +294,14 @@ double spline::operator() (double x) const
 	return interpol;
 }
 
-double spline::deriv(int order, double x) const
+float spline::deriv(int order, float x) const
 {
 	assert(order>0);
 	size_t n=m_x.size();
 	size_t idx = find_closest(x);
 
-	double h=x-m_x[idx];
-	double interpol;
+	float h=x-m_x[idx];
+	float interpol;
 	if(x<m_x[0]) {
 		// extrapolation to the left
 		switch(order) {
@@ -397,7 +399,7 @@ int band_matrix::dim() const
 
 // defines the new operator (), so that we can access the elements
 // by A(i,j), index going from i=0,...,dim()-1
-double & band_matrix::operator () (int i, int j)
+float & band_matrix::operator () (int i, int j)
 {
 	int k=j-i;       // what band is the entry
 	assert( (i>=0) && (i<dim()) && (j>=0) && (j<dim()) );
@@ -406,7 +408,7 @@ double & band_matrix::operator () (int i, int j)
 	if(k>=0)    return m_upper[k][i];
 	else        return m_lower[-k][i];
 }
-double band_matrix::operator () (int i, int j) const
+float band_matrix::operator () (int i, int j) const
 {
 	int k=j-i;       // what band is the entry
 	assert( (i>=0) && (i<dim()) && (j>=0) && (j<dim()) );
@@ -416,12 +418,12 @@ double band_matrix::operator () (int i, int j) const
 	else        return m_lower[-k][i];
 }
 // second diag (used in LU decomposition), saved in m_lower
-double band_matrix::saved_diag(int i) const
+float band_matrix::saved_diag(int i) const
 {
 	assert( (i>=0) && (i<dim()) );
 	return m_lower[0][i];
 }
-double & band_matrix::saved_diag(int i)
+float & band_matrix::saved_diag(int i)
 {
 	assert( (i>=0) && (i<dim()) );
 	return m_lower[0][i];
@@ -432,7 +434,7 @@ void band_matrix::lu_decompose()
 {
 	int  i_max,j_max;
 	int  j_min;
-	double x;
+	float x;
 
 	// preconditioning
 	// normalize column i so that a_ii=1
@@ -463,12 +465,12 @@ void band_matrix::lu_decompose()
 	}
 }
 // solves Ly=b
-std::vector<double> band_matrix::l_solve(const std::vector<double>& b) const
+std::vector<float> band_matrix::l_solve(const std::vector<float>& b) const
 {
 	assert( this->dim()==(int)b.size() );
-	std::vector<double> x(this->dim());
+	std::vector<float> x(this->dim());
 	int j_start;
-	double sum;
+	float sum;
 	for(int i=0; i<this->dim(); i++) {
 		sum=0;
 		j_start=std::max(0,i-this->num_lower());
@@ -478,12 +480,12 @@ std::vector<double> band_matrix::l_solve(const std::vector<double>& b) const
 	return x;
 }
 // solves Rx=y
-std::vector<double> band_matrix::r_solve(const std::vector<double>& b) const
+std::vector<float> band_matrix::r_solve(const std::vector<float>& b) const
 {
 	assert( this->dim()==(int)b.size() );
-	std::vector<double> x(this->dim());
+	std::vector<float> x(this->dim());
 	int j_stop;
-	double sum;
+	float sum;
 	for(int i=this->dim()-1; i>=0; i--) {
 		sum=0;
 		j_stop=std::min(this->dim()-1,i+this->num_upper());
@@ -493,11 +495,11 @@ std::vector<double> band_matrix::r_solve(const std::vector<double>& b) const
 	return x;
 }
 
-std::vector<double> band_matrix::lu_solve(const std::vector<double>& b,
+std::vector<float> band_matrix::lu_solve(const std::vector<float>& b,
 		bool is_lu_decomposed)
 {
 	assert( this->dim()==(int)b.size() );
-	std::vector<double>  x,y;
+	std::vector<float>  x,y;
 	if(is_lu_decomposed==false) {
 		this->lu_decompose();
 	}

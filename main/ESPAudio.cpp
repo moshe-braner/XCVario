@@ -166,16 +166,16 @@ void Audio::dac_cosine_enable( bool enable )
 }
 
 // 4 Ohms Type
-static const std::vector<double> F1{   50,  175, 350, 542, 885, 1236,  1380, 2100, 3000, 4000, 10000    };
-static const std::vector<double> VOL2{ 0.1, 0.2, 0.3, 1.2, 0.8,  1.5,   2.1,  1.7,  1.5,  1.4,   1.4    };
+static const std::vector<float> F1{   50,  175, 350, 542, 885, 1236,  1380, 2100, 3000, 4000, 10000    };
+static const std::vector<float> VOL2{ 0.1, 0.2, 0.3, 1.2, 0.8,  1.5,   2.1,  1.7,  1.5,  1.4,   1.4    };
 
 // 8 Ohms Type
-static const std::vector<double> F2{   50,  175, 350, 700, 885, 1120,  1380, 1450, 1600, 2000, 2100, 2300, 2600,  10000    };
-static const std::vector<double> VOL1{ 0.1, 0.2, 0.3, 2.3, 0.6,  2.1,   2.2,  1.2, 0.04,  1.0,  1.0,  1.0, 1.0,    0.3    };
+static const std::vector<float> F2{   50,  175, 350, 700, 885, 1120,  1380, 1450, 1600, 2000, 2100, 2300, 2600,  10000    };
+static const std::vector<float> VOL1{ 0.1, 0.2, 0.3, 2.3, 0.6,  2.1,   2.2,  1.2, 0.04,  1.0,  1.0,  1.0, 1.0,    0.3    };
 
 // External Speaker
-static const std::vector<double> F3{   50,  175, 490,  700, 1000, 1380, 2100, 2400, 3000, 4000, 10000   };
-static const std::vector<double> VOL3{ 1.3, 1.2, 0.9, 0.20,  1.2,  2.1,  1.8,  1.3,  1.9,  2.0,   2.0   };
+static const std::vector<float> F3{   50,  175, 490,  700, 1000, 1380, 2100, 2400, 3000, 4000, 10000   };
+static const std::vector<float> VOL3{ 1.3, 1.2, 0.9, 0.20,  1.2,  2.1,  1.8,  1.3,  1.9,  2.0,   2.0   };
 
 tk::spline *Audio::equalizerSpline = 0;
 
@@ -200,7 +200,7 @@ float Audio::equal_volume( float volume ){
 	float freq_resp = ( 1 - (((current_frequency-minf) / (maxf-minf)) * (frequency_response.get()/100.0) ) );
 	float new_vol = volume * freq_resp;
 	if( equalizerSpline )
-		new_vol = new_vol * (float)(*equalizerSpline)( (double)current_frequency );
+		new_vol = new_vol * (*equalizerSpline)( current_frequency );
 	if( new_vol >= max_volume.get() )
 		new_vol = max_volume.get();
 	if( new_vol <= 0 )

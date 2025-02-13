@@ -93,7 +93,7 @@ public:
 
   static bool getWind( int *dir, float *speed, int * age );
 
-  static float getNumCircles() 	 {  return circleCount+(circleDegrees/360.0); }
+  static float getNumCircles() 	 {  return (float)circleCount+(1.0/360.0)*(float)circleDegrees; }
   static int getSatCnt()     	 {  return satCnt; }
   static bool getGpsStatus()     {  return gpsStatus; }
   static float  getAngle() 		 { return result.getAngleDeg(); }

@@ -211,7 +211,7 @@ bool StraightWind::calculateWind()
 void StraightWind::calculateSpeedAndAngle( float angle1, float speed1, float angle2, float speed2, float& speed, float& angle ){
 	float tcrad = D2R( angle1 );
 	float thrad = D2R( angle2 );
-	float wca = Vector::angleDiff( thrad, tcrad );
+	float wca = Vector::angleDiffRad( thrad, tcrad );
 	float s2wca = speed2 * cos( wca );
 	float ang = tcrad + atan2( speed2 * sin( wca ), s2wca - speed1 );
 	// Cosinus sentence: c^2 = a^2 + b^2 − 2 * a * b * cos( α ) for wind speed in km/h
@@ -304,7 +304,7 @@ void StraightWind::calculateWind( float tc, float gs, float th, float tas, float
 	// ESP_LOGI( FNAME, "Calculated raw windspeed %.1f jitter:%.1f", newWindSpeed, jitter );
 
 	Vector v;
-	v.setAngle( newWindDir );
+	v.setAngleDeg( newWindDir );
 	v.setSpeedKmh( newWindSpeed );
 
 	windVectors.push_back( v );

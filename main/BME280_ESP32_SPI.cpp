@@ -166,7 +166,7 @@ void BME280_ESP32_SPI::readCalibration(void) {
 }
 
 //***************BME280 ****************************
-double BME280_ESP32_SPI::readTemperature( bool& success ){
+float BME280_ESP32_SPI::readTemperature( bool& success ){
 #if defined(NOSENSORS)
 	success = true;
 	return 0.0;
@@ -196,7 +196,7 @@ double BME280_ESP32_SPI::readTemperature( bool& success ){
 	uint32_t adc_T = (rx[0] << 12) | (rx[1] << 4) | (rx[2] >> 4); //0xFA, msb+lsb+xlsb=19bit
 
 	// ESP_LOGI(FNAME, "--BMP280 raw adc_T=%d  CS=%d", adc_T, _cs );
-	double t=compensate_T((int32_t)adc_T) / 100.0;
+	float t=compensate_T((int32_t)adc_T) / 100.0;
 	// ESP_LOGI(FNAME, "--BMP280 read Temp=%0.1f  CS=%d", t, _cs );
 	// ESP_LOGI(FNAME,"   Calibration  CS %d  T1 %d T2 %02x T3 %02x", _cs, _dig_T1, _dig_T2, _dig_T3);
 	return t;
@@ -204,7 +204,7 @@ double BME280_ESP32_SPI::readTemperature( bool& success ){
 }
 
 //***************BME280 ****************************
-double BME280_ESP32_SPI::readPressure(bool &ok){
+float BME280_ESP32_SPI::readPressure(bool &ok){
 #if defined(NOSENSORS)
 	ok = true;
 	return 1000.0;
@@ -252,7 +252,7 @@ double BME280_ESP32_SPI::readPressure(bool &ok){
 }
 
 //***************BME280****************************
-double BME280_ESP32_SPI::readHumidity(){
+float BME280_ESP32_SPI::readHumidity(){
 #if defined(NOSENSORS)
 	return 0.5;
 #else
@@ -336,27 +336,45 @@ uint32_t BME280_ESP32_SPI::compensate_H(int32_t adc_H) {
 }
 
 //*******************************************************************
-double BME280_ESP32_SPI::readAltitude(double SeaLevel_Pres, bool &ok ) {
+float BME280_ESP32_SPI::readAltitude(float SeaLevel_Pres, bool &ok ) {
 	if( init_err ) {
 		ok = false;
 		return 0.0;
 	}
 	// ESP_LOGI(FNAME,"++BMP280 readAltitude QNH=%0.1f CS:%d", SeaLevel_Pres, _cs);
-	double pressure = readPressure(ok);
+	float pressure = readPressure(ok);
 	// ESP_LOGI(FNAME,"press=%0.1f", pressure);
-	double altitude = calcAltitude( SeaLevel_Pres, pressure );
+	float altitude = calcAltitude( SeaLevel_Pres, pressure );
 	// ESP_LOGI(FNAME,"--BME280 readAltitude  qnh: %0.1f p=%0.1f alt=%0.1f", SeaLevel_Pres, pressure, altitude);
 	return altitude;
 }
 
-double BME280_ESP32_SPI::calcAltitudeSTD( double pressure ) {
+#if 0 // moved to PressureSensor.h
+float BME280_ESP32_SPI::calcAltitude(float SeaLevel_Pres, float pressure) {
+    // this was inline in BME280_ESP32_SPI.h:
+    //   return ( 44330.0 * (1.0 - pow(pressure / SeaLevel_Pres, (1.0/5.255))) );
+    // polynomial approximation of altitude as a function of pressure ratio
+    // - courtesy of Rick Sheppe
+    // - faster to compute than with pow()
+    float ratio = pressure / SeaLevel_Pres;
+    float altitude = ratio * -1.752317e+04;
+    altitude = ratio * (altitude + 6.801427e+04);
+    altitude = ratio * (altitude - 1.087470e+05);
+    altitude = ratio * (altitude + 9.498147e+04);
+    altitude = ratio * (altitude - 5.669573e+04);
+    altitude += 1.997137e+04;
+    return altitude;
+}
+
+float BME280_ESP32_SPI::calcAltitudeSTD( float pressure ) {
 	if( init_err )
 			return 0.0;
 	// ESP_LOGI(FNAME,"++BMP280 readAVGAltitude QNH=%0.1f CS:%d", SeaLevel_Pres, _cs);
-	double alt = calcAltitude( 1013.25, pressure );
+	float alt = calcAltitude( 1013.25, pressure );
 	// ESP_LOGI(FNAME,"--BME280 readAVGAltitudeSTD qnh: %0.1f p=%0.1f avlt=%0.1f alt=%0.1f", 1013.25, pressure, _avg_alt_std, alt );
 	return alt;
 }
+#endif
 
 bool BME280_ESP32_SPI::selfTest( float& t, float &p ) {
 #if defined(NOSENSORS)
@@ -370,7 +388,7 @@ bool BME280_ESP32_SPI::selfTest( float& t, float &p ) {
 		return( false );
 	}
 	bool success = false;
-	double temp=0;
+	float temp=0;
 	for( int i=0; i<10; i++ ){
 		temp += readTemperature(success);
 		delay(100);
@@ -461,11 +479,11 @@ uint8_t BME280_ESP32_SPI::read8bit(uint8_t reg) {
 #endif
 }
 
-double BME280_ESP32_SPI::readPressureAVG( float alpha ){
+float BME280_ESP32_SPI::readPressureAVG( float alpha ){
 	if( init_err )
 		return 0.0;
 	bool ok;
-    double newval = readPressure(ok);
+    float newval = readPressure(ok);
 	if ( exponential_average == 0 ){
 		exponential_average = newval;
 	}

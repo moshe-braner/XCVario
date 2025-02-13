@@ -55,20 +55,20 @@ class Vector
 public:
 
     Vector();
-    Vector(const float angle, const float speed);
+    Vector(const float angle, const float speed);    // angle in degrees
 
     ~Vector();
 
     static float polar(float y, float x);
-    static float normalize(float angle);
+    static float normalizeRad(float angle);
     static float normalizePI(float angle);
     static float normalizeDeg(float angle);
     static float normalizeDeg180(float angle);
 
-    static float angleDiff(float ang1, float ang2);    // RAD
+    static float angleDiffRad(float ang1, float ang2);    // RAD
     static float angleDiffDeg(float ang1, float ang2);    // DEG
 
-    static float reverse( float angle );
+    static float reverse( float angle );              // angle in degrees
     /**
      * Get angle in degrees.
      */
@@ -82,7 +82,7 @@ public:
     /**
      * set the angle in degrees
      */
-    void setAngle(const float angle);
+    void setAngleDeg(const float angle);
 
     /**
      * set the angle in degrees  and the speed
@@ -133,12 +133,12 @@ public:
 
 
     /**
-     * Sets the X (latitudinal) speed in meters per second.
+     * Sets the X (latitudinal) speed in kph.
      */
     void setX(const float& x);
 
     /**
-     * Sets the Y (longitudinal) speed in meters per second.
+     * Sets the Y (longitudinal) speed in kph.
      */
     void setY(const float& y);
 
@@ -190,11 +190,14 @@ public:
 
     Vector operator * (int left);
 
+    void scale(float arg);   // same as arg * vector, but more efficient
+
     /**
      * Poor man's solution for not getting the +
      * operator to work properly.
      */
     void add(Vector arg);
+    void subtract(Vector arg);
 
     /**
      * Returns a copy of the object

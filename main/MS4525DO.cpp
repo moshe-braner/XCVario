@@ -141,13 +141,14 @@ float MS4525DO::getTemperature(void){     // returns temperature of last measure
 float MS4525DO::getAirSpeed(void){        // calculates and returns the airspeed
 	/* Velocity calculation from a pitot tube explanation */
 	/* +/- 1PSI, approximately 100 m/s */
-	float rho = 1.225; // density of air
+	// float rho = 1.225; // density of air
+	float invrho2 = (2.0 / 1.225);
 	// velocity = squareroot( (2*differential) / rho )
 	float velocity;
 	if (psi<0) {
-		velocity = -sqrt(-(2*psi) / rho);
+		velocity = -sqrt(-psi * invrho2);
 	}else{
-		velocity = sqrt((2*psi) / rho);
+		velocity =  sqrt( psi * invrho2);
 	}
 	velocity = velocity*10;
 

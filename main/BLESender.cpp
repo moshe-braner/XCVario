@@ -180,7 +180,7 @@ void BLESender::begin(){
 	pTxCharacteristic->addDescriptor(new BLE2902());
 
 	BLECharacteristic * pRxCharacteristic = pService->createCharacteristic(
-			CHARACTERISTIC_UUID_RX,
+			UART_CHARACTERISTIC_UUID,                     // was CHARACTERISTIC_UUID_RX,
 			BLECharacteristic::PROPERTY_WRITE
 	);
 

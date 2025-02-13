@@ -51,12 +51,12 @@ private:
 	 // Rebuild spline function
 	void recalcInterpolationSpline();
 
-	std::vector<double> X;
-	std::vector<double> Y;
+	std::vector<float> X;
+	std::vector<float> Y;
 
 	static xSemaphoreHandle splineMutex;
 	tk::spline *deviationSpline;
-	std::map< int, double> devmap;
+	std::map< int, float> devmap;
 	int _devHolddown;
 	int samples;
 };

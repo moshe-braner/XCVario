@@ -14,10 +14,14 @@
  **
  ***********************************************************************/
 
+
+// ****** MB: this version stores degrees not radians ******
+
+
 #include <cmath>
-#include "Units.h"
 #include "vector.h"
 #include "logdef.h"
+#include "Units.h"
 
 Vector::Vector() :
 _angle(0.0),
@@ -30,6 +34,8 @@ _speed(0.0)
 	flags._isValid = true;
 }
 
+// this expects the angle in deg (even the original version that stored radians):
+
 Vector::Vector(const float angle, const float speed )
 {
 	// ESP_LOGI(FNAME, "New Vector ang:%f speed %f", angle, speed );
@@ -38,23 +44,21 @@ Vector::Vector(const float angle, const float speed )
 	flags.dirtyXY = false;
 	flags.dirtyDR = false;
 	_speed = speed;
-	setAngle( angle );
+	setAngleDeg( angle );
 	flags.dirtyDR = false;
 	flags.dirtyXY = true;
 	flags._isValid = true;
 }
 
 
-float Vector::normalize(float angle)
+float Vector::normalizeRad(float angle)
 {
-	//perhaps use something similar here?
-	if (angle < 0)
-		return normalize (angle + PI2);
-
-	if (angle >= PI2)
-		return normalize (angle - PI2);
-
-	return angle;
+	float a=angle;
+	while( a < 0.0 )
+		a += PI2;
+	while( a >= PI2 )
+		a -= PI2;
+	return a;
 }
 
 float Vector::normalizeDeg(float angle)
@@ -87,9 +91,10 @@ float Vector::normalizeDeg180(float angle)
 	return a;
 }
 
+// note this expects degrees not radians
 float Vector::reverse( float angle ){
 	float opposite = 0;
-	normalizeDeg( angle );
+	angle = normalizeDeg( angle );  // <<< MB: was not assigned
 	if( abs( angle ) < 0.1 )
 		opposite = 180.0;           // or -180 as you wish
 	else if(angle > 180.0)
@@ -102,24 +107,23 @@ float Vector::reverse( float angle ){
 float Vector::polar(float y, float x)
 {
 	float angle = 0.0;
-	if(x >= -0.001 && x <= 0.001) {
-		if(y < 0.0)
-			return ( M_PI );
-		else
-			return ( 0 );
-	}
-	// Punkt liegt auf der neg. X-Achse
-	if(x < 0.0)
-		angle = atan( y / x ) + M_PI;
-	else
-		angle = atan( y / x );
+
+	// no need for special code for small x,
+	//   using atan2() instead of atan() takes care of that
+
+	//if(x < 0.0)
+	//	angle = atan( y / x ) + M_PI;
+	//else
+	//	angle = atan( y / x );
+	//angle = R2D(angle);
+	angle = R2D(atan2(y,x));
 
 	// Normalize
 	if(angle < 0.0)
-		angle = PI2 + angle;
+		angle = 360.0 + angle;
 
-	if(angle > (PI2))
-		angle = angle - (PI2);
+	if(angle > 360.0)
+		angle = angle - 360.0;
 
 	return angle;
 }
@@ -129,7 +133,7 @@ float Vector::angleDiffDeg(float ang1, float ang2)
 	return( normalizeDeg180( normalizeDeg180(ang1) - normalizeDeg180( ang2 ) ) );
 }
 
-float Vector::angleDiff(float ang1, float ang2)
+float Vector::angleDiffRad(float ang1, float ang2)
 {
 	return( normalizePI( normalizePI(ang1) - normalizePI(ang2) ));
 }
@@ -144,7 +148,7 @@ float Vector::getAngleDeg()
 		recalcDR();
 	}
 
-	return (_angle * 180.0/M_PI);
+	return _angle;
 }
 
 /** Get angle in radian. */
@@ -155,10 +159,10 @@ float Vector::getAngleRad()
 		recalcDR();
 	}
 
-	return _angle;
+	return D2R(_angle);
 }
 
-void Vector::setAngle(const float angle)
+void Vector::setAngleDeg(const float angle)
 {
 	// ESP_LOGI(FNAME, "setAngle D ang:%f", angle );
 	if( flags.dirtyDR )
@@ -166,7 +170,7 @@ void Vector::setAngle(const float angle)
 		recalcDR();
 	}
 
-	_angle = normalize( angle*M_PI/180.0 );
+	_angle = normalizeDeg( angle );
 	flags.dirtyXY = true;
 	flags._isValid = true;
 	// ESP_LOGI(FNAME, "New angle ang:%f", _angle );
@@ -183,7 +187,7 @@ void Vector::setAngleAndSpeed(const int angle, const float & spd)
 		recalcDR();
 	}
 
-	setAngle( angle );
+	setAngleDeg( angle );
 	_speed = spd;
 	flags.dirtyDR = false;
 	flags.dirtyXY = true;
@@ -198,7 +202,7 @@ void Vector::setAngleRad(const float& angle)
 		recalcDR();
 	}
 
-	_angle = normalize( angle );
+	_angle = normalizeDeg( R2D(angle) );
 	flags.dirtyXY = true;
 	flags.dirtyDR = false;
 	flags._isValid = true;
@@ -215,6 +219,7 @@ void Vector::setSpeedKmh(const float speed)
 	}
 
 	_speed = speed;
+	flags.dirtyXY = true;       // <<< added by MB
 	flags._isValid = true;
 }
 
@@ -229,11 +234,12 @@ void Vector::setSpeedMps(const float mps)
 	}
 
 	_speed = mps*3.6;
+	flags.dirtyXY = true;       // <<< added by MB
 	flags._isValid = true;
 }
 
 /**
- * @return The speed
+ * @return The speed (in kph)
  */
 float Vector::getSpeed()
 {
@@ -259,7 +265,7 @@ float Vector::getSpeedMps()
 /** Recalculates the the angle and the speed from the known x and y values. */
 void Vector::recalcDR()
 {
-	_angle = normalize( polar( _y, _x ) );
+	_angle = normalizeDeg( polar( _y, _x ) );
 	_speed = hypot( _y, _x );
 	flags.dirtyDR = false;
 }
@@ -268,8 +274,8 @@ void Vector::recalcDR()
 /** Recalculates the X and Y values from the known angle and speed. */
 void Vector::recalcXY()
 {
-	_y = _speed * sin( _angle );
-	_x = _speed * cos( _angle );
+	_y = _speed * sin( D2R(_angle) );
+	_x = _speed * cos( D2R(_angle) );
 	flags.dirtyXY = false;
 }
 
@@ -306,7 +312,7 @@ float Vector::getXMps()
 		recalcXY();
 	}
 
-	return _x;
+	return Units::kmh2ms( _x );
 }
 
 /** Returns the speed in Y (longitude) direction (east is positive, west is negative) */
@@ -317,11 +323,11 @@ float Vector::getYMps()
 		recalcXY();
 	}
 
-	return _y;
+	return Units::kmh2ms( _y );
 }
 
 
-/** Sets the Y (longitudinal) speed in meters per second. */
+/** Sets the Y (longitudinal) speed in kph. */
 void Vector::setY(const float& y)
 {
 	if( flags.dirtyXY )
@@ -334,7 +340,7 @@ void Vector::setY(const float& y)
 	flags._isValid = true;
 }
 
-/** Sets the X (latitudinal) speed in meters per second. */
+/** Sets the X (latitudinal) speed in kph. */
 void Vector::setX(const float& x)
 {
 	if( flags.dirtyXY )
@@ -406,6 +412,17 @@ Vector Vector::operator * (float left)
 	return Vector( _angle, float( left * _speed ) );
 		}
 
+/** a more efficient way to scale a vector */
+void Vector::scale(const float x)
+{
+	if( flags.dirtyDR )
+	{
+		recalcDR();
+	}
+
+	_speed *= x;
+	flags.dirtyXY = true;
+}
 
 Vector Vector::operator * (int left)
 		{
@@ -485,7 +502,7 @@ Vector Vector::operator - ()
 	//there are two options for this. We use the one that involves the least conversions.
 	if( !flags.dirtyDR )
 	{
-		return Vector( _angle + M_PI, float( _speed ) );
+		return Vector( reverse( _angle ), float( _speed ) );
 	}
 	else if( !flags.dirtyXY )
 	{
@@ -502,45 +519,63 @@ Vector Vector::operator - ()
 /** * operator for vector. */
 Vector operator * (Vector& left, float right)
 		{
-	return Vector( left.getAngleRad(), float( right * left.getSpeed() ) );
+	return Vector( left.getAngleDeg(), float( right * left.getSpeed() ) );
 		}
 
 
 /** * operator for vector. */
 Vector operator * (float left, Vector& right)
 		{
-	return Vector( right.getAngleRad(), float( left * right.getSpeed() ) );
+	return Vector( right.getAngleDeg(), float( left * right.getSpeed() ) );
 		}
 
 
 /** / operator for vector. */
 Vector operator /( Vector& left, float right )
 {
-	return Vector( left.getAngleRad(), float( left.getSpeed() / right ) );
+	return Vector( left.getAngleDeg(), float( left.getSpeed() / right ) );
 }
 
 /** / operator for vector. */
 Vector operator /( Vector& left, int right )
 {
-	return Vector( left.getAngleRad(), float( left.getSpeed() / right ) );
+	return Vector( left.getAngleDeg(), float( left.getSpeed() / right ) );
 }
 
 
 /** Poor man's solution for not getting the + operator to work properly. */
 void Vector::add(Vector arg)
 {
-	if( arg.flags.dirtyXY )
-	{
-		arg.recalcXY();
-	}
+	//if( arg.flags.dirtyXY )
+	//{
+	//	arg.recalcXY();
+	//}
 
 	if( flags.dirtyXY )
 	{
 		recalcXY();
 	}
 
-	_x += arg.getXMps();
-	_y += arg.getYMps();
+	_x += arg.getX();   // implies recalcXY() if necessary
+	_y += arg.getY();
+
+	flags.dirtyDR = true;
+}
+
+void Vector::subtract(Vector arg)
+{
+	//if( arg.flags.dirtyXY )
+	//{
+	//	arg.recalcXY();
+	//}
+
+	if( flags.dirtyXY )
+	{
+		recalcXY();
+	}
+
+	_x -= arg.getX();   // implies recalcXY() if necessary
+	_y -= arg.getY();
 
 	flags.dirtyDR = true;
 }
@@ -553,7 +588,7 @@ Vector Vector::clone()
 
 	result.flags._isValid = flags._isValid;
 	result._speed = _speed;
-	result.setAngleRad( this->getAngleRad() );
+	result.setAngleDeg( this->getAngleDeg() );
 	result.flags.dirtyDR = false;
 	return result;
 }
