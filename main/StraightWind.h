@@ -50,13 +50,19 @@ public:
 	 */
 	bool getWind( int* direction, float* speed, int *age );
 
-	void setWind( float direction, float speed ){
-		windDir = direction;
-		windSpeed = speed;
-		_age = 0;
-	}
+//	void setsWind( float direction, float speed ){
+//		swindDir = direction;
+//		swindSpeed = speed;
+//		_age = 0;
+//	}
+//	void setzWind( float direction, float speed ){
+//		zwindDir = direction;
+//		zwindSpeed = speed;
+//		_age = 0;
+//	}
 
-	void calculateWind( float tc, float gs, float th, float tas, float deviation  );
+	void calculateWind( float tc, float gs, float th, float tas, float deviation );
+	bool calculatezWind( float tc, float gs, float tas );
 	static void calculateSpeedAndAngle( float angle1, float speed1, float angle2, float speed2, float& speed, float& angle );
 	void newCirclingWind( float angle, float speed );
 	void test();
@@ -75,8 +81,8 @@ private:
 	float averageTH;          // sum of Compass true heading
 	float averageTC;          // sum of GPS heading (true course)
 	float averageGS;		   // average ground speed
-	float windDir;            // calculated wind direction
-	float windSpeed;          // calculated wind speed in Km/h
+	float swindDir;           // calculated wind direction
+	float swindSpeed;         // calculated wind speed in Km/h
 	bool   lowAirspeed;
 	float  circlingWindDir;
 	float  circlingWindDirReverse;
@@ -91,8 +97,15 @@ private:
 	const char *status;
 	float  jitter;
 	std::list<Vector> windVectors;
+	Vector result;
 	float newWindSpeed;
 	float newWindDir;
+	float zwindDir;           // wind without compass, from TAS & zig-zag
+	float zwindSpeed;
+	int   zcount;             // how many zwind samples
+	float zminDir;            // min zwind sample direction
+	float zmaxDir;            // max zwind sample direction
+	static float zWgt;       // weight for rolling average
 	float slipAverage;
 	float lastHeading;
 	float lastGroundCourse;

@@ -35,6 +35,7 @@
 #include "sensor.h"
 #include "KalmanMPU6050.h"
 #include "vector.h"  // D2R, R2D
+#include "ApproxMath.h"
 
 
 StraightWind::StraightWind() :
@@ -42,13 +43,13 @@ averageTas(0),
 averageTH( 0.0 ),
 averageTC( 0.0 ),
 averageGS(0.0),
-windDir( -1.0 ),
-windSpeed( -1.0 ),
+swindDir( -1.0 ),
+swindSpeed( -1.0 ),
 lowAirspeed( false ),
 circlingWindDir( -1.0 ),
 circlingWindDirReverse( -1.0 ),
 circlingWindSpeed( -1.0 ),
-circlingWindAge( 0 ),
+circlingWindAge( 10000 ),
 airspeedCorrection( 1.0 ),
 _tick(0),
 gpsStatus(false),
@@ -56,8 +57,14 @@ deviation_cur(0),
 magneticHeading(0),
 status( "Initial" ),
 jitter(0),
+result(0,0),
 newWindSpeed(0),
 newWindDir(0),
+zwindDir( -1.0 ),
+zwindSpeed( -1.0 ),
+zcount(0),
+zminDir(-1.0),
+zmaxDir(-1.0),
 slipAverage(0),
 lastHeading(0),
 lastGroundCourse(0)
@@ -70,6 +77,7 @@ void StraightWind::begin(){
 }
 
 int StraightWind::_age = 10000;
+float StraightWind::zWgt;
 
 void StraightWind::tick(){
 	_age++;
@@ -82,7 +90,10 @@ bool StraightWind::getWind( int* direction, float* speed, int *age )
 	*direction = int( swind_dir.get() + 0.5 );
 	*speed = float( swind_speed.get() );
 	*age = _age;
-	return ( true );
+	if( _age < 7200 )
+		return true;
+	else
+		return false;
 }
 
 /**
@@ -104,26 +115,32 @@ bool StraightWind::calculateWind()
 		if( wind_enable.get() & WA_STRAIGHT ){
 			ESP_LOGI(FNAME,"Restart Cycle: GPS Status invalid");
 		}
-		status="Bad GPS";
+		status = "Bad GPS";
 		gpsStatus = false;
 	}else{
 		gpsStatus = true;
 	}
 	// ESP_LOGI(FNAME,"calculateWind flightMode: %d", CircleStraightWind::getFlightMode() );
-	// Check if straight wind requirements are fulfilled
+	bool compass_ok = (compass);
+	status = (compass_ok? "Compass OK" : "No Compass");
+	// Check if compass-based straight wind requirements are fulfilled
 	if( (compass_enable.get() != CS_I2C && compass_enable.get() != CS_CAN) || compass_calibrated.get() == false || !(wind_enable.get() & WA_STRAIGHT)) {
 		// ESP_LOGI(FNAME,"Compass issues: ENA:%d CAL:%d WIND_ENA:%d, abort", compass_enable.get(), compass_calibrated.get(), wind_enable.get() );
 		if( !compass_enable.get() )
-			status="Comps Dis";
+			status = "Comps Dis";
 		if( !compass_calibrated.get() )
-			status="Comps NoCal";
+			status = "Comps NoCal";
 		if( !( wind_enable.get() & WA_STRAIGHT) )
-			status="SWnd NoEna";
-		return false;
+			status = "SWnd NoEna";
+		compass_ok = false;
 	}
+	// if not compass_ok will use no-compass algorithm
 
 	// Get current ground speed in km/h
 	float cgs = Units::knots2kmh( Flarm::getGndSpeedKnots() );
+
+	// Get current true course from GPS
+	float ctc = Flarm::getGndCourse();
 
 	// Get current TAS in km/h
 	float ctas = float( getTAS() );
@@ -138,40 +155,34 @@ bool StraightWind::calculateWind()
 			ESP_LOGI(FNAME,"Low Airspeed, stop wind calculation, AS %3.1f  < %3.1f Kmh", ctas,  Units::Airspeed2Kmh( wind_as_min.get() ) );
 			lowAirspeed = true;
 		}
-		status="Low AS";
+		status = "Low AS";
 	}else{
 		if( lowAirspeed ) {
 			ESP_LOGI(FNAME,"Airspeed OK, start wind calculation, AS %3.1f  < %3.1f Kmh", ctas,  Units::Airspeed2Kmh( wind_as_min.get() ) );
 			lowAirspeed = false;
 		}
 	}
-	// Get current true heading from compass.
+
 	bool THok = false;
-	if( compass )
-		averageTH = compass->filteredTrueHeading( &THok, false ); // no deviation considered here (we add ourselfs as for reverse calculation we need also the pure heading)
-	if( THok == false ) {
-		// No valid heading available
-		status="No Compass";
-		if( wind_enable.get() & WA_STRAIGHT ){
-			ESP_LOGI(FNAME,"Restart Cycle: No magnetic heading");
+	float deviation = 0;
+	if (compass_ok) {
+		// Get current true heading from compass.
+		averageTH = compass->filteredTrueHeading( &THok, false );
+		// no deviation considered here (we add ourselfs as for reverse calculation we need also the pure heading)
+		if( THok == false ) {
+			// No valid heading available
+			status = "No Heading";
+			//if( wind_enable.get() & WA_STRAIGHT ){
+			//	ESP_LOGI(FNAME,"Restart Cycle: No magnetic heading");
+			//}
+			compass_ok = false;
 		}
+		// WCA in radians
+		magneticHeading = averageTH;
+		deviation = compass->getDeviation( averageTH );
 	}
 
-	// Get current true course from GPS
-	float ctc = Flarm::getGndCourse();
-	// averageTC = Vector::normalize( averageTC + (ctc - averageTC) * 1/wind_gps_lowpass.get());
-	averageTas = ctas;
-	averageGS += (cgs -averageGS) * 1/wind_gps_lowpass.get();
-
-	// Calculate average true course TC
-	averageTC = ctc;
-
-	// WCA in radians
-	magneticHeading = averageTH;
-
-	float deviation = compass->getDeviation( averageTH );
-
-	if( (wind_logging.get() != WLOG_DISABLE) && compass ){
+	if( (wind_logging.get() != WLOG_DISABLE) && compass_ok ){
 		char log[SSTRLEN];
 		sprintf( log, "$WIND;");
 		int pos = strlen(log);
@@ -192,16 +203,49 @@ bool StraightWind::calculateWind()
 		// ESP_LOGI( FNAME,"%s", log );
 	}
 
-	if( (CircleWind::getFlightMode() != straight) || lowAirspeed || !THok || !gpsStatus ){
+	// averageTC = Vector::normalize( averageTC + (ctc - averageTC) * 1/wind_gps_lowpass.get());
+	averageTC = ctc;
+	averageGS += (cgs - averageGS) * 1/wind_gps_lowpass.get();
+
+	averageTas = ctas;
+
+	if( (CircleWind::getFlightMode() != straight) || lowAirspeed || !gpsStatus ){
 		// ESP_LOGI(FNAME,"In Circling, stop ");
 		return false;
 	}
 
-	status="Calculating";
-	// ESP_LOGI(FNAME,"%d TC: %3.1f (avg:%3.1f) GS:%3.1f TH: %3.1f (avg:%3.1f) TAS: %3.1f", nunberOfSamples, ctc, averageTC, cgs, cth, averageTH, ctas );
-	calculateWind( averageTC, averageGS, averageTH, averageTas, deviation  );
-	return true;
+	// Gating for proper heading alignment
+	slipAverage += (slipAngle -slipAverage)*0.0005;
+	if( abs( slipAngle - slipAverage) > swind_sideslip_lim.get() ){
+		status = "Side Slip";
+		ESP_LOGI( FNAME, "Slip overrun %.2f, average %.2f", slipAngle, slipAverage );
+		return false;
+	}
+	float headingDelta = Vector::angleDiffDeg( averageTH , lastHeading );
+	lastHeading = averageTH;
+	if(  abs(headingDelta) > wind_straight_course_tolerance.get() ){
+		ESP_LOGI(FNAME,"Not really straight flight, heading delta: %f", headingDelta );
+		return false;
+	}
+	float groundCourseDelta = Vector::angleDiffDeg( averageTC , lastGroundCourse );
+	lastGroundCourse = averageTC;
+	if(  abs(groundCourseDelta) > 7.5  ){
+			ESP_LOGI(FNAME,"Not really straight flight, GND course delta: %f", groundCourseDelta );
+			return false;
+	}
+
+	//status = "Calculating";  // leave previous message since may be calculating without compass
+
+	if (compass_ok) {
+		// ESP_LOGI(FNAME,"%d TC: %3.1f (avg:%3.1f) GS:%3.1f TH: %3.1f (avg:%3.1f) TAS: %3.1f",
+		//   nunberOfSamples, ctc, averageTC, cgs, cth, averageTH, ctas );
+		calculateWind( averageTC, averageGS, averageTH, averageTas, deviation );
+		return true;
+	}
+
+	return calculatezWind( averageTC, cgs, averageTas );   // current ground speed cgs, not averageGS
 }
+
 
 // length (or speed) of third vector in windtriangle
 // and calculate WA (wind angle) in degree
@@ -209,54 +253,112 @@ bool StraightWind::calculateWind()
 // view-source:http://www.owoba.de/fliegerei/flugrechner.html
 // direction in degrees of third vector in windtriangle
 void StraightWind::calculateSpeedAndAngle( float angle1, float speed1, float angle2, float speed2, float& speed, float& angle ){
-	float tcrad = D2R( angle1 );
-	float thrad = D2R( angle2 );
-	float wca = Vector::angleDiffRad( thrad, tcrad );
-	float s2wca = speed2 * cos( wca );
-	float ang = tcrad + atan2( speed2 * sin( wca ), s2wca - speed1 );
+	//float tcrad = D2R( angle1 );
+	//float thrad = D2R( angle2 );
+	//float wca = Vector::angleDiff( thrad, tcrad );
+	float wca_deg = Vector::angleDiffDeg( angle2, angle1 );
+	//float s2wca = speed2 * cos( wca );
+	float s2wca = speed2 * cos_approx( wca_deg );
+	//float ang = tcrad + atan2( speed2 * sin( wca ), s2wca - speed1 );
+	//float ang = tcrad + D2R( atan2_approx( s2wca - speed1, speed2 * sin_approx( wca_deg ) ) );
+	float ang_deg = angle1 + atan2_approx( s2wca - speed1, speed2 * sin_approx( wca_deg ) );
 	// Cosinus sentence: c^2 = a^2 + b^2 − 2 * a * b * cos( α ) for wind speed in km/h
 	speed = sqrt( (speed2 * speed2) + (speed1 * speed1 ) - ( 2 * s2wca * speed1  ) );
-	angle = Vector::normalizeDeg( R2D( ang ) );  // convert radian to degree
-	// ESP_LOGI(FNAME,"calcAngleSpeed( A1/S1=%3.1f°/%3.1f km/h  A2/S2=%3.1f°/%3.1f km/h): A/S: %3.2f°/%3.2f km/h", angle1, speed1, angle2, speed2, angle, speed  );
+	angle = Vector::normalizeDeg( ang_deg );  // convert radian to degree
+	// ESP_LOGI(FNAME,"calcAngleSpeed( A1/S1=%3.1f°/%3.1f km/h  A2/S2=%3.1f°/%3.1f km/h): A/S: %3.2f°/%3.2f km/h", 
+	//  angle1, speed1, angle2, speed2, angle, speed  );
 }
 
 float StraightWind::getAngle() { return swind_dir.get(); };
 float StraightWind::getSpeed() { return swind_speed.get(); };
 
-void StraightWind::calculateWind( float tc, float gs, float th, float tas, float deviation  ){
+// Compute wind without compass, using TAS and iterative approximation on a zig-zag path.
+// Algorithm: estimate airspeed vector from TAS and a WCA based on previous wind estimate.
+// The interesting thing is that this simple algorithm converges to the true wind.
+bool StraightWind::calculatezWind( float tc, float gs, float tas ){
+
+	if (_tick & 0x03)
+		return false;    // only calculate once every 4 sec
+
+	if (wind_enable.get() == WA_BOTH && circlingWindAge < 1200 && circlingWindAge < _age) {
+		// circling wind estimate is more recent,
+		// re-initialize the zwind estimate
+		zwindSpeed = circlingWindSpeed;
+		zwindDir   = circlingWindDir;
+		zcount = (int)wind_filter_lowpass.get();        // report right away
+		zWgt = 8.0 / (3.0 + wind_filter_lowpass.get());
+	}
+
+	if (zwindSpeed < 0) {
+		// initialize based on difference between GS and TAS
+		if (gs < tas) {             // headwind
+			zwindSpeed = tas - gs;
+			zwindDir = tc;          // direction the wind is coming from
+		} else {
+			zwindSpeed = gs - tas;
+			zwindDir = Vector::normalizeDeg(tc+180);
+		}
+		zminDir = zwindDir;
+		zmaxDir = zwindDir;
+		zcount = -(int)wind_filter_lowpass.get();
+		zWgt = 8.0 / (3.0 + wind_filter_lowpass.get());
+		ESP_LOGI(FNAME,"calculatezWind: averaging weight: %.3f", zWgt);
+		ESP_LOGI(FNAME,"calculatezWind: initial wind estimate: from %.1f, kph %.1f", zwindDir, zwindSpeed);
+	}
+
+	Vector oldwind( zwindDir, zwindSpeed );   // previous wind estimate
+	Vector vgs( tc, gs );                     // groundspeed
+	Vector newwind = vgs;
+	newwind.add( oldwind );                   // gives approximate wind correction angle
+	newwind.setSpeedKmh( tas );               // same direction, but the actual TAS
+	newwind.subtract( vgs );                  // this is the new wind estimate
+	ESP_LOGI(FNAME,"New zWind: %3.1f deg,  %3.1f km/h", newwind.getAngleDeg(), newwind.getSpeed() );
+
+	// as long as TAS, heading, and wind stay the same,
+	//   the newwind will equal the oldwind.
+
+	// average the new estimate into the established average estimate
+	newwind.scale( zWgt );
+	oldwind.scale( 1.0 - zWgt );
+	newwind.add( oldwind );
+
+	zwindDir   = newwind.getAngleDeg();
+	zwindSpeed = newwind.getSpeed();
+	ESP_LOGI(FNAME,"New AVG zWind: %3.1f deg,  %3.1f km/h", zwindDir, zwindSpeed );
+
+	// Is the sample sufficient to bother to display it?
+	// Require diverse directions plus some more samples
+	// - even then it may not yet be a good estimate
+	if (zcount < 0) {
+		if (Vector::angleDiffDeg(zwindDir,zminDir) < 0)
+			zminDir = zwindDir;
+		if (Vector::angleDiffDeg(zwindDir,zmaxDir) > 0)
+			zmaxDir = zwindDir;
+		if (Vector::angleDiffDeg(zmaxDir,zminDir) > 40.0)
+			zcount = 0;
+	}
+	zcount++;
+	if (zcount < (((unsigned int)wind_filter_lowpass.get())>>2) && !testmode.get())
+		return false;
+
+	_age = 0;
+	if( (int)zwindDir != (int)swind_dir.get() )
+		swind_dir.set( zwindDir );
+	if( (int)zwindSpeed != (int)swind_speed.get() )
+		swind_speed.set( zwindSpeed );
+	return true;
+}
+
+void StraightWind::calculateWind( float tc, float gs, float th, float tas, float deviation, bool use_compass ){
 	// ESP_LOGI(FNAME,"calculateWind: TC:%3.1f GS:%3.1f TH:%3.1f TAS:%3.1f Dev:%2.2f", tc, gs, th, tas, deviation );
-	// Wind correction angle WCA
-	if( gs < 5 ){
+	if( gs < 5 )
 		tc = th;   // what will deliver heading and airspeed for wind
-	}
-	// Wind speed
-	// Reverse calculate windtriangle for deviation and airspeed calibration
 	bool devOK = true;
-
-	// Gating for proper heading alignment
-	slipAverage += (slipAngle -slipAverage)*0.0005;
-	if( abs( slipAngle - slipAverage) > swind_sideslip_lim.get() ){
-		status = "Side Slip";
-		ESP_LOGI( FNAME, "Slip overrun %.2f, average %.2f", slipAngle, slipAverage );
-		return;
-	}
-	float headingDelta = Vector::angleDiffDeg( th , lastHeading );
-	lastHeading = th;
-	if(  abs(headingDelta) > wind_straight_course_tolerance.get() ){
-		ESP_LOGI(FNAME,"Not really straight flight, heading delta: %f", headingDelta );
-		return;
-	}
-	float groundCourseDelta = Vector::angleDiffDeg( tc , lastGroundCourse );
-	lastGroundCourse = tc;
-	if(  abs(groundCourseDelta) > 7.5  ){
-			ESP_LOGI(FNAME,"Not really straight flight, GND course delta: %f", groundCourseDelta );
-			return;
-	}
-
+	// Reverse calculate windtriangle for deviation and airspeed calibration
 	if( circlingWindSpeed > 0 && compass_dev_auto.get() ){
 		if( circlingWindAge > 1200 ){
 			status = "OLD CIRC WIND";
-			ESP_LOGI(FNAME,"Circling Wind exired");
+			ESP_LOGI(FNAME,"Circling Wind expired");
 		}else{
 			float airspeed = 0;
 			float heading = 0;
@@ -266,11 +368,13 @@ void StraightWind::calculateWind( float tc, float gs, float th, float tas, float
 			airspeed = groundTrack.getSpeed();
 			heading = groundTrack.getAngleDeg();
 //#ifdef VERBOSE_LOG
-			ESP_LOGI(FNAME,"Using CWind: %.2f°/%.2f, TC/GS: %.1f°/%.1f, HD/AS: %.2f°/%.2f, tas=%.2f, ASdelta %.3f", circlingWindDir, circlingWindSpeed, tc, gs, heading, airspeed, tas, airspeed-tas );
+			ESP_LOGI(FNAME,"Using CWind: %.2f°/%.2f, TC/GS: %.1f°/%.1f, HD/AS: %.2f°/%.2f, tas=%.2f, ASdelta %.3f",
+			  circlingWindDir, circlingWindSpeed, tc, gs, heading, airspeed, tas, airspeed-tas );
 // #endif
 			if( abs( airspeed - tas ) > wind_straight_speed_tolerance.get() ){  // 30 percent max deviation
 				status = "AS OOB";
-				ESP_LOGI(FNAME,"Estimated Airspeed/Groundspeed OOB, max delta: %f km/h, delta: %f km/h", wind_straight_speed_tolerance.get(), abs( airspeed - tas ) );
+				ESP_LOGI(FNAME,"Estimated Airspeed/Groundspeed OOB, max delta: %f km/h, delta: %f km/h",
+				  wind_straight_speed_tolerance.get(), abs( airspeed - tas ) );
 				return;
 			}
 			airspeedCorrection +=  (airspeed/tas - airspeedCorrection) * wind_as_filter.get();
@@ -303,19 +407,25 @@ void StraightWind::calculateWind( float tc, float gs, float th, float tas, float
 	calculateSpeedAndAngle( tc, gs, th+deviation, tas*airspeedCorrection, newWindSpeed, newWindDir );
 	// ESP_LOGI( FNAME, "Calculated raw windspeed %.1f jitter:%.1f", newWindSpeed, jitter );
 
+	if (wind_enable.get() == WA_BOTH && circlingWindAge < 1200 && circlingWindAge < _age) {
+		// circling wind estimate is more recent,
+		// re-initialize the swind estimate
+		windVectors.clear();
+		result = Vector( circlingWindDir, circlingWindSpeed );
+		windVectors.push_back( result );
+		windVectors.push_back( result );   // weigh old circling wind 2x the new straight wind
+		result.add( result );
+	}
+
 	Vector v;
 	v.setAngleDeg( newWindDir );
 	v.setSpeedKmh( newWindSpeed );
 
 	windVectors.push_back( v );
+	result.add( v );
 	while( windVectors.size() > wind_filter_lowpass.get() ){
+		result.subtract( windVectors.front() );
 		windVectors.pop_front();
-	}
-
-	Vector result = Vector( 0.0, 0.0 );
-	for( auto it=std::begin(windVectors); it != std::end(windVectors); it++ ){
-			result.add( *it );
-			// ESP_LOGI(FNAME,"angle %.1f speed %.1f", it->getAngleDeg(), it->getSpeed() );
 	}
 
 	windDir   = result.getAngleDeg(); // Vector::normalizeDeg( result.getAngleDeg()/circle_wind_lowpass.get() );
@@ -335,12 +445,13 @@ void StraightWind::calculateWind( float tc, float gs, float th, float tas, float
 void StraightWind::newCirclingWind( float angle, float speed ){
 	ESP_LOGI(FNAME,"New good circling wind %3.2f°/%3.2f", angle, speed );
 	circlingWindDir = angle;
-	circlingWindDirReverse = Vector::reverse( angle );      // revers windvector
+	circlingWindDirReverse = Vector::reverse( angle );      // reverse windvector
 	ESP_LOGI(FNAME,"Wind dir %3.2f, reverse circling wind dir %3.2f", angle, circlingWindDirReverse );
 	circlingWindSpeed = speed;
 	circlingWindAge = 0;
 }
 
+#if 0
 void StraightWind::test()
 {    // Class Test, check here the results: http://www.owoba.de/fliegerei/flugrechner.html
 	calculateWind( 90, 100, 0, 100, 0 );
@@ -365,3 +476,4 @@ void StraightWind::test()
 	if( int( windSpeed ) != 141 || int(windDir +0.5) != 135  )
 		ESP_LOGI(FNAME,"Failed");
 }
+#endif

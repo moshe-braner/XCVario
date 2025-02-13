@@ -33,14 +33,12 @@ SetupMenuDisplay( title, nullptr )
 	ESP_LOGI(FNAME, "ShowStraightWind(): title='%s'", title );
 }
 
-
-
 void ShowStraightWind::display( int mode )
 {
 	if( (selected != this) || !gflags.inSetup )
 		return;
 
-	ESP_LOGI(FNAME, "display() mode=%d", mode );
+	//ESP_LOGI(FNAME, "display() mode=%d", mode );
 	if( mode != 5 )
 		clear();
 	ucg->setFont( ucg_font_ncenR14_hr );
@@ -92,4 +90,75 @@ void ShowStraightWind::display( int mode )
 
 	semaphoreGive();
 
+}
+
+
+ShowBothWinds::ShowBothWinds( const char* title ) :
+SetupMenuDisplay( title, nullptr )
+{
+	ESP_LOGI(FNAME, "ShowBothWinds(): title='%s'", title );
+}
+
+void ShowBothWinds::display( int mode )
+{
+	if( (selected != this) || !gflags.inSetup )
+		return;
+
+	//ESP_LOGI(FNAME, "display() mode=%d", mode );
+	if( mode != 5 )
+		clear();
+	ucg->setFont( ucg_font_ncenR14_hr );
+	uprintf( 5, 25, selected->_title );
+
+	uint16_t y = 70;
+	char buffer[32];
+
+	semaphoreTake();
+
+	if (wind_enable.get() & 1) {
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "Status: %s     ", theWind.getStatus() );
+	ucg->printf( "%s", buffer );
+	y += 25;
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "Last Str Wind : %03df°/%2.1f   ", (int)theWind.getAngle(), Units::Airspeed( theWind.getSpeed()) );
+	ucg->printf( "%s", buffer );
+	y += 25;
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "Str Wind Age : %d sec   ", theWind.getAge() );
+	ucg->printf( "%s", buffer );
+	y += 25;
+
+	}
+
+	int cwinddir=0;
+	float cwind=0;
+	int ageCircling;
+
+	if (wind_enable.get() & 2 && CircleWind::getWind( &cwinddir, &cwind, &ageCircling )) {
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "Last Cir Wind : %03d°/%2.1f   ", cwinddir, Units::Airspeed( cwind ) );
+	ucg->printf( "%s", buffer );
+	y += 25;
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "Cir Wind Age : %d sec   ", ageCircling );
+	ucg->printf( "%s", buffer );
+	y += 25;
+
+	}
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "GPS Status : %s", (theWind.getGpsStatus() == true ) ? "Good" : "Bad  "  );
+	ucg->printf( "%s", buffer );
+	y += 25;
+
+	ucg->setPrintPos( 5, 310 );
+	ucg->printf( "Press button to exit" );
+
+	semaphoreGive();
 }

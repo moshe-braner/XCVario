@@ -61,6 +61,7 @@ CircleWind::CircleWind()
 	// Initialization
 	minVector.setSpeedKmh( 370.0 );
 	maxVector.setSpeedKmh( 0.0 );
+	result = Vector( 0.0, 0.0 );
 }
 
 int CircleWind::circleCount = 0; 		// we are counting the number of circles, the first onces are probably not very round
@@ -73,6 +74,7 @@ t_circling CircleWind::circlingMode = undefined;
 int  CircleWind::gpsStatus = false;
 Vector CircleWind::minVector;
 Vector CircleWind::maxVector;
+float CircleWind::sumSpeed = 0;
 Vector CircleWind::result;
 float CircleWind::jitter = 0;
 float CircleWind::headingDiff = 0;
@@ -230,7 +232,7 @@ void CircleWind::_calcWind()
 		return;
 
 	// Invert maxVector angle
-	maxVector.setAngleDeg( maxVector.getAngleDeg() + 180 );
+	maxVector.setAngleDeg( Vector::reverse( maxVector.getAngleDeg() ) );
 
 	float aDiff = Vector::angleDiffDeg( minVector.getAngleDeg(), maxVector.getAngleDeg() );
 	ESP_LOGI(FNAME,"calcWind, min/max diff %3.2f", aDiff );
@@ -251,7 +253,8 @@ void CircleWind::_calcWind()
 
 
 	// the direction of the wind is the direction where the greatest speed occurred
-	result.setAngleDeg( Vector::normalizeDeg((Vector::normalizeDeg180(maxVector.getAngleDeg()) + Vector::normalizeDeg180(minVector.getAngleDeg())) / 2.0) );
+	result.setAngleDeg( Vector::normalizeDeg((Vector::normalizeDeg180(maxVector.getAngleDeg()) +
+	                                          Vector::normalizeDeg180(minVector.getAngleDeg())) * 0.5) );
 
 	// The speed of the wind is half the difference between the minimum and the maximum speeds.
 	result.setSpeedKmh( (maxVector.getSpeed() - minVector.getSpeed()) / 2.0 );
@@ -267,19 +270,35 @@ void CircleWind::_calcWind()
 void CircleWind::newWind( float angle, float speed ){
 	ESP_LOGI(FNAME,"New Wind Vector angle %.1f speed %.1f", angle, speed );
 
-	windVectors.push_back( Vector( angle, speed ) );
-	while( windVectors.size() > (int)circle_wind_lowpass.get() ){
-		windVectors.pop_front();
+	Vector v = Vector( angle, speed );
+
+	int s_age = theWind.getAge();
+	if (wind_enable.get() == WA_BOTH && s_age < 1200 && s_age < _age) {
+		// straight wind estimate is more recent,
+		// re-initialize the windvectors to the straight wind estimate
+		result = v;
+		sumSpeed = speed;
+		windVectors.clear();
+		Vector s_wind( swind_dir.get(), swind_speed.get() );
+		while( windVectors.size() + 1 < (int)circle_wind_lowpass.get() ){
+			result.add( s_wind );
+			sumSpeed += swind_speed.get();
+			windVectors.push_back( s_wind );
+		}
+		windVectors.push_back( v );
+	} else {
+		result.add( v );
+		sumSpeed += speed;
+		windVectors.push_back( v );
+		while( windVectors.size() > (int)circle_wind_lowpass.get() ){
+			result.subtract( windVectors.front() );
+			sumSpeed -= windVectors.front().getSpeed();
+			windVectors.pop_front();
+		}
 	}
-	result = Vector( 0.0, 0.0 );
-	float avgSpeed = 0;
-	for( auto it=std::begin(windVectors); it != std::end(windVectors); it++ ){
-		result.add( *it );
-		// ESP_LOGI(FNAME,"angle %.1f speed %.1f", it->getAngleDeg(), it->getSpeed() );
-		avgSpeed+=it->getSpeed();
-	}
+
 	float direction = result.getAngleDeg();
-	float windspeed = avgSpeed / windVectors.size();
+	float windspeed = sumSpeed / windVectors.size();
 
 	ESP_LOGI(FNAME,"### NEW AVG CircleWind: %.1f°/%.1fKm/h  JI:%2.1f", direction, windspeed, jitter  );
 
