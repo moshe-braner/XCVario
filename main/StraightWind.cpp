@@ -274,7 +274,7 @@ void StraightWind::calculateSpeedAndAngle( float angle1, float speed1, float ang
 float StraightWind::getAngle() { return swind_dir.get(); };
 float StraightWind::getSpeed() { return swind_speed.get(); };
 
-void init_zWgt()
+void StraightWind::init_zWgt()
 {
 	float f = wind_filter_lowpass.get();
 	if (f < 11.0)  f = 11.0;        // menu allows down to 5 for compass-wind
