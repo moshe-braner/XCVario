@@ -68,7 +68,7 @@ public:
 	void newCirclingWind( float angle, float speed );
 	void test();
 	int getAge() { return _age; }
-	void resetAge() { _age = 0; }
+	static void resetAge() { _age = 0; }
 	float getAsCorrection() { return airspeedCorrection; }
 	float getAngle();
 	float getSpeed();
@@ -90,7 +90,7 @@ private:
 	float  circlingWindSpeed;
 	int    circlingWindAge;
 	float  airspeedCorrection;
-	int    _age;
+	static int    _age;
 	int    _tick;
 	bool   gpsStatus;
 	float  deviation_cur;
