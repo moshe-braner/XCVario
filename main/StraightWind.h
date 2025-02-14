@@ -62,6 +62,7 @@ public:
 //	}
 
 	void calculateWind( float tc, float gs, float th, float tas, float deviation );
+	void init_zWgt();
 	bool calculatezWind( float tc, float gs, float tas );
 	static void calculateSpeedAndAngle( float angle1, float speed1, float angle2, float speed2, float& speed, float& angle );
 	void newCirclingWind( float angle, float speed );
@@ -80,7 +81,7 @@ private:
 	float averageTas;         // TAS in km/h
 	float averageTH;          // sum of Compass true heading
 	float averageTC;          // sum of GPS heading (true course)
-	float averageGS;		   // average ground speed
+	float averageGS;          // average ground speed
 	float swindDir;           // calculated wind direction
 	float swindSpeed;         // calculated wind speed in Km/h
 	bool   lowAirspeed;
@@ -89,7 +90,7 @@ private:
 	float  circlingWindSpeed;
 	int    circlingWindAge;
 	float  airspeedCorrection;
-	static int    _age;
+	int    _age;
 	int    _tick;
 	bool   gpsStatus;
 	float  deviation_cur;
@@ -105,8 +106,8 @@ private:
 	int   zcount;             // how many zwind samples
 	float zminDir;            // min zwind sample direction
 	float zmaxDir;            // max zwind sample direction
-	static float zWgt;       // weight for rolling average
-	static bool zWgtChg;     // after a while change weight once to reduce noise
+	float zWgt;               // weight for rolling average
+	bool  zWgtChg;            // after a while change weight once to reduce noise
 	float slipAverage;
 	float lastHeading;
 	float lastGroundCourse;

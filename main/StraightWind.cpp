@@ -51,6 +51,7 @@ circlingWindDirReverse( -1.0 ),
 circlingWindSpeed( -1.0 ),
 circlingWindAge( 10000 ),
 airspeedCorrection( 1.0 ),
+_age( 10000 ),
 _tick(0),
 gpsStatus(false),
 deviation_cur(0),
@@ -65,6 +66,8 @@ zwindSpeed( -1.0 ),
 zcount(0),
 zminDir(-1.0),
 zmaxDir(-1.0),
+zWgt(0),
+zWgtChg(false),
 slipAverage(0),
 lastHeading(0),
 lastGroundCourse(0)
@@ -75,10 +78,6 @@ void StraightWind::begin(){
 	if( compass_dev_auto.get() )
 		airspeedCorrection = wind_as_calibration.get();
 }
-
-int StraightWind::_age = 10000;
-float StraightWind::zWgt;
-bool StraightWind::zWgtChg = false;
 
 void StraightWind::tick(){
 	_age++;
@@ -279,10 +278,10 @@ void init_zWgt()
 {
 	float f = wind_filter_lowpass.get();
 	if (f < 11.0)  f = 11.0;        // menu allows down to 5 for compass-wind
-	zWgtChg = false;  // <<< test
 	zWgt = 8.0 / (2.5 + 0.5*f);
 	//if (zWgt > 1.0)  zWgt = 1.0;
 	ESP_LOGI(FNAME,"initial averaging weight: %.3f", zWgt);
+	zWgtChg = false;
 }
 
 // Compute wind without compass, using TAS and iterative approximation on a zig-zag path.
@@ -300,7 +299,6 @@ bool StraightWind::calculatezWind( float tc, float gs, float tas ){
 		zwindDir   = circlingWindDir;
 		zcount = (int)wind_filter_lowpass.get();        // report right away
 		init_zWgt();
-		zWgtChg = false;
 	}
 
 	if (zwindSpeed < 0) {
@@ -316,7 +314,6 @@ bool StraightWind::calculatezWind( float tc, float gs, float tas ){
 		zmaxDir = zwindDir;
 		zcount = -(int)wind_filter_lowpass.get();
 		init_zWgt();
-		zWgtChg = false;
 		ESP_LOGI(FNAME,"calculatezWind: initial wind estimate: from %.1f, kph %.1f", zwindDir, zwindSpeed);
 	}
 
