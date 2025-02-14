@@ -43,9 +43,9 @@ float atan2_approx(float ns, float ew)
 }
 
 // a more accurate formula, but not quite as fast
-// https://mazzo.li/posts/vectorized-atan2.html - plus added a constant 0.005 deg
+// https://mazzo.li/posts/vectorized-atan2.html - plus added a constant 0.004965 deg
 // max error: +-0.04 deg
-// average (signed) error: 0.00003 deg - not much bias!
+// average (signed) error: -0.00000015 deg - not much bias!
 // average absolute error: 0.04 deg
 // root-mean-square error: 0.03 deg
 float atan2_positive_better(float ns, float ew)
@@ -54,11 +54,11 @@ float atan2_positive_better(float ns, float ew)
   if (ew < ns) {
     t = ew / ns;
     float s = t*t;
-    return (0.005 + t*(57.02958 - s*(16.540089 - 4.54533*s)));
+    return (0.004965 + t*(57.02958 - s*(16.540089 - 4.54533*s)));
   } else {
     t = ns / ew;
     float s = t*t;
-    return ((90.0-0.005) - t*(57.02958 - s*(16.540089 - 4.54533*s)));
+    return ((90.0-0.004965) - t*(57.02958 - s*(16.540089 - 4.54533*s)));
   }
 }
 float atan2_better(float ns, float ew)

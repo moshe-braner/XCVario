@@ -78,6 +78,7 @@ void StraightWind::begin(){
 
 int StraightWind::_age = 10000;
 float StraightWind::zWgt;
+bool StraightWind::zWgtChg = false;
 
 void StraightWind::tick(){
 	_age++;
@@ -274,6 +275,15 @@ void StraightWind::calculateSpeedAndAngle( float angle1, float speed1, float ang
 float StraightWind::getAngle() { return swind_dir.get(); };
 float StraightWind::getSpeed() { return swind_speed.get(); };
 
+float init_zWgt()
+{
+	float f = wind_filter_lowpass.get());
+	if (f < 11.0)  f = 11.0;        // menu allows down to 5 for compass-wind
+	zWgt = 8.0 / (2.5 + 0.5*f);
+	//if (zWgt > 1.0)  zWgt = 1.0;
+	ESP_LOGI(FNAME,"initial averaging weight: %.3f", zWgt);
+}
+
 // Compute wind without compass, using TAS and iterative approximation on a zig-zag path.
 // Algorithm: estimate airspeed vector from TAS and a WCA based on previous wind estimate.
 // The interesting thing is that this simple algorithm converges to the true wind.
@@ -288,7 +298,8 @@ bool StraightWind::calculatezWind( float tc, float gs, float tas ){
 		zwindSpeed = circlingWindSpeed;
 		zwindDir   = circlingWindDir;
 		zcount = (int)wind_filter_lowpass.get();        // report right away
-		zWgt = 8.0 / (3.0 + wind_filter_lowpass.get());
+		init_zWgt();
+		zWgtChg = false;
 	}
 
 	if (zwindSpeed < 0) {
@@ -303,8 +314,8 @@ bool StraightWind::calculatezWind( float tc, float gs, float tas ){
 		zminDir = zwindDir;
 		zmaxDir = zwindDir;
 		zcount = -(int)wind_filter_lowpass.get();
-		zWgt = 8.0 / (3.0 + wind_filter_lowpass.get());
-		ESP_LOGI(FNAME,"calculatezWind: averaging weight: %.3f", zWgt);
+		init_zWgt();
+		zWgtChg = false;
 		ESP_LOGI(FNAME,"calculatezWind: initial wind estimate: from %.1f, kph %.1f", zwindDir, zwindSpeed);
 	}
 
@@ -343,8 +354,13 @@ bool StraightWind::calculatezWind( float tc, float gs, float tas ){
 			zcount = 0;
 	}
 	zcount++;
-	if (zcount < (((unsigned int)wind_filter_lowpass.get())>>2) && !testmode.get())
+	if (zcount < (((int)wind_filter_lowpass.get())>>2) && !testmode.get())
 		return false;
+	if (! zWgtChg && zcount >= (int)wind_filter_lowpass.get()) {
+		zWgt *= 0.5;  // reduce noise in the average
+		ESP_LOGI(FNAME,"lowered averaging weight to: %.3f", zWgt);
+		zWgtChg = true;
+	}
 
 	_age = 0;
 	if( (int)zwindDir != (int)swind_dir.get() )

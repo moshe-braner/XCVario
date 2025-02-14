@@ -123,7 +123,7 @@ void ShowBothWinds::display( int mode )
 	y += 25;
 
 	ucg->setPrintPos( 0, y );
-	sprintf( buffer, "Last Str Wind : %03df°/%2.1f   ", (int)theWind.getAngle(), Units::Airspeed( theWind.getSpeed()) );
+	sprintf( buffer, "Last Str Wind : %03d°/%2.1f   ", (int)theWind.getAngle(), Units::Airspeed( theWind.getSpeed()) );
 	ucg->printf( "%s", buffer );
 	y += 25;
 
@@ -138,7 +138,15 @@ void ShowBothWinds::display( int mode )
 	float cwind=0;
 	int ageCircling;
 
-	if (wind_enable.get() & 2 && CircleWind::getWind( &cwinddir, &cwind, &ageCircling )) {
+	if (wind_enable.get() & 2) {
+
+	bool r = CircleWind::getWind( &cwinddir, &cwind, &ageCircling );
+	if (r == false) {
+		ucg->setPrintPos( 0, y );
+		sprintf( buffer, "Circle Wind not current");
+		ucg->printf( "%s", buffer );
+		y += 25;
+	}
 
 	ucg->setPrintPos( 0, y );
 	sprintf( buffer, "Last Cir Wind : %03d°/%2.1f   ", cwinddir, Units::Airspeed( cwind ) );

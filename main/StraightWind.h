@@ -106,6 +106,7 @@ private:
 	float zminDir;            // min zwind sample direction
 	float zmaxDir;            // max zwind sample direction
 	static float zWgt;       // weight for rolling average
+	static bool zWgtChg;     // after a while change weight once to reduce noise
 	float slipAverage;
 	float lastHeading;
 	float lastGroundCourse;
