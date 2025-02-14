@@ -51,7 +51,6 @@ circlingWindDirReverse( -1.0 ),
 circlingWindSpeed( -1.0 ),
 circlingWindAge( 10000 ),
 airspeedCorrection( 1.0 ),
-_age( 10000 ),
 _tick(0),
 gpsStatus(false),
 deviation_cur(0),
@@ -78,6 +77,8 @@ void StraightWind::begin(){
 	if( compass_dev_auto.get() )
 		airspeedCorrection = wind_as_calibration.get();
 }
+
+int StraightWind::_age = 10000;
 
 void StraightWind::tick(){
 	_age++;
