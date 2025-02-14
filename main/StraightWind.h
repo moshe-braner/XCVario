@@ -64,11 +64,11 @@ public:
 	void calculateWind( float tc, float gs, float th, float tas, float deviation );
 	void init_zWgt();
 	bool calculatezWind( float tc, float gs, float tas );
-	static void calculateSpeedAndAngle( float angle1, float speed1, float angle2, float speed2, float& speed, float& angle );
+	void calculateSpeedAndAngle( float angle1, float speed1, float angle2, float speed2, float& speed, float& angle );
 	void newCirclingWind( float angle, float speed );
 	void test();
 	int getAge() { return _age; }
-	static void resetAge() { _age = 0; }
+	void resetAge() { _age = 0; }
 	float getAsCorrection() { return airspeedCorrection; }
 	float getAngle();
 	float getSpeed();
