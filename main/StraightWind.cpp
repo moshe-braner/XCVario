@@ -277,7 +277,7 @@ float StraightWind::getSpeed() { return swind_speed.get(); };
 
 float init_zWgt()
 {
-	float f = wind_filter_lowpass.get());
+	float f = wind_filter_lowpass.get();
 	if (f < 11.0)  f = 11.0;        // menu allows down to 5 for compass-wind
 	zWgt = 8.0 / (2.5 + 0.5*f);
 	//if (zWgt > 1.0)  zWgt = 1.0;
