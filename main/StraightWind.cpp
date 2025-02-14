@@ -275,10 +275,11 @@ void StraightWind::calculateSpeedAndAngle( float angle1, float speed1, float ang
 float StraightWind::getAngle() { return swind_dir.get(); };
 float StraightWind::getSpeed() { return swind_speed.get(); };
 
-float init_zWgt()
+void init_zWgt()
 {
 	float f = wind_filter_lowpass.get();
 	if (f < 11.0)  f = 11.0;        // menu allows down to 5 for compass-wind
+	zWgtChg = false;  // <<< test
 	zWgt = 8.0 / (2.5 + 0.5*f);
 	//if (zWgt > 1.0)  zWgt = 1.0;
 	ESP_LOGI(FNAME,"initial averaging weight: %.3f", zWgt);
