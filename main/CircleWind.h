@@ -59,7 +59,8 @@ public:
    * Call for wind measurement result. The result is included in wind,
    * the jitter of the measurement (1-5; 1 is bad, 5 is excellent) in jitter.
    */
-  static inline void getWind( Vector &wind, int &qual ) { wind = result; qual=jitter; };
+  // >>> this is never used, and if it was, remember that sumWinds is a sum not an average
+  //static inline void getWind( Vector &wind, int &qual ) { wind = sumWinds; qual=jitter; };
 
   /**
    * Called if the flight mode changes
@@ -96,8 +97,8 @@ public:
   static float getNumCircles() 	 {  return (float)circleCount+(1.0/360.0)*(float)circleDegrees; }
   static int getSatCnt()     	 {  return satCnt; }
   static bool getGpsStatus()     {  return gpsStatus; }
-  static float  getAngle() 		 { return result.getAngleDeg(); }
-  static float  getSpeed() 		 { return result.getSpeed(); }
+  static float  getAngle() 		 { return cwind_dir.get(); }
+  static float  getSpeed() 		 { return cwind_speed.get(); }
   static int  getAge() 			 { return _age; }
   static void resetAge();
   static int  getQuality() 		 { return rint( 100.0 - jitter ); } // 0..100 %

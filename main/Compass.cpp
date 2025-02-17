@@ -209,7 +209,7 @@ void Compass::setHeading( float h ) {
 	m_magn_heading = h;
 	_heading_average = h;
 	m_headingValid=true;
-	_external_data=100;
+	//_external_data=100;  // now done in Protocols::parseNMEA() even if there is no compass
 	// ESP_LOGI( FNAME, "NEW external heading %.1f", h );
 };
 

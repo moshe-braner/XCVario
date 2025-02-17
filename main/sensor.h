@@ -121,7 +121,7 @@ extern DataMonitor DM;
 extern xSemaphoreHandle spiMutex;
 
 extern Compass *compass;
-extern int _external_data = 0;    // moved here, was a private member of Compass
+extern int _external_data;    // moved here, was a private member of Compass
 inline bool externalData() { return( _external_data > 0); }
 
 class AdaptUGC;
