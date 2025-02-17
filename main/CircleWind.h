@@ -37,7 +37,7 @@ typedef enum e_circling { undefined, straight, circlingL, circlingR } t_circling
 #include <cmath>
 #include <list>
 
-
+#include "SetupNG.h"
 
 // #include "calculator.h"
 // #include "gpsnmea.h"
