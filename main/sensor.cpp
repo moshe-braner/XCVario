@@ -166,7 +166,7 @@ uint8_t g_col_header_light_b=g_col_highlight;
 uint16_t gear_warning_holdoff = 0;
 uint8_t gyro_flash_savings=0;
 
-t_global_flags gflags = { true, false, false, false, false, false, false, false, false, false, false, false, false, false, false };
+t_global_flags gflags = { true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false };
 
 int  ccp=60;
 float tas = 0;
@@ -737,7 +737,8 @@ void readSensors(void *pvParameters){
 			airspeed_max.set( ias.get() );
 		}
 		// ESP_LOGI("FNAME","P: %f  IAS:%f IASF: %d", dynamicP, iasraw, ias );
-		if( !compass || !(compass->externalData()) ){
+		//if( !compass || !(compass->externalData()) ){
+		if( _external_data <= 0 ){          // not getting TAS from simulator
 			tas += (tasraw-tas)*0.25;       // low pass filter
 		}
 		// ESP_LOGI(FNAME,"IAS=%f, T=%f, TAS=%f baroP=%f", ias, T, tas, baroP );

@@ -122,7 +122,6 @@ extern xSemaphoreHandle spiMutex;
 
 extern Compass *compass;
 extern int _external_data;    // moved here, was a private member of Compass
-inline bool externalData() { return( _external_data > 0); }
 
 class AdaptUGC;
 extern AdaptUGC *MYUCG;
