@@ -76,6 +76,8 @@ public:
 	bool  getGpsStatus() { return gpsStatus; }
 	float getMH() { return magneticHeading; }
 	const char *getStatus() { return status; }
+	float getzAngle() { return zwindDir; }
+	float getzSpeed() { return zwindSpeed; }
 
 private:
 	float averageTas;         // TAS in km/h
@@ -92,6 +94,7 @@ private:
 	float  airspeedCorrection;
 	static int    _age;
 	int    _tick;
+	int    _n_avg;
 	bool   gpsStatus;
 	float  deviation_cur;
 	float  magneticHeading;

@@ -127,6 +127,15 @@ void ShowBothWinds::display( int mode )
 	ucg->printf( "%s", buffer );
 	y += 25;
 
+	if (wind_enable.get() == WA_TEST) {
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "Last ZZ Wind :  %03d°/%2.1f   ", (int)theWind.getzAngle(), Units::Airspeed( theWind.getzSpeed()) );
+	ucg->printf( "%s", buffer );
+	y += 25;
+
+	}
+
 	ucg->setPrintPos( 0, y );
 	sprintf( buffer, "Str Wind Age : %d sec   ", theWind.getAge() );
 	ucg->printf( "%s", buffer );

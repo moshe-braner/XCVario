@@ -118,10 +118,11 @@ private:
   static Vector minVector;
   static Vector maxVector;
   static float sumSpeed;
-  static Vector result;
+  static Vector sumWinds;
   static float jitter;
   static t_circling flightMode;
   static int _age;
+  static int _n_avg;
   static const char *status;
   static float headingDiff;
   static std::list<Vector> windVectors;

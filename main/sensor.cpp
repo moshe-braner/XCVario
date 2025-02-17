@@ -138,6 +138,7 @@ MPU_t MPU;         // create an object
 
 // Magnetic sensor / compass
 Compass *compass = 0;
+int _external_data = 0;    // moved here, was a private member of Compass
 BTSender btsender;
 BLESender blesender;
 

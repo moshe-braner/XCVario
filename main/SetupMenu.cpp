@@ -1525,10 +1525,9 @@ void SetupMenu::system_menu_create_compass( MenuEntry *top ){
 	compdamp->setHelp("Compass or magnetic heading damping factor in seconds");
 
 	SetupMenuSelect * compSensor = new SetupMenuSelect( "Sensor Option", RST_ON_EXIT, compass_ena, true, &compass_enable);
-	compSensor->addEntry( "Disable");
-	compSensor->addEntry( "Enable I2C sensor");
-	compSensor->addEntry( "Disable");
-	compSensor->addEntry( "Enable CAN sensor");
+	compSensor->addEntry( "Disable", CS_DISABLE);
+	compSensor->addEntry( "Enable I2C sensor", CS_I2C);
+	compSensor->addEntry( "Enable CAN sensor", CS_CAN);
 	compSensor->setHelp( "Option to enable/disable the Compass Sensor (reboots)" );
 	top->addEntry( compSensor );
 
@@ -1574,6 +1573,7 @@ void SetupMenu::options_menu_create_wind( MenuEntry *top ){
 	windcal->addEntry( "Circling", WA_CIRCLING);       // 2
 	windcal->addEntry( "Either",   WA_EITHER);         // 3
 	windcal->addEntry( "Both",     WA_BOTH);           // 7
+	windcal->addEntry( "Test",     WA_TEST);           // 9
 	windcal->setHelp("Enable Wind calculation for straight flight, circling, either (separately) or both (linked)");
 	top->addEntry( windcal );
 

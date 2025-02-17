@@ -346,6 +346,7 @@ void Protocols::parseNMEA( const char *str ){
 		if( compass )
 			compass->setHeading( heading );
 		tas = TAS;
+		_external_data = 100;  // so it is done even if !compass
 	}
 	else if ( strncmp( str, "!xcs,", 5 ) == 0 ) {
 		if( strncmp( str+5, "crew-weight,", 12 ) == 0 ){
