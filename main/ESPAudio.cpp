@@ -714,7 +714,7 @@ void Audio::dactask(void* arg )
 			if( sound ){
 				if (scheduled && mtick > 0 && mtick < 3)
 					//ESP_LOGI(FNAME, "sound, mtick %d, cur_vol %.2f, te %2.1f",
-					    mtick, current_volume, _te );
+					//    mtick, current_volume, _te );
 				long_silence = false;
 				silent_ticks = 0;
 				disable_amp = false;
