@@ -61,17 +61,7 @@ void ShowStraightWind::display( int mode )
 	ucg->printf( "%s", buffer );
 	y += 25;
 
-	ucg->setPrintPos( 0, y );
-	sprintf( buffer, "GPS Status : %s", (theWind.getGpsStatus() == true ) ? "Good" : "Bad  "  );
-	ucg->printf( "%s", buffer );
-	y += 25;
-
-	ucg->setPrintPos( 0, y );
-	sprintf( buffer, "AS C/F: %+3.3f %%/%3.3f %%  ", (theWind.getAsCorrection()-1.0)*100, (wind_as_calibration.get()-1.0)*100 );
-	ucg->printf( "%s", buffer );
-	y += 25;
-
-	if (wind_enable.get() & WA_STRAIGHT) {
+	if ((wind_enable.get() & WA_STRAIGHT) && (compass)){
 
 	ucg->setPrintPos( 0, y );
 	sprintf( buffer, "Last  Str Wind : %3.1f°/%2.1f   ", theWind.getAngle(), Units::Airspeed( theWind.getSpeed()) );
@@ -88,6 +78,16 @@ void ShowStraightWind::display( int mode )
 	y += 25;
 
 	}
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "GPS Status : %s", (theWind.getGpsStatus() == true ) ? "Good" : "Bad  "  );
+	ucg->printf( "%s", buffer );
+	y += 25;
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "AS C/F: %+3.3f %%/%3.3f %%  ", (theWind.getAsCorrection()-1.0)*100, (wind_as_calibration.get()-1.0)*100 );
+	ucg->printf( "%s", buffer );
+	y += 25;
 
 	ucg->setPrintPos( 0, y );
 	sprintf( buffer, "MH/Dev: %3.2f/%+3.2f   ", theWind.getMH(), theWind.getDeviation() );
@@ -137,10 +137,14 @@ void ShowBothWinds::display( int mode )
 	ucg->printf( "%s", buffer );
 	y += 25;
 
+	if ((wind_enable.get() & WA_STRAIGHT) && (compass)){
+
 	ucg->setPrintPos( 0, y );
 	sprintf( buffer, "Last Str Wind : %03d°/%2.1f   ", (int)theWind.getAngle(), Units::Airspeed( theWind.getSpeed()) );
 	ucg->printf( "%s", buffer );
 	y += 25;
+
+	}
 
 	if (wind_enable.get() & WA_ZIGZAG) {
 

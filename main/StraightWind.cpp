@@ -61,9 +61,9 @@ jitter(0),
 result(0,0),
 newWindSpeed(0),
 newWindDir(0),
-zwindDir( -1.0 ),
-zwindSpeed( -1.0 ),
-zcount(0),
+zwindDir( 0 ),
+zwindSpeed( 0 ),
+zcount(-999),
 zminDir(-1.0),
 zmaxDir(-1.0),
 zWgt(0),
@@ -342,9 +342,10 @@ bool StraightWind::calculatezWind( float tc, float gs, float tas, bool overwrite
 		zwindDir   = circlingWindDir;
 		zcount = (int)wind_filter_lowpass.get();        // report right away
 		init_zWgt();
+		ESP_LOGI(FNAME,"calculatezWind: initialized zwind based on cwind");
 	}
 
-	if (zwindSpeed < 0) {
+	if (zcount == -999) {  // not initialized
 		// initialize based on difference between GS and TAS
 		if (gs < tas) {             // headwind
 			zwindSpeed = tas - gs;
