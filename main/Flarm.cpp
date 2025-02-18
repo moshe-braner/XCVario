@@ -236,7 +236,7 @@ void Flarm::parseGPRMC( const char *_gprmc ) {
 		if( myGPS_OK == false ){
 			myGPS_OK = true;
 			//if( wind_enable.get() & WA_STRAIGHT || wind_enable.get() & WA_CIRCLING  ){
-			if( wind_enable.get() & (WA_STRAIGHT | WA_CIRCLING) ){
+			if( wind_enable.get() ){
 				CircleWind::gpsStatusChange( true);
 			}
 			ESP_LOGI(FNAME,"GPRMC, GPS status changed to good, rmc:%s gps:%d", gprmc, myGPS_OK );

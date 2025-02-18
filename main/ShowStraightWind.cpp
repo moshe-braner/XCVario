@@ -49,10 +49,12 @@ void ShowStraightWind::display( int mode )
 
 	semaphoreTake();
 
+/*
 	ucg->setPrintPos( 0, y );
-	sprintf( buffer, "Straight Wind enabled: %s", (wind_enable.get() & 1) ? "Yes" : "No  "  );
+	sprintf( buffer, "Straight Wind enabled: %s", (wind_enable.get() & WA_STRAIGHT) ? "Yes" : "No  "  );
 	ucg->printf( "%s", buffer );
 	y += 25;
+*/
 
 	ucg->setPrintPos( 0, y );
 	sprintf( buffer, "Status: %s     ", theWind.getStatus() );
@@ -69,10 +71,23 @@ void ShowStraightWind::display( int mode )
 	ucg->printf( "%s", buffer );
 	y += 25;
 
+	if (wind_enable.get() & WA_STRAIGHT) {
+
 	ucg->setPrintPos( 0, y );
-	sprintf( buffer, "Last Wind : %3.1f°/%2.1f   ", theWind.getAngle(), Units::Airspeed( theWind.getSpeed()) );
+	sprintf( buffer, "Last  Str Wind : %3.1f°/%2.1f   ", theWind.getAngle(), Units::Airspeed( theWind.getSpeed()) );
 	ucg->printf( "%s", buffer );
 	y += 25;
+
+	}
+
+	if (wind_enable.get() & WA_ZIGZAG) {
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "Last ZZ Wind :   %03d°/%2.1f   ", (int)theWind.getzAngle(), Units::Airspeed( theWind.getzSpeed()) );
+	ucg->printf( "%s", buffer );
+	y += 25;
+
+	}
 
 	ucg->setPrintPos( 0, y );
 	sprintf( buffer, "MH/Dev: %3.2f/%+3.2f   ", theWind.getMH(), theWind.getDeviation() );
@@ -115,7 +130,7 @@ void ShowBothWinds::display( int mode )
 
 	semaphoreTake();
 
-	if (wind_enable.get() & 1) {
+	if (wind_enable.get() & (WA_STRAIGHT | WA_ZIGZAG)) {
 
 	ucg->setPrintPos( 0, y );
 	sprintf( buffer, "Status: %s     ", theWind.getStatus() );
@@ -127,7 +142,7 @@ void ShowBothWinds::display( int mode )
 	ucg->printf( "%s", buffer );
 	y += 25;
 
-	if (wind_enable.get() == WA_TEST) {
+	if (wind_enable.get() & WA_ZIGZAG) {
 
 	ucg->setPrintPos( 0, y );
 	sprintf( buffer, "Last ZZ Wind :  %03d°/%2.1f   ", (int)theWind.getzAngle(), Units::Airspeed( theWind.getzSpeed()) );
@@ -147,7 +162,7 @@ void ShowBothWinds::display( int mode )
 	float cwind=0;
 	int ageCircling;
 
-	if (wind_enable.get() & 2) {
+	if (wind_enable.get() & WA_CIRCLING) {
 
 	bool r = CircleWind::getWind( &cwinddir, &cwind, &ageCircling );
 	if (r == false) {

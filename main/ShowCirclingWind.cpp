@@ -51,8 +51,15 @@ void ShowCirclingWind::display( int mode )
 
 	semaphoreTake();
 
+/*
 	ucg->setPrintPos( 0, y );
-	sprintf( buffer, "Circling Wind enabled: %s", (wind_enable.get() & 2) ? "Yes" : "No  "  );
+	sprintf( buffer, "Circling Wind enabled: %s", (wind_enable.get() & WA_CIRCLING) ? "Yes" : "No  "  );
+	ucg->printf( "%s", buffer );
+	y += 25;
+*/
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "Status: %s     ", CircleWind::getStatus() );
 	ucg->printf( "%s", buffer );
 	y += 25;
 

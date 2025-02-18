@@ -16,10 +16,12 @@ static float atan2_positive(float ns, float ew)
   float t;
   if (ew < ns) {
     t = ew / ns;
-    return (45.0*t + 15.86*(t*(1.0-t)));  // ops can be reduced
+    //return (45.0*t + 15.86*(t*(1.0-t)));  // ops can be reduced
+    return t*((45.0+15.86) - 15.86*t);
   } else {
     t = ns / ew;
-    return (90.0 - 45.0*t - 15.86*(t*(1.0-t)));
+    //return (90.0 - 45.0*t - 15.86*(t*(1.0-t)));
+    return (90.0 - t*((45.0+15.86) - 15.86*t));
   }
 }
 

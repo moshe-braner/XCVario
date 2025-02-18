@@ -1568,13 +1568,15 @@ void SetupMenu::options_menu_create_wind_circlingwind( MenuEntry *top ){
 void SetupMenu::options_menu_create_wind( MenuEntry *top ){
 
 	SetupMenuSelect * windcal = new SetupMenuSelect( "Calculation", RST_NONE, 0, true, &wind_enable );
-	windcal->addEntry( "Disable",  WA_OFF);            // 0
-	windcal->addEntry( "Straight", WA_STRAIGHT);       // 1
-	windcal->addEntry( "Circling", WA_CIRCLING);       // 2
-	windcal->addEntry( "Either",   WA_EITHER);         // 3
-	windcal->addEntry( "Both",     WA_BOTH);           // 7
-	windcal->addEntry( "Test",     WA_TEST);           // 9
-	windcal->setHelp("Enable Wind calculation for straight flight, circling, either (separately) or both (linked)");
+	windcal->addEntry( "Disable");        // 0
+	windcal->addEntry( "Straight");       // 1
+	windcal->addEntry( "Circling");       // 2
+	windcal->addEntry( "Str & Cir");      // 3
+	windcal->addEntry( "Zig Zag");        // 4
+	windcal->addEntry( "Str & ZZ");       // 5
+	windcal->addEntry( "Cir & ZZ");       // 6
+	windcal->addEntry( "Automatic");      // 7
+	windcal->setHelp("Wind estimate method - 'Automatic' links S & C, and uses ZZ if no compass", 260);
 	top->addEntry( windcal );
 
 	ShowBothWinds* sbw = new ShowBothWinds( "Current Wind" );
