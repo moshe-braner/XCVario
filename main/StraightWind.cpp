@@ -118,7 +118,7 @@ bool StraightWind::calculateWind()
 		return false;
 	}
 
-	if( ! (wind_enable.get() & (WA_STRAIGHT | WA_ZIGZAG)) ){
+	if( ! (wind_enable.get() & WA_STRAIGHT) ){
 		status = "Disabled";
 		return false;
 	}
@@ -134,20 +134,14 @@ bool StraightWind::calculateWind()
 	// ESP_LOGI(FNAME,"calculateWind flightMode: %d", CircleStraightWind::getFlightMode() );
 
 	bool compass_ok = true;
-	if ( !(wind_enable.get() & WA_STRAIGHT) ) {
-		status = "SWnd NoEna";
+	// Check if compass-based straight wind requirements are fulfilled
+	if( (!compass) || !compass_enable.get() ) {
+		status = "Comps Dis";
 		compass_ok = false;
 	}
-	if( compass_ok ) {
-		// Check if compass-based straight wind requirements are fulfilled
-		if( (!compass) || !compass_enable.get() ) {
-			status = "Comps Dis";
-			compass_ok = false;
-		}
-		if( !compass_calibrated.get() ) {
-			status = "Comps NoCal";
-			compass_ok = false;
-		}
+	else if( !compass_calibrated.get() ) {
+		status = "Comps NoCal";
+		compass_ok = false;
 	}
 
 	// Get current ground speed in km/h
@@ -193,9 +187,7 @@ bool StraightWind::calculateWind()
 		if( THok == false ) {
 			// No valid heading available
 			status = "No Heading";
-			//if( wind_enable.get() & WA_STRAIGHT ){
-			//	ESP_LOGI(FNAME,"Restart Cycle: No magnetic heading");
-			//}
+			//ESP_LOGI(FNAME,"Restart Cycle: No magnetic heading");
 			compass_ok = false;
 		}
 		// WCA in radians
@@ -214,7 +206,7 @@ bool StraightWind::calculateWind()
 			   (airspeedCorrection-1)*100, CircleWind::getFlightMode(), gpsStatus, deviation, slipAngle );
 		}
 		pos=strlen(log);
-		if( wind_logging.get() & WLOG_GYRO_MAG && compass_ok ){
+		if( (wind_logging.get() & WLOG_GYRO_MAG) && compass_ok ){
 			sprintf( log+pos, ";%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f;%.3f",
 					compass->rawX()/16384.0,compass->rawY()/16384.0,compass->rawZ()/16384.0,
 					IMU::getGliderAccelX(), IMU::getGliderAccelY(), IMU::getGliderAccelZ(),
@@ -224,15 +216,6 @@ bool StraightWind::calculateWind()
 		sprintf( log+pos, "\n");
 		Router::sendXCV( log );
 		// ESP_LOGI( FNAME,"%s", log );
-	}
-
-	if( ! compass_ok ) {
-		if ( ! (wind_enable.get() & WA_ZIGZAG) ) {
-			if (! compass)
-				status = "ZWnd NoEna";
-			// else leave prior status message in place
-			return false;
-		}
 	}
 
 	// averageTC = Vector::normalize( averageTC + (ctc - averageTC) * 1/wind_gps_lowpass.get());
@@ -282,8 +265,8 @@ bool StraightWind::calculateWind()
 		// ESP_LOGI(FNAME,"%d TC: %3.1f (avg:%3.1f) GS:%3.1f TH: %3.1f (avg:%3.1f) TAS: %3.1f",
 		//   nunberOfSamples, ctc, averageTC, cgs, cth, averageTH, ctas );
 		calculateWind( averageTC, averageGS, averageTH, averageTas, deviation );
-		if (wind_enable.get() & WA_ZIGZAG)   // also compute zWind
-			(void) calculatezWind( averageTC, cgs, averageTas, false );
+		// also compute zWind for testing
+		(void) calculatezWind( averageTC, cgs, averageTas, false );
 		return true;
 	}
 
@@ -335,7 +318,7 @@ bool StraightWind::calculatezWind( float tc, float gs, float tas, bool overwrite
 	if (_tick & 0x03)
 		return false;    // only calculate once every 4 sec
 
-	if ( (wind_enable.get() == WA_AUTO) && circlingWindAge < 1200 && circlingWindAge < _age) {
+	if ( (wind_enable.get() == WA_BOTH) && circlingWindAge < 1200 && circlingWindAge < _age) {
 		// circling wind estimate is more recent,
 		// re-initialize the zwind estimate
 		zwindSpeed = circlingWindSpeed;
@@ -473,7 +456,7 @@ void StraightWind::calculateWind( float tc, float gs, float th, float tas, float
 	calculateSpeedAndAngle( tc, gs, th+deviation, tas*airspeedCorrection, newWindSpeed, newWindDir );
 	// ESP_LOGI( FNAME, "Calculated raw windspeed %.1f jitter:%.1f", newWindSpeed, jitter );
 
-	if (wind_enable.get() == WA_AUTO && circlingWindAge < 1200 && circlingWindAge < _age) {
+	if (wind_enable.get() == WA_BOTH && circlingWindAge < 1200 && circlingWindAge < _age) {
 		// circling wind estimate is more recent,
 		// re-initialize the swind estimate
 		windVectors.clear();

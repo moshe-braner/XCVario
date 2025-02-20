@@ -278,7 +278,7 @@ void CircleWind::newWind( float angle, float speed ){
 	Vector v = Vector( angle, speed );
 
 	int s_age = theWind.getAge();
-	if (wind_enable.get() == WA_AUTO && s_age < 1200 && s_age < _age) {
+	if (wind_enable.get() == WA_BOTH && s_age < 1200 && s_age < _age) {
 		// straight wind estimate is more recent,
 		// re-initialize the windvectors to the straight wind estimate
 		// except for the last windvector, which is set to this new estimate

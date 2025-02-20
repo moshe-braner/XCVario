@@ -61,16 +61,12 @@ void ShowStraightWind::display( int mode )
 	ucg->printf( "%s", buffer );
 	y += 25;
 
-	if ((wind_enable.get() & WA_STRAIGHT) && (compass)){
-
 	ucg->setPrintPos( 0, y );
 	sprintf( buffer, "Last  Str Wind : %3.1f°/%2.1f   ", theWind.getAngle(), Units::Airspeed( theWind.getSpeed()) );
 	ucg->printf( "%s", buffer );
 	y += 25;
 
-	}
-
-	if (wind_enable.get() & WA_ZIGZAG) {
+	if (compass) {    // also show ZZ wind for testing
 
 	ucg->setPrintPos( 0, y );
 	sprintf( buffer, "Last ZZ Wind :   %03d°/%2.1f   ", (int)theWind.getzAngle(), Units::Airspeed( theWind.getzSpeed()) );
@@ -130,23 +126,19 @@ void ShowBothWinds::display( int mode )
 
 	semaphoreTake();
 
-	if (wind_enable.get() & (WA_STRAIGHT | WA_ZIGZAG)) {
+	if (wind_enable.get() & WA_STRAIGHT) {
 
 	ucg->setPrintPos( 0, y );
 	sprintf( buffer, "Status: %s     ", theWind.getStatus() );
 	ucg->printf( "%s", buffer );
 	y += 25;
 
-	if ((wind_enable.get() & WA_STRAIGHT) && (compass)){
-
 	ucg->setPrintPos( 0, y );
 	sprintf( buffer, "Last Str Wind : %03d°/%2.1f   ", (int)theWind.getAngle(), Units::Airspeed( theWind.getSpeed()) );
 	ucg->printf( "%s", buffer );
 	y += 25;
 
-	}
-
-	if (wind_enable.get() & WA_ZIGZAG) {
+	if (compass) {    // also show ZZ wind for testing
 
 	ucg->setPrintPos( 0, y );
 	sprintf( buffer, "Last ZZ Wind :  %03d°/%2.1f   ", (int)theWind.getzAngle(), Units::Airspeed( theWind.getzSpeed()) );
@@ -183,6 +175,15 @@ void ShowBothWinds::display( int mode )
 
 	ucg->setPrintPos( 0, y );
 	sprintf( buffer, "Cir Wind Age : %d sec   ", ageCircling );
+	ucg->printf( "%s", buffer );
+	y += 25;
+
+	}
+
+	if ( wind_enable.get() == WA_OFF ) {
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "Wind estimation disabled   ");
 	ucg->printf( "%s", buffer );
 	y += 25;
 

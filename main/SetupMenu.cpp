@@ -1571,12 +1571,8 @@ void SetupMenu::options_menu_create_wind( MenuEntry *top ){
 	windcal->addEntry( "Disable");        // 0
 	windcal->addEntry( "Straight");       // 1
 	windcal->addEntry( "Circling");       // 2
-	windcal->addEntry( "Str & Cir");      // 3
-	windcal->addEntry( "Zig Zag");        // 4
-	windcal->addEntry( "Str & ZZ");       // 5
-	windcal->addEntry( "Cir & ZZ");       // 6
-	windcal->addEntry( "Automatic");      // 7
-	windcal->setHelp("Wind estimate method - 'Automatic' links S & C, and uses ZZ if no compass", 260);
+	windcal->addEntry( "Both");           // 3
+	windcal->setHelp("Wind estimate method", 260);
 	top->addEntry( windcal );
 
 	ShowBothWinds* sbw = new ShowBothWinds( "Current Wind" );
