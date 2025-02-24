@@ -280,18 +280,18 @@ void CircleWind::newWind( float angle, float speed ){
 	int s_age = theWind.getAge();
 	if (wind_enable.get() == WA_BOTH && s_age < 1200 && s_age < _age) {
 		// straight wind estimate is more recent,
-		// re-initialize the windvectors to the straight wind estimate
-		// except for the last windvector, which is set to this new estimate
+		// re-initialize the windvectors (3 entries) to the straight wind estimate
 		sumWinds = v;
 		sumSpeed = speed;
 		windVectors.clear();
 		Vector s_wind( swind_dir.get(), swind_speed.get() );
-		while( windVectors.size() + 1 < (int)circle_wind_lowpass.get() ){
+		//while( windVectors.size() + 1 < (int)circle_wind_lowpass.get() ){
+		while( windVectors.size() < 3 ){
 			sumWinds.add( s_wind );
 			sumSpeed += swind_speed.get();
 			windVectors.push_back( s_wind );
 		}
-		windVectors.push_back( v );
+		windVectors.push_back( v );     // the new circling estimate
 		_n_avg = 0;
 	} else {
 		sumWinds.add( v );
@@ -314,22 +314,29 @@ void CircleWind::newWind( float angle, float speed ){
 		}
 	}
 
+	if (circleCount < 2)   // do not report yet
+		return;
+
 	float direction = sumWinds.getAngleDeg();
 	float windspeed = sumSpeed / windVectors.size();
 
 	ESP_LOGI(FNAME,"### NEW AVG CircleWind: %.1f°/%.1fKm/h  JI:%2.1f", direction, windspeed, jitter  );
 
-	resetAge();
+	resetAge();   // not really needed, since also called from setupNG.cpp resetCWindAge()
 	if( (int)(direction+0.5) != (int)cwind_dir.get()  ){
 		cwind_dir.set( (int)(direction+0.5) );
 	}
 	if( (int)(windspeed+0.5) != (int)cwind_speed.get() ){
 		cwind_speed.set( (int)(windspeed+0.5) );
 	}
+
 	float deltaDir = abs( Vector::angleDiffDeg( lastWindDir, angle ) );
 	float deltaSpeed = abs( lastWindSpeed - speed );
 	lastWindDir = angle;
 	lastWindSpeed = speed;
+
+	if (circleCount < 4)   // do not use for auto-deviation and airspeed calibration
+		return;
 
 	if( deltaDir < max_circle_wind_delta_deg.get() && deltaSpeed < max_circle_wind_delta_speed.get()  ){
 		theWind.newCirclingWind( direction, windspeed );

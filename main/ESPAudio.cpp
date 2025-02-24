@@ -549,9 +549,11 @@ void  Audio::calculateFrequency(){
 	float range = _range;
 	if( _s2f_mode && (cruise_audio_mode.get() == AUDIO_S2F) )
 		range = 5.0;
-	float mult = std::pow( (abs(_te)/range)+1, audio_factor.get());
+	//float mult = std::pow( (abs(_te)/range)+1, audio_factor.get());
+	float mult = exp2_approx( log2_approx( (abs(_te)/range)+1 ) * audio_factor.get() );
 	if( audio_factor.get() != prev_aud_fact ) {
-		inv_exp_max  = 1.0/std::pow( 2, audio_factor.get());
+		//inv_exp_max  = 1.0/std::pow( 2, audio_factor.get());
+		inv_exp_max  = exp2_approx( -audio_factor.get() );
 		prev_aud_fact = audio_factor.get();
 	}
 	current_frequency = center_freq.get() + ((mult*_te)/range )  * (max_var*inv_exp_max);

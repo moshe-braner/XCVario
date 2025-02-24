@@ -73,6 +73,7 @@
 #include <string>
 #include <cstdio>
 #include <cstring>
+#include <cmath>
 #include "DataMonitor.h"
 #include "AdaptUGC.h"
 #include "CenterAid.h"
@@ -692,6 +693,14 @@ void readSensors(void *pvParameters){
 			pos=strlen(log);
 			sprintf( log+pos, "\n");
 			Router::sendXCV( log );
+			if (attitude_indicator.get() == 2 && SetupCommon::isMaster()) {
+				float f = IMU::getRollRad();
+				if (abs(f - hzn_roll.get()) > 0.016)
+					hzn_roll.set(f);
+				f = IMU::getPitchRad();
+				if (abs(f - hzn_pitch.get()) > 0.08)
+					hzn_pitch.set(f);
+			}
 			if ( testmode.get() )            // otherwise allow less cluttered USB-serial output
 				ESP_LOGI(FNAME,"%s", log );
 		}
@@ -1727,7 +1736,6 @@ void system_startup(void *args){
 	if ( SetupCommon::isClient() ){
 		if( wireless == WL_WLAN_CLIENT ){
 			display->clear();
-
 			int line=1;
 			display->writeText( line++, "Wait for WiFi Master" );
 			char mxcv[30] = "";

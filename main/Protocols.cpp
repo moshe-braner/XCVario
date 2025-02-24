@@ -294,6 +294,46 @@ void Protocols::sendNMEA( proto_t proto, char* str, float baro, float dp, float 
 	Router::sendXCV(str);
 }
 
+// SetupCommon::getMember() is very slow.
+// Identify some volatile items synched to client in a faster way.
+static SetupNG<float> *findItem (const char *key)
+{
+	if (key[0] == 'A') {
+		if (strcmp(key,"ALTI")==0)
+			return &altitude;
+		if (strcmp(key,"AVCL")==0)
+			return &average_climb;
+	} else if (key[0] == 'H') {
+		if (strcmp(key,"HDM")==0)
+			return &mag_hdm;
+		if (strcmp(key,"HDT")==0)
+			return &mag_hdt;
+		if (strcmp(key,"HZROLL")==0)
+			return &hzn_roll;
+		if (strcmp(key,"HZPTCH")==0)
+			return &hzn_pitch;
+	} else if (key[0] == 'S') {
+		if (strcmp(key,"SWDD")==0)
+			return &swind_dir;
+		if (strcmp(key,"SWDS")==0)
+			return &swind_speed;
+	} else if (key[0] == 'C') {
+		if (strcmp(key,"CWDD")==0)
+			return &cwind_dir;
+		if (strcmp(key,"CWDS")==0)
+			return &cwind_speed;
+	}
+	if (strcmp(key,"IASV")==0)
+		return &ias;
+	if (strcmp(key,"TEVA")==0)
+		return &te_vario;
+	if (strcmp(key,"OAT")==0)
+		return &OAT;
+	if (strcmp(key,"FLPS")==0)
+		return &flap_pos;
+	return (SetupNG<float> *)SetupCommon::getMember( key );
+}
+
 // The XCVario Protocol or Cambridge CAI302 protocol to adjust MC,Ballast,Bugs.
 
 void Protocols::parseXS( const char *str ){
@@ -308,7 +348,11 @@ void Protocols::parseXS( const char *str ){
 	if( cs == calc_cs ){
 		// ESP_LOGI(FNAME,"parsed NMEA: role=%c type=%c key=%s val=%f vali=%d", role, type , key, val, (int)val );
 		if( type == 'F' ){
-			SetupNG<float> *item = (SetupNG<float> *)SetupCommon::getMember( key );
+			SetupNG<float> *item;
+			if( SetupCommon::isClient() )
+				item = findItem( key );
+			else
+				item = (SetupNG<float> *)SetupCommon::getMember( key );
 			if( item != 0 ){
 				if( role == 'A' )
 					item->ack( val );

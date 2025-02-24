@@ -2103,8 +2103,10 @@ void SetupMenu::system_menu_create_ahrs( MenuEntry *top ){
 	top->addEntry( mpu );
 	mpu->setHelp( "Enable High Accuracy Attitude Sensor (AHRS) NMEA messages (need valid license key entered, reboots)");
 	mpu->addEntry( "Disable");
-	if( gflags.ahrsKeyValid )
+	if( gflags.ahrsKeyValid ) {
 		mpu->addEntry( "Enable");
+		mpu->addEntry( "Sync");
+	}
 
 	SetupMenu * ahrslc = new SetupMenu( "AHRS License Key" );
 	ahrslc->setHelp( "Enter valid AHRS License Key, then AHRS feature can be enabled under 'AHRS Option'");

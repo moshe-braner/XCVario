@@ -390,7 +390,7 @@ bool StraightWind::calculatezWind( float tc, float gs, float tas, bool overwrite
 	if ( ! overwrite )   // do not overwrite swind_dir and swind.speed
 		return true;
 
-	_age = 0;
+	_age = 0;   // not really needed, since also called from setupNG.cpp resetSWindAge()
 	if( (int)zwindDir != (int)swind_dir.get() )
 		swind_dir.set( zwindDir );
 	if( (int)zwindSpeed != (int)swind_speed.get() )
@@ -497,7 +497,7 @@ void StraightWind::calculateWind( float tc, float gs, float th, float tas, float
 	swindSpeed = result.getSpeed() / windVectors.size();
 
 	// ESP_LOGI(FNAME,"New AVG WindDirection: %3.1f deg,  Strength: %3.1f km/h JI:%2.1f", windDir, windSpeed, jitter );
-	_age = 0;
+	_age = 0;   // not really needed, since also called from setupNG.cpp resetSWindAge()
 	if( (int)swindDir != (int)swind_dir.get()  ){
 		swind_dir.set( swindDir );
 	}

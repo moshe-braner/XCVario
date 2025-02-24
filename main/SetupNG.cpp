@@ -404,6 +404,15 @@ void resetCWindAge() {
 		CircleWind::resetAge();
 }
 
+#if defined(NOSENSORS)
+void change_roll() {
+	IMU::setRollRad(hzn_roll.get());
+}
+void change_pitch() {
+	IMU::setPitchRad(hzn_pitch.get());
+}
+#endif
+
 void change_volume() {
 	Audio::setVolume( audio_volume.get() );
 	//ESP_LOGI(FNAME,"change_volume -> %f", vol );
@@ -608,6 +617,13 @@ SetupNG<float>		    password( "PASSWORD", 0 );
 SetupNG<int>		    autozero( "AUTOZERO", 0 );
 SetupNG<int>		    attitude_indicator("AHRS", 1 );
 SetupNG<float>		    horizon_offset("HRZOFST", 0, RST_NONE, SYNC_NONE, VOLATILE );
+#if defined(NOSENSORS)
+SetupNG<float>		    hzn_roll("HZROLL", 0, RST_NONE, SYNC_FROM_MASTER, VOLATILE, change_roll );
+SetupNG<float>		    hzn_pitch("HZPTCH", 0, RST_NONE, SYNC_FROM_MASTER, VOLATILE, change_pitch );
+#else
+SetupNG<float>		    hzn_roll("HZROLL", 0, RST_NONE, SYNC_FROM_MASTER, VOLATILE );
+SetupNG<float>		    hzn_pitch("HZPTCH", 0, RST_NONE, SYNC_FROM_MASTER, VOLATILE );
+#endif
 SetupNG<int>		horizon_colors("HRZCOLOR", 0, RST_NONE, SYNC_NONE, VOLATILE, update_horizon_options );
 SetupNG<int>		horizon_line("HRZLINE", 0, RST_NONE, SYNC_NONE, VOLATILE, update_horizon_options );
 SetupNG<int>		horizon_bticks("HRZBTIK", 0, RST_NONE, SYNC_NONE, VOLATILE, update_horizon_options );

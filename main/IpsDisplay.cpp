@@ -300,7 +300,8 @@ static void initGauge(const float max, const bool log)
 static float gaugeValueFromIdx(const float rad)
 {
 	if ( _gauge == &logGaugeIdx ) {
-		return (pow(2., std::abs(rad))-1.f) / _scale_k * (std::signbit(rad)?-1.:1.);
+		//return (pow(2., std::abs(rad))-1.f) / _scale_k * (std::signbit(rad)?-1.:1.);
+		return (exp2_approx2(std::abs(rad))-1.f) / _scale_k * (std::signbit(rad)?-1.:1.);
 	} else {
 		return rad / _scale_k;
 	}
