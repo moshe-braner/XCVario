@@ -36,6 +36,7 @@
 #include "I2Cbus.hpp"
 #include "sensor.h"
 #include "SetupNG.h"
+#include "ApproxMath.h"
 
 
 static TaskHandle_t dactid = NULL;
