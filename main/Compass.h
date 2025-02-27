@@ -74,7 +74,8 @@ public:
 	// sensor related interface
 	bool haveSensor();
 	bool overflowFlag();
-	bool externalData() { return( _external_data > 0); }
+	//bool externalData() { return( _external_data > 0); }
+	// - moved to a static variable in sensor.cpp
 
 	// Heading related methods
 	float cur_heading( bool *ok );
@@ -128,7 +129,7 @@ private:
 	bool m_headingValid;
 
 	int _tick;
-	int _external_data;
+	//int _external_data;
 	float _heading_average;
 	int gyro_age;
 

@@ -36,6 +36,7 @@
 #include "I2Cbus.hpp"
 #include "sensor.h"
 #include "SetupNG.h"
+#include "ApproxMath.h"
 
 
 static TaskHandle_t dactid = NULL;
@@ -549,9 +550,11 @@ void  Audio::calculateFrequency(){
 	float range = _range;
 	if( _s2f_mode && (cruise_audio_mode.get() == AUDIO_S2F) )
 		range = 5.0;
-	float mult = std::pow( (abs(_te)/range)+1, audio_factor.get());
+	//float mult = std::pow( (abs(_te)/range)+1.0f, audio_factor.get());
+	float mult = exp2_approx( log2_approx( (abs(_te)/range)+1 ) * audio_factor.get() );
 	if( audio_factor.get() != prev_aud_fact ) {
-		inv_exp_max  = 1.0/std::pow( 2, audio_factor.get());
+		//inv_exp_max  = 1.0/std::pow( 2.0f, audio_factor.get());
+		inv_exp_max  = exp2_approx( -audio_factor.get() );
 		prev_aud_fact = audio_factor.get();
 	}
 	current_frequency = center_freq.get() + ((mult*_te)/range )  * (max_var*inv_exp_max);
@@ -713,8 +716,8 @@ void Audio::dactask(void* arg )
 
 			if( sound ){
 				if (scheduled && mtick > 0 && mtick < 3)
-					ESP_LOGI(FNAME, "sound, mtick %d, cur_vol %.2f, te %2.1f",
-					    mtick, current_volume, _te );
+					//ESP_LOGI(FNAME, "sound, mtick %d, cur_vol %.2f, te %2.1f",
+					//    mtick, current_volume, _te );
 				long_silence = false;
 				silent_ticks = 0;
 				disable_amp = false;
@@ -873,7 +876,7 @@ void Audio::setup()
 void Audio::restart()
 {
 	//ESP_LOGD(FNAME,"Audio::restart");
-	ESP_LOGI(FNAME,"Audio::restart");
+	//ESP_LOGI(FNAME,"Audio::restart");
 	dacDisable();
 	dac_cosine_enable( true );
 	dac_offset_set( 0 );
@@ -901,7 +904,7 @@ void Audio::shutdown(){
 #endif
 	speaker_volume = 0;
 	audio_volume.set( 0 );
-	ESP_LOGI(FNAME,"shutdown alarm volume set 0");
+	//ESP_LOGI(FNAME,"shutdown alarm volume set 0");
 }
 
 void Audio::boot(){
@@ -923,10 +926,10 @@ void Audio::enableAmplifier( bool enable, int silence_ms )
 			// need for delay, amplifier will be ready for the first tick.
 			// But if in sink falling below the deadband, need the delay.
 			if ( silence_ms < 180 ) {
-				ESP_LOGI(FNAME,"enabled Amplifier, 180 ms delay");
+				//ESP_LOGI(FNAME,"enabled Amplifier, 180 ms delay");
 				delay(180);  // amplifier startup time ~175mS according to datasheet Fig. 21
 			} else {
-				ESP_LOGI(FNAME,"enabled Amplifier, skipping 180 ms delay");
+				//ESP_LOGI(FNAME,"enabled Amplifier, skipping 180 ms delay");
 			}
 			// do NOT call dacEnable() here - allow doing this in silence.
 			amplifier_enabled = true;
@@ -942,7 +945,7 @@ void Audio::enableAmplifier( bool enable, int silence_ms )
 #endif
 				dacDisable();
 				amplifier_enabled = false;
-				ESP_LOGI(FNAME,"disabled Amplifier");
+				//ESP_LOGI(FNAME,"disabled Amplifier");
 			}
 		}
 	}

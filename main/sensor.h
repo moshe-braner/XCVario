@@ -121,6 +121,7 @@ extern DataMonitor DM;
 extern xSemaphoreHandle spiMutex;
 
 extern Compass *compass;
+extern int _external_data;    // moved here, was a private member of Compass
 
 class AdaptUGC;
 extern AdaptUGC *MYUCG;

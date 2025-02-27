@@ -404,6 +404,15 @@ void resetCWindAge() {
 		CircleWind::resetAge();
 }
 
+#if defined(NOSENSORS)
+void change_roll() {
+	IMU::setRollRad(hzn_roll.get());
+}
+void change_pitch() {
+	IMU::setPitchRad(hzn_pitch.get());
+}
+#endif
+
 void change_volume() {
 	Audio::setVolume( audio_volume.get() );
 	//ESP_LOGI(FNAME,"change_volume -> %f", vol );
@@ -608,6 +617,13 @@ SetupNG<float>		    password( "PASSWORD", 0 );
 SetupNG<int>		    autozero( "AUTOZERO", 0 );
 SetupNG<int>		    attitude_indicator("AHRS", 1 );
 SetupNG<float>		    horizon_offset("HRZOFST", 0, RST_NONE, SYNC_NONE, VOLATILE );
+#if defined(NOSENSORS)
+SetupNG<float>		    hzn_roll("HZROLL", 0, RST_NONE, SYNC_FROM_MASTER, VOLATILE, change_roll );
+SetupNG<float>		    hzn_pitch("HZPTCH", 0, RST_NONE, SYNC_FROM_MASTER, VOLATILE, change_pitch );
+#else
+SetupNG<float>		    hzn_roll("HZROLL", 0, RST_NONE, SYNC_FROM_MASTER, VOLATILE );
+SetupNG<float>		    hzn_pitch("HZPTCH", 0, RST_NONE, SYNC_FROM_MASTER, VOLATILE );
+#endif
 SetupNG<int>		horizon_colors("HRZCOLOR", 0, RST_NONE, SYNC_NONE, VOLATILE, update_horizon_options );
 SetupNG<int>		horizon_line("HRZLINE", 0, RST_NONE, SYNC_NONE, VOLATILE, update_horizon_options );
 SetupNG<int>		horizon_bticks("HRZBTIK", 0, RST_NONE, SYNC_NONE, VOLATILE, update_horizon_options );
@@ -676,7 +692,7 @@ SetupNG<float>          compass_i2c_cl("CP_I2C_CL", 100 );
 SetupNG<float>          wind_as_filter( "WINDASF", 0.02 );
 SetupNG<float>          wind_gps_lowpass( "WINDGPSLP", 1.00 );
 SetupNG<float>          wind_dev_filter( "WINDDEVF", 0.010 );
-SetupNG<int> 			wind_enable( "WIND_ENA", WA_OFF );
+SetupNG<int> 			wind_enable( "WIND_ENA", WA_BOTH );
 SetupNG<int> 			wind_logging( "WIND_LOG", 0 );
 SetupNG<float> 			wind_as_calibration("WIND_AS_CAL", 1.0 );
 SetupNG<float> 			wind_filter_lowpass("SWINDAVER", 60 );

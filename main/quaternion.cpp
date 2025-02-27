@@ -16,9 +16,9 @@ Quaternion::Quaternion(float _a, float _b, float _c, float _d)
 // rotate radian angle around axis
 Quaternion::Quaternion(const float angle, const vector_ijk& axis)
 {
-    float fac = std::sin(0.5 * angle);
+    float fac = std::sin(0.5f * angle);
 
-    a = std::cos(0.5 * angle);
+    a = std::cos(0.5f * angle);
     b = fac * axis.a;
     c = fac * axis.b;
     d = fac * axis.c;
@@ -77,7 +77,7 @@ Quaternion slerp(Quaternion q1, Quaternion q2, double lambda)
 
 	st = (float) sin(theta);
 	sut = (float) sin(lambda*theta);
-	sout = (float) sin((1-lambda)*theta);
+	sout = (float) sin((1.0f-lambda)*theta);
 	coeff1 = sout/st;
 	coeff2 = sut/st;
 

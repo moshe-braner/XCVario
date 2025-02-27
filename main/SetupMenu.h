@@ -97,9 +97,9 @@ public:
 	static void system_menu_create_compass_dev( MenuEntry *top );
 	static void system_menu_create_compass_devs( MenuEntry *top );
 	static void system_menu_create_compass_nmea( MenuEntry *top );
-	static void system_menu_create_compass_straightwind( MenuEntry *top );
-	static void system_menu_create_compass_straightwind_limits( MenuEntry *top );
-	static void system_menu_create_compass_straightwind_filters( MenuEntry *top );
+	static void system_menu_create_wind_straightwind( MenuEntry *top );
+	static void system_menu_create_straightwind_limits( MenuEntry *top );
+	static void system_menu_create_straightwind_filters( MenuEntry *top );
 	static void system_menu_create_battery( MenuEntry *top );
 	static SetupMenuValFloat * createQNHMenu();
 };

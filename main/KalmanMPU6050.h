@@ -155,6 +155,11 @@ public:
   static inline float getPitch()  { return float(RAD_TO_DEG) * filterPitch_rad; }
   static inline float getPitchRad()  { return filterPitch_rad; }
 
+#if defined(NOSENSORS)
+  static inline float setRollRad(float r)  { filterRoll_rad  = r; }
+  static inline float setPitchRad(float p) { filterPitch_rad = p; }
+#endif
+
   // XCSoar uses a 180 deg rotated reference system with Z vector pointing down, so Yaw and Pitch inverted
   // hence only Pitch and Roll is used for XCSoar
   static inline float getXCSPitch()  { return -float(RAD_TO_DEG) * filterPitch_rad;  }

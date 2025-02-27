@@ -73,6 +73,7 @@
 #include <string>
 #include <cstdio>
 #include <cstring>
+#include <cmath>
 #include "DataMonitor.h"
 #include "AdaptUGC.h"
 #include "CenterAid.h"
@@ -138,6 +139,7 @@ MPU_t MPU;         // create an object
 
 // Magnetic sensor / compass
 Compass *compass = 0;
+int _external_data = 0;    // moved here, was a private member of Compass
 BTSender btsender;
 BLESender blesender;
 
@@ -165,7 +167,7 @@ uint8_t g_col_header_light_b=g_col_highlight;
 uint16_t gear_warning_holdoff = 0;
 uint8_t gyro_flash_savings=0;
 
-t_global_flags gflags = { true, false, false, false, false, false, false, false, false, false, false, false, false, false, false };
+t_global_flags gflags = { true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false };
 
 int  ccp=60;
 float tas = 0;
@@ -246,7 +248,7 @@ void drawDisplay(void *pvParameters){
 					float acceleration=IMU::getGliderAccelZ();
 					if( acceleration < 0.3 )
 						acceleration = 0.3;  // limit acceleration effect to minimum 30% of 1g
-					float acc_stall= stall_speed.get() * sqrt( acceleration + ( ballast.get()/100));  // accelerated and ballast(ed) stall speed
+					float acc_stall= stall_speed.get() * sqrt( acceleration + ( ballast.get()*0.01));  // accelerated and ballast(ed) stall speed
 					if( ias.get() < acc_stall && ias.get() > acc_stall*0.7 ){
 						if( !gflags.stall_warning_active ){
 							Audio::alarm( true, max_volume.get() );
@@ -691,6 +693,14 @@ void readSensors(void *pvParameters){
 			pos=strlen(log);
 			sprintf( log+pos, "\n");
 			Router::sendXCV( log );
+			if (attitude_indicator.get() == 2 && SetupCommon::isMaster()) {
+				float f = IMU::getRollRad();
+				if (abs(f - hzn_roll.get()) > 0.016)
+					hzn_roll.set(f);
+				f = IMU::getPitchRad();
+				if (abs(f - hzn_pitch.get()) > 0.08)
+					hzn_pitch.set(f);
+			}
 			if ( testmode.get() )            // otherwise allow less cluttered USB-serial output
 				ESP_LOGI(FNAME,"%s", log );
 		}
@@ -736,7 +746,8 @@ void readSensors(void *pvParameters){
 			airspeed_max.set( ias.get() );
 		}
 		// ESP_LOGI("FNAME","P: %f  IAS:%f IASF: %d", dynamicP, iasraw, ias );
-		if( !compass || !(compass->externalData()) ){
+		//if( !compass || !(compass->externalData()) ){
+		if( _external_data <= 0 ){          // not getting TAS from simulator
 			tas += (tasraw-tas)*0.25;       // low pass filter
 		}
 		// ESP_LOGI(FNAME,"IAS=%f, T=%f, TAS=%f baroP=%f", ias, T, tas, baroP );
@@ -1725,7 +1736,6 @@ void system_startup(void *args){
 	if ( SetupCommon::isClient() ){
 		if( wireless == WL_WLAN_CLIENT ){
 			display->clear();
-
 			int line=1;
 			display->writeText( line++, "Wait for WiFi Master" );
 			char mxcv[30] = "";

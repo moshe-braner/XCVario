@@ -1437,7 +1437,7 @@ void SetupMenu::system_menu_create_compass_nmea( MenuEntry *top ){
 	top->addEntry( nmeaHdt );
 }
 
-void SetupMenu::system_menu_create_compass_straightwind_filters( MenuEntry *top ){
+void SetupMenu::system_menu_create_straightwind_filters( MenuEntry *top ){
 	SetupMenuValFloat *smgsm = new SetupMenuValFloat( "Airspeed Lowpass", "", 0, 0.05, 0.001, nullptr, false, &wind_as_filter );
 	smgsm->setPrecision(3);
 	top->addEntry( smgsm );
@@ -1459,7 +1459,7 @@ void SetupMenu::system_menu_create_compass_straightwind_filters( MenuEntry *top 
 	wlpf->setHelp("Number of measurements (seconds) averaged in straight flight live wind estimation");
 }
 
-void SetupMenu::system_menu_create_compass_straightwind_limits( MenuEntry *top ){
+void SetupMenu::system_menu_create_straightwind_limits( MenuEntry *top ){
 	SetupMenuValFloat *smdev = new SetupMenuValFloat( "Deviation Limit", "°", 0.0, 180.0, 1.0,	nullptr, false, &wind_max_deviation );
 	smdev->setHelp( "Maximum deviation change accepted when derived from AS/Compass and GPS tracks" );
 	top->addEntry( smdev );
@@ -1480,15 +1480,15 @@ void SetupMenu::system_menu_create_compass_straightwind_limits( MenuEntry *top )
 	aslim->setHelp("Maximum delta in airspeed estimation from wind and GPS during straight flight accepted for straight wind calculation");
 }
 
-void SetupMenu::system_menu_create_compass_straightwind( MenuEntry *top ){
-	SetupMenu * strWindFM = new SetupMenu( "Filters" );
-	top->addEntry( strWindFM );
-	strWindFM->addCreator( system_menu_create_compass_straightwind_filters );
-	SetupMenu * strWindLM = new SetupMenu( "Limits" );
-	top->addEntry( strWindLM );
-	strWindLM->addCreator( system_menu_create_compass_straightwind_limits );
+void SetupMenu::system_menu_create_wind_straightwind( MenuEntry *top ){
 	ShowStraightWind* ssw = new ShowStraightWind( "Straight Wind Status" );
 	top->addEntry( ssw );
+	SetupMenu * strWindFM = new SetupMenu( "Filters" );
+	top->addEntry( strWindFM );
+	strWindFM->addCreator( system_menu_create_straightwind_filters );
+	SetupMenu * strWindLM = new SetupMenu( "Limits" );
+	top->addEntry( strWindLM );
+	strWindLM->addCreator( system_menu_create_straightwind_limits );
 }
 
 void SetupMenu::system_menu_create_compass( MenuEntry *top ){
@@ -1499,8 +1499,8 @@ void SetupMenu::system_menu_create_compass( MenuEntry *top ){
 
 	SetupMenu * strWindM = new SetupMenu( "Straight Wind" );
 	top->addEntry( strWindM );
-	strWindM->setHelp( "Straight flight wind calculation needs compass module active", 250 );
-	strWindM->addCreator( system_menu_create_compass_straightwind );
+	strWindM->setHelp( "Straight flight wind calculation", 250 );
+	strWindM->addCreator( system_menu_create_wind_straightwind );
 
 	SetupMenuSelect * compSensorCal = new SetupMenuSelect( "Sensor Calibration", RST_NONE, compassSensorCalibrateAction, false );
 	compSensorCal->addEntry( "Cancel");
@@ -1525,10 +1525,9 @@ void SetupMenu::system_menu_create_compass( MenuEntry *top ){
 	compdamp->setHelp("Compass or magnetic heading damping factor in seconds");
 
 	SetupMenuSelect * compSensor = new SetupMenuSelect( "Sensor Option", RST_ON_EXIT, compass_ena, true, &compass_enable);
-	compSensor->addEntry( "Disable");
-	compSensor->addEntry( "Enable I2C sensor");
-	compSensor->addEntry( "Disable");
-	compSensor->addEntry( "Enable CAN sensor");
+	compSensor->addEntry( "Disable", CS_DISABLE);
+	compSensor->addEntry( "Enable I2C sensor", CS_I2C);
+	compSensor->addEntry( "Enable CAN sensor", CS_CAN);
 	compSensor->setHelp( "Option to enable/disable the Compass Sensor (reboots)" );
 	top->addEntry( compSensor );
 
@@ -1568,14 +1567,16 @@ void SetupMenu::options_menu_create_wind_circlingwind( MenuEntry *top ){
 
 void SetupMenu::options_menu_create_wind( MenuEntry *top ){
 
-	// Wind speed observation window
-	SetupMenuSelect * windcal = new SetupMenuSelect( "Wind Calculation", RST_NONE, 0, true, &wind_enable );
-	windcal->addEntry( "Disable");
-	windcal->addEntry( "Straight");
-	windcal->addEntry( "Circling");
-	windcal->addEntry( "Both");
-	windcal->setHelp("Enable Wind calculation for straight flight (needs compass), circling, or both - display wind in retro display style");
+	SetupMenuSelect * windcal = new SetupMenuSelect( "Calculation", RST_NONE, 0, true, &wind_enable );
+	windcal->addEntry( "Disable");        // 0
+	windcal->addEntry( "Straight");       // 1
+	windcal->addEntry( "Circling");       // 2
+	windcal->addEntry( "Both");           // 3
+	windcal->setHelp("Wind estimate method", 260);
 	top->addEntry( windcal );
+
+	ShowBothWinds* sbw = new ShowBothWinds( "Current Wind" );
+	top->addEntry( sbw );
 
 	// Display option
 	SetupMenuSelect * winddis = new SetupMenuSelect( "Display", RST_NONE, 0, true, &wind_display );
@@ -1594,6 +1595,10 @@ void SetupMenu::options_menu_create_wind( MenuEntry *top ){
 	windref->addEntry( "GPS Course");
 	windref->setHelp( "Choose wind arrow relative to geographic north or to true aircraft heading");
 	top->addEntry( windref );
+
+	SetupMenu * strWindM = new SetupMenu( "Straight Wind" );
+	top->addEntry( strWindM );
+	strWindM->addCreator( system_menu_create_wind_straightwind );
 
 	SetupMenu * cirWindM = new SetupMenu( "Circling Wind" );
 	top->addEntry( cirWindM );
@@ -1826,11 +1831,6 @@ void SetupMenu::options_menu_create_horizon_screen( MenuEntry *top ){
 
 void SetupMenu::options_menu_create_advanced( MenuEntry *top ){
 
-	SetupMenu * windMenu = new SetupMenu( "Wind" );
-	top->addEntry( windMenu );
-	windMenu->setHelp( "Setup Wind Estimation", 280 );
-	windMenu->addCreator(options_menu_create_wind);
-
 	SetupMenu * alt_as = new SetupMenu( "Altimeter, Airspeed" );
 	top->addEntry( alt_as );
 	alt_as->addCreator(options_menu_create_altimeter_airspeed);
@@ -1838,6 +1838,15 @@ void SetupMenu::options_menu_create_advanced( MenuEntry *top ){
 	SetupMenu * display = new SetupMenu( "Display Setup" );
 	top->addEntry( display );
 	display->addCreator( options_menu_create_display );
+
+	SetupMenu * gload = new SetupMenu( "G-Load Display" );
+	top->addEntry( gload );
+	gload->addCreator(options_menu_create_gload);
+
+	SetupMenu * horizon_screen = new SetupMenu( "Horizon Display");
+	top->addEntry( horizon_screen );
+	//horizon_screen->setHelp("Options regarding the horizon screen");
+	horizon_screen->addCreator( options_menu_create_horizon_screen );
 
 	SetupMenu * rotary = new SetupMenu( "Rotary Setup" );
 	top->addEntry( rotary );
@@ -1865,19 +1874,15 @@ void SetupMenu::options_menu_create( MenuEntry *top ){
 	top->addEntry( va );
 	va->addCreator( vario_menu_create );
 
+	SetupMenu * windMenu = new SetupMenu( "Wind" );
+	top->addEntry( windMenu );
+	windMenu->setHelp( "Setup Wind Estimation", 280 );
+	windMenu->addCreator(options_menu_create_wind);
+
 	SetupMenu * flarm = new SetupMenu( "FLARM" );
 	top->addEntry( flarm );
 	flarm->setHelp( "Option to display or sound warnings depending on FLARM alarm level", 240);
 	flarm->addCreator(options_menu_create_flarm);
-
-	SetupMenu * gload = new SetupMenu( "G-Load Display" );
-	top->addEntry( gload );
-	gload->addCreator(options_menu_create_gload);
-
-	SetupMenu * horizon_screen = new SetupMenu( "Horizon Display");
-	top->addEntry( horizon_screen );
-	//horizon_screen->setHelp("Options regarding the horizon screen");
-	horizon_screen->addCreator( options_menu_create_horizon_screen );
 
 	// Advanced Options submenu
 	SetupMenu * advopt = new SetupMenu( "Advanced Options" );
@@ -2098,8 +2103,10 @@ void SetupMenu::system_menu_create_ahrs( MenuEntry *top ){
 	top->addEntry( mpu );
 	mpu->setHelp( "Enable High Accuracy Attitude Sensor (AHRS) NMEA messages (need valid license key entered, reboots)");
 	mpu->addEntry( "Disable");
-	if( gflags.ahrsKeyValid )
+	if( gflags.ahrsKeyValid ) {
 		mpu->addEntry( "Enable");
+		mpu->addEntry( "Sync");
+	}
 
 	SetupMenu * ahrslc = new SetupMenu( "AHRS License Key" );
 	ahrslc->setHelp( "Enter valid AHRS License Key, then AHRS feature can be enabled under 'AHRS Option'");

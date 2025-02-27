@@ -33,14 +33,12 @@ SetupMenuDisplay( title, nullptr )
 	ESP_LOGI(FNAME, "ShowStraightWind(): title='%s'", title );
 }
 
-
-
 void ShowStraightWind::display( int mode )
 {
 	if( (selected != this) || !gflags.inSetup )
 		return;
 
-	ESP_LOGI(FNAME, "display() mode=%d", mode );
+	//ESP_LOGI(FNAME, "display() mode=%d", mode );
 	if( mode != 5 )
 		clear();
 	ucg->setFont( ucg_font_ncenR14_hr );
@@ -51,15 +49,31 @@ void ShowStraightWind::display( int mode )
 
 	semaphoreTake();
 
+/*
 	ucg->setPrintPos( 0, y );
-	sprintf( buffer, "Straight Wind enabled: %s", (wind_enable.get() & 1) ? "Yes" : "No  "  );
+	sprintf( buffer, "Straight Wind enabled: %s", (wind_enable.get() & WA_STRAIGHT) ? "Yes" : "No  "  );
 	ucg->printf( "%s", buffer );
 	y += 25;
+*/
 
 	ucg->setPrintPos( 0, y );
 	sprintf( buffer, "Status: %s     ", theWind.getStatus() );
 	ucg->printf( "%s", buffer );
 	y += 25;
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "Last  Str Wind : %3.1f°/%2.1f   ", theWind.getAngle(), Units::Airspeed( theWind.getSpeed()) );
+	ucg->printf( "%s", buffer );
+	y += 25;
+
+	if (compass) {    // also show ZZ wind for testing
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "Last ZZ Wind :   %03d°/%2.1f   ", (int)theWind.getzAngle(), Units::Airspeed( theWind.getzSpeed()) );
+	ucg->printf( "%s", buffer );
+	y += 25;
+
+	}
 
 	ucg->setPrintPos( 0, y );
 	sprintf( buffer, "GPS Status : %s", (theWind.getGpsStatus() == true ) ? "Good" : "Bad  "  );
@@ -68,11 +82,6 @@ void ShowStraightWind::display( int mode )
 
 	ucg->setPrintPos( 0, y );
 	sprintf( buffer, "AS C/F: %+3.3f %%/%3.3f %%  ", (theWind.getAsCorrection()-1.0)*100, (wind_as_calibration.get()-1.0)*100 );
-	ucg->printf( "%s", buffer );
-	y += 25;
-
-	ucg->setPrintPos( 0, y );
-	sprintf( buffer, "Last Wind : %3.1f°/%2.1f   ", theWind.getAngle(), Units::Airspeed( theWind.getSpeed()) );
 	ucg->printf( "%s", buffer );
 	y += 25;
 
@@ -92,4 +101,101 @@ void ShowStraightWind::display( int mode )
 
 	semaphoreGive();
 
+}
+
+
+ShowBothWinds::ShowBothWinds( const char* title ) :
+SetupMenuDisplay( title, nullptr )
+{
+	ESP_LOGI(FNAME, "ShowBothWinds(): title='%s'", title );
+}
+
+void ShowBothWinds::display( int mode )
+{
+	if( (selected != this) || !gflags.inSetup )
+		return;
+
+	//ESP_LOGI(FNAME, "display() mode=%d", mode );
+	if( mode != 5 )
+		clear();
+	ucg->setFont( ucg_font_ncenR14_hr );
+	uprintf( 5, 25, selected->_title );
+
+	uint16_t y = 70;
+	char buffer[32];
+
+	semaphoreTake();
+
+	if (wind_enable.get() & WA_STRAIGHT) {
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "Status: %s     ", theWind.getStatus() );
+	ucg->printf( "%s", buffer );
+	y += 25;
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "Last Str Wind : %03d°/%2.1f   ", (int)theWind.getAngle(), Units::Airspeed( theWind.getSpeed()) );
+	ucg->printf( "%s", buffer );
+	y += 25;
+
+	if (compass) {    // also show ZZ wind for testing
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "Last ZZ Wind :  %03d°/%2.1f   ", (int)theWind.getzAngle(), Units::Airspeed( theWind.getzSpeed()) );
+	ucg->printf( "%s", buffer );
+	y += 25;
+
+	}
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "Str Wind Age : %d sec   ", theWind.getAge() );
+	ucg->printf( "%s", buffer );
+	y += 25;
+
+	}
+
+	int cwinddir=0;
+	float cwind=0;
+	int ageCircling;
+
+	if (wind_enable.get() & WA_CIRCLING) {
+
+	bool r = CircleWind::getWind( &cwinddir, &cwind, &ageCircling );
+	if (r == false) {
+		ucg->setPrintPos( 0, y );
+		sprintf( buffer, "Circle Wind not current");
+		ucg->printf( "%s", buffer );
+		y += 25;
+	}
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "Last Cir Wind : %03d°/%2.1f   ", cwinddir, Units::Airspeed( cwind ) );
+	ucg->printf( "%s", buffer );
+	y += 25;
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "Cir Wind Age : %d sec   ", ageCircling );
+	ucg->printf( "%s", buffer );
+	y += 25;
+
+	}
+
+	if ( wind_enable.get() == WA_OFF ) {
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "Wind estimation disabled   ");
+	ucg->printf( "%s", buffer );
+	y += 25;
+
+	}
+
+	ucg->setPrintPos( 0, y );
+	sprintf( buffer, "GPS Status : %s", (theWind.getGpsStatus() == true ) ? "Good" : "Bad  "  );
+	ucg->printf( "%s", buffer );
+	y += 25;
+
+	ucg->setPrintPos( 5, 310 );
+	ucg->printf( "Press button to exit" );
+
+	semaphoreGive();
 }

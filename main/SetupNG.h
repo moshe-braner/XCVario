@@ -582,6 +582,8 @@ extern SetupNG<float>		password;
 extern SetupNG<int>		    autozero;
 extern SetupNG<int>		    attitude_indicator;
 extern SetupNG<float>		horizon_offset;
+extern SetupNG<float>		hzn_roll;
+extern SetupNG<float>		hzn_pitch;
 extern SetupNG<int>		    horizon_options;
 extern SetupNG<int>		    horizon_colors;
 extern SetupNG<int>		    horizon_line;

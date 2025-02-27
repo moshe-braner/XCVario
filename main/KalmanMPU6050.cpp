@@ -215,7 +215,7 @@ void IMU::Process()
 		petal.b = sin(roll)*cos(pitch);      // Right wing down (or positive X roll) results in positive Y force
 		petal.c = cos(roll)*cos(pitch);      // Any roll or pitch creates a smaller positive Z, gravity Z is positive
 		// trust in gyro at load factors unequal 1 g
-		gravity_trust = (ahrs_min_gyro_factor.get() + (ahrs_gyro_factor.get() * ( pow(10, abs(loadFactor-1) * ahrs_dynamic_factor.get()) - 1)));
+		gravity_trust = (ahrs_min_gyro_factor.get() + (ahrs_gyro_factor.get() * ( pow(10.0f, abs(loadFactor-1.0f) * ahrs_dynamic_factor.get()) - 1.0f)));
 		// ESP_LOGI( FNAME,"Omega roll: %f Pitch: %f W_yz: %f Gyro Trust: %f", R2D(roll), R2D(pitch), circle_omega, gravity_trust );
 	}
 	else {
@@ -389,7 +389,8 @@ class IMU_Ref
 		double Nl = (Bl - tmp).get_norm();
 
 		// ESP_LOGI(FNAME, "iter: %f,%f,%f", x[0],x[1],x[2]);
-        return pow(Nr-1,2) + pow(Nl-1,2) + (tmp).get_norm2() + pow(Nl- Nr,2)/10.;
+        //return pow(Nr-1,2) + pow(Nl-1,2) + (tmp).get_norm2() + pow(Nl- Nr,2)/10.;
+        return (Nr-1.0f)*(Nr-1.0f) + (Nl-1.0f)*(Nl-1.0f) + (tmp).get_norm2() + (Nl- Nr)*(Nl- Nr)*0.1f;
     }
 	private:
 	vector_d Br, Bl;

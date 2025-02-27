@@ -49,10 +49,12 @@ float DS18B20::getTemp(){
 #if defined(NOSENSORS)
 	return 0.0;
 #else
-	 float temp = 0;
-	 dallas->requestTemperatures();
-	 temp = dallas->getTempCByIndex(0);
-	 return temp;
+	float temp = DEVICE_DISCONNECTED_C;
+	if( numDevices ) {
+		dallas->requestTemperatures();
+		temp = dallas->getTempCByIndex(0);
+	}
+	return temp;
 #endif
 }
 

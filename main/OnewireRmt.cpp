@@ -350,8 +350,8 @@ uint8_t OnewireRmt::reset(void)
 					else
 						ESP_LOGD(FNAME,"OW level 1 not reached");
 				}
-				else
-					ESP_LOGW(FNAME,"OW reset duration out of bounds");
+				//else
+					//ESP_LOGW(FNAME,"OW reset duration out of bounds");
 			}
 			else
 			{
