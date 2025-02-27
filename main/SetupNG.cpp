@@ -614,7 +614,7 @@ SetupNG<int>		    rotary_dir_21( "ROTARY_DIR_21", 1 );
 #endif
 SetupNG<int>		    student_mode( "STUD_MOD", 0 );
 SetupNG<float>		    password( "PASSWORD", 0 );
-SetupNG<int>		    autozero( "AUTOZERO", 0 );
+SetupNG<int>		    autozero( "AUTOZERO", 1 );  // AS autozero at factory
 SetupNG<int>		    attitude_indicator("AHRS", 1 );
 SetupNG<float>		    horizon_offset("HRZOFST", 0, RST_NONE, SYNC_NONE, VOLATILE );
 #if defined(NOSENSORS)

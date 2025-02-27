@@ -2151,6 +2151,7 @@ void SetupMenu::system_menu_create_hardware( MenuEntry *top ){
 	pstype->addEntry( "ABPMRR");
 	pstype->addEntry( "TE4525");
 	pstype->addEntry( "MP5004");
+	pstype->addEntry( "MCPH21");
 	pstype->addEntry( "Autodetect");
 
 	Flap::setupMenue( top );
