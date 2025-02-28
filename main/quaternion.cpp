@@ -212,7 +212,7 @@ Quaternion Quaternion::AlignVectors(const vector_ijk &start, const vector_ijk &d
 	float cosTheta = from.dot(to);
 	vector_ijk rotationAxis;
 
-	if (cosTheta < -1f + 0.001f){
+	if (cosTheta < -1.0f + 0.001f){
 		// special case when vectors in opposite directions:
 		// there is no "ideal" rotation axis
 		// So guess one; any will do as long as it's perpendicular to start
