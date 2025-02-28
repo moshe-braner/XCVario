@@ -17,7 +17,7 @@
 #define ADDR_READ_MR            0x00    /* write to this address to start conversion */
  
 // MS4525D sensor full scale range and units
-const int16_t MS4525FullScaleRange = 1;  // 1 psi
+const float MS4525FullScaleRange = 1.0;  // 1 psi
  
 // MS4525D Sensor type (A or B) comment out the wrong type assignments
 // Type A (10% to 90%)
@@ -32,7 +32,7 @@ const int16_t MS4525ZeroCounts=(MS4525MinScaleCounts+MS4525FullScaleCounts)/2;
  
 #define MAX_AUTO_CORRECTED_OFFSET 50
 
-const float multiplier ( 2 * 6894.76 / MS4525Span );
+const float multiplier ( 2.f * 6894.76f / (float) MS4525Span );
 
 class MS4525DO : public AirspeedSensor
 {
@@ -65,8 +65,8 @@ class MS4525DO : public AirspeedSensor
         uint16_t    P_dat;  // 14 bit pressure data
         uint16_t    T_dat;  // 11 bit temperature data
         esp_err_t   error;
-    	float       _offset;
-    	float       _multiplier;
+        int         _offset;
+        float       _multiplier;
     // private functions
         int collect(void);
     

@@ -16,9 +16,12 @@ public:
 	virtual float readAltitude( float qnh, bool &success ) = 0;
 //	virtual float calcAltitude( float qnh, float p ) = 0;
     float calcAltitude(float SeaLevel_Pres, float pressure) {
+       return ( 44330.0f * (1.0f - pow(pressure / SeaLevel_Pres, (1.0f/5.255f))) );
+    }
+/*
         // polynomial approximation of altitude as a function of pressure ratio
         // - courtesy of Rick Sheppe
-        // - faster to compute than with pow()
+        // - maybe faster to compute than with pow() - or maybe not
         float ratio = pressure / SeaLevel_Pres;
         float altitude = ratio * -1.752317e+04;
         altitude = ratio * (altitude + 6.801427e+04);
@@ -28,10 +31,10 @@ public:
         altitude += 1.997137e+04;
         return altitude;
     }
+*/
 //	virtual float calcAltitudeSTD( float p ) = 0;
 	inline float calcAltitudeSTD( float p ) { return calcAltitude( 1013.25, p ); };
-    // we don't yet have an alternative to pow() for this:
-    // - but it's apparently only called from client loop, and can do less often?
+    // this is apparently only called from client loop, and can do less often?
     float calcPressure(float SeaLevel_Pres, float altitude) { return SeaLevel_Pres * pow(1.0 - (altitude / 44330.171), 5.255); }
 };
 

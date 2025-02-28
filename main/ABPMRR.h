@@ -17,7 +17,7 @@
 #define ADDR_READ_MR            0x00    /* write to this address to start conversion */
  
 // ABPMRRD sensor full scale range and units
-const int16_t ABPMRRFullScaleRange = 1;  // 1 psi
+const float ABPMRRFullScaleRange = 1.0;  // 1 psi
  
 // ABPMRRD Sensor type (10% to 90%)
 // Output (% of 2^14 counts) = P max. 80% x (Pressure applied – P min. ) + 10%
@@ -33,7 +33,7 @@ const int16_t ABPMRRZeroCounts=(ABPMRRMinScaleCounts+ABPMRRFullScaleCounts)/2;
  
 #define MAX_AUTO_CORRECTED_OFFSET 50
 
-const float ABPMRRmultiplier =  2 * 6894.76 / ABPMRRSpan;
+const float ABPMRRmultiplier =  2f * 6894.76f / (float) ABPMRRSpan;
 
 class ABPMRR : public AirspeedSensor
 {
@@ -67,8 +67,8 @@ class ABPMRR : public AirspeedSensor
         uint16_t    P_dat;  // 14 bit pressure data
         uint16_t    T_dat;  // 11 bit temperature data
         esp_err_t   error;
-    	float       _offset;
-    	float       multiplier;
+        int         _offset;
+        float       multiplier;
     // private functions
         int collect(void);
     

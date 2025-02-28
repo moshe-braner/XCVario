@@ -65,7 +65,7 @@ Quaternion operator*(const Quaternion& q1, const Quaternion& q2)
 // If the value of the parameter is close to 0, the output will be close to q1,
 // if it is close to 1, the output will be close to q2.
 
-Quaternion slerp(Quaternion q1, Quaternion q2, double lambda)
+Quaternion slerp(Quaternion q1, Quaternion q2, float lambda)
 {
 	float dotproduct = q1.b * q2.b + q1.c * q2.c + q1.d * q2.d + q1.a * q2.a;
 	float theta, st, sut, sout, coeff1, coeff2;
@@ -173,14 +173,14 @@ EulerAngles Quaternion::toEulerRad() const
     result.a = atan2(2.f*(a*b + c*d),1.f - 2.f*(b*b + c*c));
 
     // pitch
-    result.b = (-(float)(M_PI)/2.f + 2.f* atan2(sqrt(1.f+ 2.f*(a*c - b*d)), sqrt(1- 2*(a*c - b*d))));
+    result.b = (-(float)(M_PI)/2.f + 2.f* atan2(sqrt(1.f + 2.f*(a*c - b*d)), sqrt(1.f - 2.f*(a*c - b*d))));
     // or asin(2*(a*c - d*b));
 
     // yaw
     if (d==0)
         result.c = 0.0f;
     else
-        result.c = atan2(2.f*(a*d + b*c),1.f - 2.f*(c*c + d*d));
+        result.c = atan2(2.f*(a*d + b*c), 1.f - 2.f*(c*c + d*d));
     return result;
 
 
@@ -212,7 +212,7 @@ Quaternion Quaternion::AlignVectors(const vector_ijk &start, const vector_ijk &d
 	float cosTheta = from.dot(to);
 	vector_ijk rotationAxis;
 
-	if (cosTheta < -1 + 0.001f){
+	if (cosTheta < -1f + 0.001f){
 		// special case when vectors in opposite directions:
 		// there is no "ideal" rotation axis
 		// So guess one; any will do as long as it's perpendicular to start

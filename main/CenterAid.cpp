@@ -5,6 +5,8 @@
  *      Author: Eckhard Völlm
  */
 
+#include <math.h>
+
 #include "CenterAid.h"
 #include "types.h"
 #include "vector.h"
@@ -14,7 +16,6 @@
 #include "AdaptUGC.h"
 #include "KalmanMPU6050.h"
 #include "sensor.h"
-#include "ApproxMath.h"
 
 static const int X=75;
 static const int Y=215;
@@ -47,8 +48,10 @@ void CenterAid::drawThermal( int tn, int idir, bool draw_red ){
 		ESP_LOGE(FNAME,"index out of range: %d", agedir );
 		return;
 	}
-	short int cy = Y - (int)(cos_approx(((float)idir*CA_STEP))*(CA_STEP*2));
-	short int cx = X + (int)(sin_approx(((float)idir*CA_STEP))*(CA_STEP*2));
+	//short int cy = Y-cos(D2R(idir*CA_STEP))*CA_STEP*2;
+	//short int cx = X+sin(D2R(idir*CA_STEP))*CA_STEP*2;
+	short int cy = Y - (int)(cos(D2R((float)idir*CA_STEP))*(CA_STEP*2));
+	short int cx = X + (int)(sin(D2R((float)idir*CA_STEP))*(CA_STEP*2));
 	int td = drawn_thermals[idir];
 
 	if( td && (tn <  td) ){

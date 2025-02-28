@@ -28,33 +28,33 @@ class Atmosphere {
 	~Atmosphere() {};
 public:
 	static inline float calcPressure(float alti) {
-			return ( 1013.25 * pow( (1.0 - (6.5 * alti / 288150.0)), 5.255 ));
+			return ( 1013.25f * pow( (1.0f - (6.5f * alti / 288150.0f)), 5.255f ));
 	};
 	static inline float TAS( float ias, float baro, float temp ) {
 		//return( ias * sqrt( 1.225 / ( baro*100.0 / (287.058 * (273.15+temp)))));
-		return( ias * sqrt((0.01 * 1.225 * 287.058) * (273.15+temp) / baro ));
+		return( ias * sqrt((0.01f * 1.225f * 287.058f) * (273.15f+temp) / baro ));
 	};
 	// TAS=IAS/sqrt( 288.15/(T+273.15) * (P/1013.25) )
 	static inline float TAS2( float ias, float altitude, float temp ) {
 			//return( ias / sqrt( 288.15/(temp+273.15) * ( calcPressure( altitude )/1013.25 )) );
-			return( ias * sqrt( (1013.25/288.15) * (temp+273.15) / calcPressure( altitude )));
+			return( ias * sqrt( (1013.25f/288.15f) * (temp+273.15f) / calcPressure( altitude )));
 			// - slightly different constant from above
 	};
 	static inline float CAS( float dp ) {
-			return( 1225.0 * sqrt( 5.0 * ( pow( (dp/101325.0)+1.0, (2.0/7) ) -1.0)));
+			return( 1225.0f * sqrt( 5.0f * ( pow( (dp/101325.0f)+1.0f, (2.0f/7.0f) ) - 1.0f)));
 	};
 	static inline float IAS( float tas, float alti, float temp ) {
 			//return( tas / sqrt( 1.225 / ( calcPressure(alti)*100.0 / (287.058 * (273.15+temp)))));
-			return( tas * sqrt( (100.0/1.225/287.058) * calcPressure(alti) / (273.15+temp)));
+			return( tas * sqrt( (100.0f/1.225f/287.058f) * calcPressure(alti) / (273.15f+temp)));
 			// - slightly different constant from above
 	};
 	static inline float pascal2kmh( float pascal ){
 		//return sqrt( 2*pascal / 1.225 )*3.6;
-		return sqrt( (3.6*3.6*2.0/1.225)*pascal );
+		return sqrt( (3.6f*3.6f*2.0f/1.225f)*pascal );
 	};
 	static inline float kmh2pascal( float kmh ){
 		//return ((kmh/3.6)*(kmh/3.6)) * 1.225/2.;
-		return (kmh*kmh * (1.225/2.0/3.6/3.6));
+		return (kmh*kmh * (1.225f/2.0f/3.6f/3.6f));
 	};
 
 // This are not actually used?  Instead there is a version in PressureSensor

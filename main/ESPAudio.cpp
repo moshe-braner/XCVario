@@ -36,7 +36,7 @@
 #include "I2Cbus.hpp"
 #include "sensor.h"
 #include "SetupNG.h"
-#include "ApproxMath.h"
+#include <math.h>
 
 
 static TaskHandle_t dactid = NULL;
@@ -544,20 +544,23 @@ void  Audio::evaluateChopping(){
 void  Audio::calculateFrequency(){
 	float max_var;
 	if ( _te > 0 )
-		max_var = (maxf - center_freq.get()) * 2;
+		max_var = (maxf - center_freq.get()) * 2.f;
 	else
 		max_var = center_freq.get() - minf;
-	float range = _range;
+	float _te_range;
 	if( _s2f_mode && (cruise_audio_mode.get() == AUDIO_S2F) )
-		range = 5.0;
+		_te_range = _te * 0.2f;
+	else
+		_te_range = _te / _range;
+	float factor = audio_factor.get();
 	//float mult = std::pow( (abs(_te)/range)+1.0f, audio_factor.get());
-	float mult = exp2_approx( log2_approx( (abs(_te)/range)+1 ) * audio_factor.get() );
-	if( audio_factor.get() != prev_aud_fact ) {
+	float mult = std::pow( abs(_te_range)+1.0f, factor);
+	if( factor != prev_aud_fact ) {
 		//inv_exp_max  = 1.0/std::pow( 2.0f, audio_factor.get());
-		inv_exp_max  = exp2_approx( -audio_factor.get() );
-		prev_aud_fact = audio_factor.get();
+		inv_exp_max  = std::pow( 2.0f, -factor);
+		prev_aud_fact = factor;
 	}
-	current_frequency = center_freq.get() + ((mult*_te)/range )  * (max_var*inv_exp_max);
+	current_frequency = center_freq.get() + (mult * _te_range)  * (max_var*inv_exp_max);
 	if( hightone && (_tonemode == ATM_DUAL_TONE ) )
 		setFrequency( current_frequency*_high_tone_var );
 	else

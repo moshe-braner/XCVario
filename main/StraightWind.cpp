@@ -35,8 +35,6 @@
 #include "sensor.h"
 #include "KalmanMPU6050.h"
 #include "vector.h"  // D2R, R2D
-#include "ApproxMath.h"
-
 
 StraightWind::StraightWind() :
 averageTas(0),
@@ -281,18 +279,14 @@ bool StraightWind::calculateWind()
 // view-source:http://www.owoba.de/fliegerei/flugrechner.html
 // direction in degrees of third vector in windtriangle
 void StraightWind::calculateSpeedAndAngle( float angle1, float speed1, float angle2, float speed2, float& speed, float& angle ){
-	//float tcrad = D2R( angle1 );
-	//float thrad = D2R( angle2 );
-	//float wca = Vector::angleDiff( thrad, tcrad );
-	float wca_deg = Vector::angleDiffDeg( angle2, angle1 );
-	//float s2wca = speed2 * cos( wca );
-	float s2wca = speed2 * cos_approx( wca_deg );
-	//float ang = tcrad + atan2( speed2 * sin( wca ), s2wca - speed1 );
-	//float ang = tcrad + D2R( atan2_approx( s2wca - speed1, speed2 * sin_approx( wca_deg ) ) );
-	float ang_deg = angle1 + atan2_approx( s2wca - speed1, speed2 * sin_approx( wca_deg ) );
+	float tcrad = D2R( angle1 );
+	float thrad = D2R( angle2 );
+	float wca = Vector::angleDiff( thrad, tcrad );
+	float s2wca = speed2 * cos( wca );
+	float ang = tcrad + atan2( speed2 * sin( wca ), s2wca - speed1 );
 	// Cosinus sentence: c^2 = a^2 + b^2 − 2 * a * b * cos( α ) for wind speed in km/h
 	speed = sqrt( (speed2 * speed2) + (speed1 * speed1 ) - ( 2 * s2wca * speed1  ) );
-	angle = Vector::normalizeDeg( ang_deg );  // convert radian to degree
+	angle = Vector::normalizeDeg( R2D( ang ) );  // convert radian to degree
 	// ESP_LOGI(FNAME,"calcAngleSpeed( A1/S1=%3.1f°/%3.1f km/h  A2/S2=%3.1f°/%3.1f km/h): A/S: %3.2f°/%3.2f km/h", 
 	//  angle1, speed1, angle2, speed2, angle, speed  );
 }

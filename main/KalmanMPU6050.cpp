@@ -8,8 +8,10 @@
 #include <simplex.h>
 #include <vector>
 
-#define sqr(x) x *x
-#define hypotenuse(x, y) sqrt(sqr(x) + sqr(y))
+#define sqr(x)  ((x)*(x))
+//#define hypotenuse(x, y) sqrt(sqr(x) + sqr(y))
+// this is in the standard library:
+#define hypotenuse(x,y) hypot((float)(x),(float)(y))
 
 // Kalman Variables
 Kalman IMU::kalmanX; // Create the Kalman instances
@@ -195,13 +197,15 @@ void IMU::Process()
 		float lf = loadFactor > 2.0 ? 2.0 : loadFactor;
 		loadFactor = lf < 0 ? 0 : lf; // limit to 0..2g
 		// the yz portion of w is proportional to the length of YZ portion of the normalized axis.
-		circle_omega = w * sqrt(axis.b*axis.b + axis.c*axis.c) * (std::signbit(gyro_rad.c)?-1.f:1.f);
+		//circle_omega = w * sqrt(axis.b*axis.b + axis.c*axis.c) * (std::signbit(gyro_rad.c)?-1.f:1.f);
+		circle_omega = w * hypot(axis.b, axis.c) * (std::signbit(gyro_rad.c)?-1.f:1.f);
 		// tan(roll):= petal force/G = m w v / m g
-		float tanw = -circle_omega * getTAS() / (3.6f * 9.80665f);
+		float tanw = -circle_omega * getTAS() * (1.f / (3.6f * 9.80665f));
 		roll = atan( tanw );
 		if ( ahrs_roll_check.get() ) {
 			// expected extra load c = sqrt(aa+bb) - 1, here a = 1/9.81 x atan, b=1
-			float loadz_exp = sqrt(tanw*tanw/(9.80665f*9.80665f)+1.f) - 1.f;
+			//float loadz_exp = sqrt(tanw*tanw*(1.f/(9.80665f*9.80665f))+1.f) - 1.f;
+			float loadz_exp = hypot(tanw*(1.f/9.80665f), 1.f) - 1.f;
 			float loadz_check = (loadz_exp > 0.f) ? std::min(std::max((accel.c-.99f)/loadz_exp,0.f), 1.f) : 0.f;
 			// ESP_LOGI( FNAME,"tanw: %f loadexp: %.2f loadf: %.2f c:%.2f", tanw, loadz_exp, loadFactor, loadz_check );
 			// Scale according to real experienced load factor with x 0..1
@@ -211,9 +215,10 @@ void IMU::Process()
 		pitch = IMU::PitchFromAccelRad();
 
 		// Centripetal forces to keep angle of bank while circling
-		petal.a = -sin(pitch);               // Nose down (positive Y turn) results in negative X force
-		petal.b = sin(roll)*cos(pitch);      // Right wing down (or positive X roll) results in positive Y force
-		petal.c = cos(roll)*cos(pitch);      // Any roll or pitch creates a smaller positive Z, gravity Z is positive
+		cospitch = cos(pitch);
+		petal.a = -sin(pitch);          // Nose down (positive Y turn) results in negative X force
+		petal.b = sin(roll)*cospitch;   // Right wing down (or positive X roll) results in positive Y force
+		petal.c = cos(roll)*cospitch;   // Any roll or pitch creates a smaller positive Z, gravity Z is positive
 		// trust in gyro at load factors unequal 1 g
 		gravity_trust = (ahrs_min_gyro_factor.get() + (ahrs_gyro_factor.get() * ( pow(10.0f, abs(loadFactor-1.0f) * ahrs_dynamic_factor.get()) - 1.0f)));
 		// ESP_LOGI( FNAME,"Omega roll: %f Pitch: %f W_yz: %f Gyro Trust: %f", R2D(roll), R2D(pitch), circle_omega, gravity_trust );
@@ -355,7 +360,7 @@ float IMU::getVerticalOmega()
 
 double IMU::PitchFromAccel()
 {
-	return -atan2(accel.a, accel.c) * RAD_TO_DEG;
+	return -atan2(accel.a, accel.c) * (float)RAD_TO_DEG;
 }
 
 double IMU::PitchFromAccelRad()

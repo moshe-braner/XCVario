@@ -5,8 +5,8 @@ SPL06_007::SPL06_007( char _addr ){
 	bus = 0;
 	address = _addr;
 	c00 = c10 = c01 = c11 = c20 = c21 = c30 = c0 = c1 = 0;
-	_scale_factor_p = 0;
-	_scale_factor_t = 0;
+	_scale_factor_p = 1.0;
+	_scale_factor_t = 1.0;
 	errors = 0;
 	_praw = 0;
 	_traw = 0;
@@ -61,8 +61,8 @@ bool SPL06_007::begin() {
 	get_c0();
 	get_c1();
 
-	_scale_factor_p = get_scale_factor( 0x06 );
-	_scale_factor_t = get_scale_factor( 0x07 );
+	_scale_factor_p = 1.0f / get_scale_factor( 0x06 );
+	_scale_factor_t = 1.0f / get_scale_factor( 0x07 );
 	if( errors )
 		return false;
 	else
@@ -72,7 +72,7 @@ bool SPL06_007::begin() {
 
 float SPL06_007::readTemperature( bool& success ){
 
-	float t = float(c0) * 0.5f + float(c1) * float(_traw)/_scale_factor_t;
+	float t = float(c0) * 0.5f + float(c1) * (float)_traw * _scale_factor_t;
 	success = true;
 	return t;
 }
@@ -135,26 +135,16 @@ bool SPL06_007::selfTest( float& t, float& p ){
 
 #if 0 // moved to PressureSensor.h
 float SPL06_007::get_altitude(float pressure, float seaLevelhPa) {
-    //float altitude = 44330.0 * (1.0 - pow(pressure / seaLevelhPa, 0.19029495718));
-    // polynomial approximation of altitude as a function of pressure ratio
-    // - courtesy of Rick Sheppe
-    // - faster to compute than with pow()
-    float ratio = pressure / seaLevelhPa;
-    float altitude = ratio * -1.752317e+04;
-    altitude = ratio * (altitude + 6.801427e+04);
-    altitude = ratio * (altitude - 1.087470e+05);
-    altitude = ratio * (altitude + 9.498147e+04);
-    altitude = ratio * (altitude - 5.669573e+04);
-    altitude += 1.997137e+04;
-    // ESP_LOGI(FNAME,"SPL06_007::get_altitude: %f, p: %f, qnh: %f",altitude, pressure, seaLevelhPa );
-    return altitude;
+	float altitude = 44330.0f * (1.0f - pow(pressure / seaLevelhPa, 0.19029495718f));
+	// ESP_LOGI(FNAME,"SPL06_007::get_altitude: %f, p: %f, qnh: %f",altitude, pressure, seaLevelhPa );
+	return altitude;
 }
 #endif
 
 float SPL06_007::get_traw_sc( bool &ok )
 {
 	get_traw( ok );
-	return (float(_traw)/_scale_factor_t);
+	return (float)_traw * _scale_factor_t;
 }
 
 float SPL06_007::get_temp_c( bool &ok )
@@ -169,7 +159,7 @@ float SPL06_007::get_temp_f()
 {
 	bool ok;
 	float traw_sc = get_traw_sc(ok);
-	return (((float(c0) * 0.5f) + (float(c1) * traw_sc)) * 9/5) + 32;
+	return (((float(c0) * 0.5f) + (float(c1) * traw_sc)) * (9.f/5.f) + 32.f;
 }
 
 int32_t SPL06_007::get_traw( bool &ok )
@@ -200,7 +190,7 @@ int32_t SPL06_007::get_traw( bool &ok )
 float SPL06_007::get_praw_sc( bool &ok )
 {
 	get_praw( ok );
-	return (float(_praw)/_scale_factor_p);
+	return (float)_praw * _scale_factor_p;
 }
 
 

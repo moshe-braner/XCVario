@@ -27,7 +27,7 @@ ABPMRR::~ABPMRR()
 // other subroutines for returning clean values should be get functions
 
 void ABPMRR::changeConfig(){
-	multiplier = ABPMRRmultiplier * ((100.0 + speedcal.get()) / 100.0);
+	multiplier = ABPMRRmultiplier * ((100.0f + speedcal.get()) / 100.0f);
 	ESP_LOGI(FNAME,"changeConfig, speed multiplier %f, speed cal: %f ", multiplier, speedcal.get() );
 }
 
@@ -90,12 +90,12 @@ float ABPMRR::readPascal( float minimum, bool &ok ){
 			ok=false;
 		}
 	}
-	float _pascal = (P_dat - _offset) * multiplier;
+	float _pascal = (float)(P_dat - _offset) * multiplier;
 	if ( _pascal < minimum ) {
 		_pascal = 0.0;
 	};
 
-	// ESP_LOGI(FNAME,"pressure: %f offset: %d raw: %d  raw-off:%f m:%f", _pascal, (int)_offset, P_dat,  (_offset - P_dat),  ABPMRRmultiplier );
+	// ESP_LOGI(FNAME,"pressure: %f offset: %d raw: %d  raw-off:%f m:%f", _pascal, _offset, P_dat,  (_offset - P_dat),  ABPMRRmultiplier );
 	return( _pascal );
 }
 
@@ -127,21 +127,21 @@ bool    ABPMRR::selfTest( int& adval ){
 
 float ABPMRR::getPSI(void){             // returns the PSI of last measurement
 	// convert and store PSI
-	psi=( static_cast<float>(static_cast<int16_t>(P_dat)-ABPMRRZeroCounts))  / static_cast<float>(ABPMRRSpan)* static_cast<float>(ABPMRRFullScaleRange);
+	psi=( static_cast<float>(static_cast<int16_t>(P_dat)-ABPMRRZeroCounts))  / static_cast<float>(ABPMRRSpan)* ABPMRRFullScaleRange;
 	return psi;
 }             
 
 float ABPMRR::getTemperature(void){     // returns temperature of last measurement
 	temperature= (static_cast<float>(static_cast<int16_t>(T_dat)));
-	temperature = (temperature / 10);   // now in deg F
-	temperature = ((temperature -32) / 1.8f);   // now in deg C
+	temperature = (temperature * 0.1f);   // now in deg F
+	temperature = ((temperature - 32.0f) * (1.0f/1.8f));   // now in deg C
 	return temperature;
 }
 
 float ABPMRR::getAirSpeed(void){        // calculates and returns the airspeed in m/s IAS
 	/* Velocity calculation from a pitot tube explanation */
 	/* +/- 1PSI, approximately 100 m/s */
-	const float rhom = (2.0*100)/1.225; // density of air plus multiplier
+	const float rhom = (2.0f*100f)/1.225f; // density of air plus multiplier
 	// velocity = sqrt( (2*psi) / rho )   or sqt( psi /
 	//float velocity = abs( sqrt(psi*rhom) );
 	float velocity = sqrt(psi*rhom);
@@ -164,11 +164,11 @@ bool ABPMRR::offsetPlausible(uint32_t aoffset )
 bool ABPMRR::doOffset( bool force ){
 	ESP_LOGI(FNAME,"ABPMRR doOffset()");
 
-	_offset = as_offset.get();
+	_offset = (int) as_offset.get();
 	if( _offset < 0 )
 		ESP_LOGI(FNAME,"offset not yet done: need to recalibrate" );
 	else
-		ESP_LOGI(FNAME,"offset from NVS: %0.1f", _offset );
+		ESP_LOGI(FNAME,"offset from NVS: %d", _offset );
 
 	uint16_t adcval,T;
 	fetch_pressure( adcval, T );
@@ -203,8 +203,8 @@ bool ABPMRR::doOffset( bool force ){
 		if( offsetPlausible( _offset ) )
 		{
 			ESP_LOGI(FNAME,"Offset procedure finished, offset: %f", _offset);
-			if( as_offset.get() != _offset ){
-				as_offset.set( _offset );
+			if( (int) as_offset.get() != _offset ){
+				as_offset.set( (float) _offset );
 				ESP_LOGI(FNAME,"Stored new offset in NVS");
 			}
 			else

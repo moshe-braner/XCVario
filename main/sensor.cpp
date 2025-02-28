@@ -249,7 +249,7 @@ void drawDisplay(void *pvParameters){
 					float acceleration=IMU::getGliderAccelZ();
 					if( acceleration < 0.3 )
 						acceleration = 0.3;  // limit acceleration effect to minimum 30% of 1g
-					float acc_stall= stall_speed.get() * sqrt( acceleration + ( ballast.get()*0.01));  // accelerated and ballast(ed) stall speed
+					float acc_stall= stall_speed.get() * sqrt( acceleration + ( ballast.get()*0.01f));  // accelerated and ballast(ed) stall speed
 					if( ias.get() < acc_stall && ias.get() > acc_stall*0.7 ){
 						if( !gflags.stall_warning_active ){
 							Audio::alarm( true, max_volume.get() );
@@ -1156,8 +1156,10 @@ void system_startup(void *args){
 			delay( 10 );
 		}
 		char ahrs[30];
-		accelG /= samples;
-		float accel = sqrt(accelG[0]*accelG[0]+accelG[1]*accelG[1]+accelG[2]*accelG[2]);
+		accelG *= (1.0f / samples);
+		//float accel = sqrt(accelG[0]*accelG[0]+accelG[1]*accelG[1]+accelG[2]*accelG[2]);
+		//float accel = hypot(accelG[0], accelG[1], accelG[2]);
+		float accel = accelG.get_norm();
 		sprintf( ahrs,"AHRS Sensor: OK (%.2f g)", accel );
 		display->writeText( line++, ahrs );
 		logged_tests += "MPU6050 AHRS test: PASSED\n";

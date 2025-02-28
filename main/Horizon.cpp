@@ -11,7 +11,6 @@
 #include "Units.h"
 #include "Flarm.h"
 #include "vector.h"
-#include "ApproxMath.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include <AdaptUGC.h>
@@ -92,7 +91,6 @@ static float limited_bank( float b ) {
 }
 
 // these approximations take angles in radians:
-#if 0
 static float approxsin( float x ) {
 	if (x > 0) {
 		if (x > 2.3562)                      // x > 135 degrees (but < 180)
@@ -122,14 +120,6 @@ static float approxcos( float x ) {
 	x = 0.5*x*x;
 	return (1.0 - x + 0.1667*x*x);
 }
-#else
-static float approxsin( float x ) {
-	return (sin_approx(R2D(x)));
-}
-static float approxcos( float x ) {
-	return (cos_approx(R2D(x)));
-}
-#endif
 
 static int pitch2pixels( float p ) {
 	if( pitch_offset != 0 )

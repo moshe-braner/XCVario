@@ -76,7 +76,7 @@ public:
 	};
 
     static float ActualWingloadCorrection( float v ) {
-        return v * sqrt( 100.0/(ballast.get() + 100.0) );  // ballast is in percent overweight
+        return v * sqrt( 100.0f/(ballast.get() + 100.0f) );  // ballast is in percent overweight
     }
 
 	static float TemperatureUnit( float t ){

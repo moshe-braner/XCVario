@@ -23,7 +23,7 @@ MS4525DO::~MS4525DO()
 }
 
 void MS4525DO::changeConfig(){
-	_multiplier = multiplier * ((100.0 + speedcal.get()) / 100.0);
+	_multiplier = multiplier * ((100.0f + speedcal.get()) / 100.0f);
 }
 
 // combine measure and collect into one function that returns the status code only, and holds the results in variables
@@ -91,7 +91,7 @@ float   MS4525DO::readPascal( float minimum, bool &ok ){
 		}
 	}
 
-	float _pascal = (_offset - P_dat) * _multiplier;
+	float _pascal = (float)(_offset - P_dat) * _multiplier;
 	if ( (_pascal < minimum) && (minimum != 0) ) {
 		_pascal = 0.0;
 	};
@@ -126,7 +126,7 @@ bool    MS4525DO::selfTest( int& adval ){
 
 float MS4525DO::getPSI(void){             // returns the PSI of last measurement
 	// convert and store PSI
-	psi=( static_cast<float>(static_cast<int16_t>(P_dat)-MS4525ZeroCounts))  / static_cast<float>(MS4525Span)* static_cast<float>(MS4525FullScaleRange);
+	psi=( static_cast<float>(static_cast<int16_t>(P_dat)-MS4525ZeroCounts))  / static_cast<float>(MS4525Span)* MS4525FullScaleRange;
 
 	return psi;
 }             
@@ -170,11 +170,11 @@ bool MS4525DO::offsetPlausible(uint32_t aoffset )
 bool MS4525DO::doOffset( bool force ){
 	ESP_LOGI(FNAME,"MS4525DO doOffset()");
 
-	_offset = as_offset.get();
+	_offset = (int) as_offset.get();
 	if( _offset < 0 )
 		ESP_LOGI(FNAME,"offset not yet done: need to recalibrate" );
 	else
-		ESP_LOGI(FNAME,"offset from NVS: %0.1f", _offset );
+		ESP_LOGI(FNAME,"offset from NVS: %d", _offset );
 
 	uint16_t adcval,T;
 	fetch_pressure( adcval, T );
@@ -209,8 +209,8 @@ bool MS4525DO::doOffset( bool force ){
 		if( offsetPlausible( _offset ) )
 		{
 			ESP_LOGI(FNAME,"Offset procedure finished, offset: %f", _offset);
-			if( as_offset.get() != _offset ){
-				as_offset.set( _offset );
+			if( (int) as_offset.get() != _offset ){
+				as_offset.set( (float) _offset );
 				ESP_LOGI(FNAME,"Stored new offset in NVS");
 			}
 			else

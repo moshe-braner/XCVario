@@ -15,7 +15,7 @@
 #define I2C_ADDRESS_MCPH21    0x7F  //  Datasheet testcode: IC_Send(0xFE,..) what is 7F shifted right 1 bit
 
 // MCPH21D sensor full scale range and units
-const int16_t MCPH21FullScaleRange = 0.725;  //  psi
+// const float MCPH21FullScaleRange = 0.725;  //  psi <<< not used
  
 // MCPH21D Sensor type (10% to 90%)
 // Output (% of 2^14 counts) = P max. 80% x (Pressure applied – P min. ) + 10%
@@ -59,8 +59,8 @@ class MCPH21 : public AirspeedSensor
         uint32_t    P_dat;  // 24 bit pressure data raw
         uint16_t    T_dat;  // 16 bit temperature data raw
         esp_err_t   error;
-    	float       _offset;
-    	float       multiplier;
+        int         _offset;
+        float       multiplier;
     // private functions
         int collect(void);
     
