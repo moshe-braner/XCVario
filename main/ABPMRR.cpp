@@ -141,7 +141,7 @@ float ABPMRR::getTemperature(void){     // returns temperature of last measureme
 float ABPMRR::getAirSpeed(void){        // calculates and returns the airspeed in m/s IAS
 	/* Velocity calculation from a pitot tube explanation */
 	/* +/- 1PSI, approximately 100 m/s */
-	const float rhom = (2.0f*100f)/1.225f; // density of air plus multiplier
+	const float rhom = (2.0f*100.0f)/1.225f; // density of air plus multiplier
 	// velocity = sqrt( (2*psi) / rho )   or sqt( psi /
 	//float velocity = abs( sqrt(psi*rhom) );
 	float velocity = sqrt(psi*rhom);
@@ -202,7 +202,7 @@ bool ABPMRR::doOffset( bool force ){
 		_offset = rawOffset / 100;
 		if( offsetPlausible( _offset ) )
 		{
-			ESP_LOGI(FNAME,"Offset procedure finished, offset: %f", _offset);
+			ESP_LOGI(FNAME,"Offset procedure finished, offset: %d", _offset);
 			if( (int) as_offset.get() != _offset ){
 				as_offset.set( (float) _offset );
 				ESP_LOGI(FNAME,"Stored new offset in NVS");

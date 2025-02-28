@@ -33,7 +33,7 @@ const int16_t ABPMRRZeroCounts=(ABPMRRMinScaleCounts+ABPMRRFullScaleCounts)/2;
  
 #define MAX_AUTO_CORRECTED_OFFSET 50
 
-const float ABPMRRmultiplier =  2f * 6894.76f / (float) ABPMRRSpan;
+const float ABPMRRmultiplier =  2.0f * 6894.76f / (float) ABPMRRSpan;
 
 class ABPMRR : public AirspeedSensor
 {
