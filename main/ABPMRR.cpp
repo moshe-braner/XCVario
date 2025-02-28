@@ -182,13 +182,13 @@ bool ABPMRR::doOffset( bool force ){
 		ESP_LOGI(FNAME,"offset from ADC is NOT plausible");
 
 	int deviation = abs( _offset - (int)adcval );
-	if( deviation < MAX_AUTO_CORRECTED_OFFSET )
+	if( deviation < MAX_AUTO_OFFSET_ABPMRR )
 		ESP_LOGI(FNAME,"Deviation in bounds");
 	else
 		ESP_LOGI(FNAME,"Deviation out of bounds");
 
 	// Long term stability of Sensor as from datasheet 0.5% per year -> 4000 * 0.005 = 20
-	if( (_offset < 0 ) || ( plausible && (deviation < MAX_AUTO_CORRECTED_OFFSET ) ) || autozero.get() )
+	if( (_offset < 0 ) || ( plausible && (deviation < MAX_AUTO_OFFSET_ABPMRR ) ) || autozero.get() )
 	{
 		ESP_LOGI(FNAME,"Airspeed OFFSET correction ongoing, calculate new _offset...");
 		if( autozero.get() )

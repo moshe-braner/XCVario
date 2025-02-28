@@ -30,7 +30,7 @@ const int16_t MS4525Span=MS4525FullScaleCounts-MS4525MinScaleCounts;
 //Differential
 const int16_t MS4525ZeroCounts=(MS4525MinScaleCounts+MS4525FullScaleCounts)/2;
  
-#define MAX_AUTO_CORRECTED_OFFSET 50
+#define MAX_AUTO_OFFSET_MS4525DO 50
 
 const float multiplier ( 2.f * 6894.76f / (float) MS4525Span );
 
