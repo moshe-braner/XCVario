@@ -1156,7 +1156,7 @@ void system_startup(void *args){
 			delay( 10 );
 		}
 		char ahrs[30];
-		accelG *= (1.0f / samples);
+		accelG /= samples;
 		//float accel = sqrt(accelG[0]*accelG[0]+accelG[1]*accelG[1]+accelG[2]*accelG[2]);
 		//float accel = hypot(accelG[0], accelG[1], accelG[2]);
 		float accel = accelG.get_norm();

@@ -63,9 +63,13 @@ template <typename T>
 vector_3d<T>& vector_3d<T>::operator/=(const T s2)
 {
     //if (s2 == 0) throw
-    a = a / s2;
-    b = b / s2;
-    c = c / s2;
+    //a = a / s2;
+    //b = b / s2;
+    //c = c / s2;
+    T inv_s2 = 1 / s2;
+    a *= inv_s2;
+    b *= inv_s2;
+    c *= inv_s2;
     return *this;
 }
 
