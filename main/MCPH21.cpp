@@ -2,9 +2,6 @@
 #include <math.h>
 #include <logdef.h>
 
-// Long term stability of Sensor as from datasheet FS* 0.15 + 0.3 (dT) % per year -> 16777216 * 0.00015 = 2516
-#define MAX_AUTO_CORRECTED_OFFSET 73000    // pressure for minimum of 60 Pa: 911868 Offset according to datasheet: 838861, difference: ~73000 and ~1% FS of 7549746
-
 MCPH21::MCPH21()
 {
 	// address = I2C_ADDRESS_MCPH21;
@@ -164,7 +161,7 @@ float MCPH21::getTemperature(void){     // returns temperature of last measureme
 float MCPH21::getAirSpeed(void){        // calculates and returns the airspeed in m/s IAS
 	/* Velocity calculation from a pitot tube explanation */
 	/* +/- 1PSI, approximately 100 m/s */
-	const float rhom = (2.0f*100f)/1.225f; // density of air plus multiplier
+	const float rhom = (2.0f*100.0f)/1.225f; // density of air plus multiplier
 	// velocity = sqrt( (2*psi) / rho )   or sqt( psi /
 	float velocity = abs( sqrt(psi*rhom) );
 	// ESP_LOGI(FNAME,"velocity %f", velocity );
@@ -204,7 +201,7 @@ bool MCPH21::doOffset( bool force ){
 	else
 		ESP_LOGI(FNAME,"offset from ADC is NOT plausible");
 
-	int deviation = abs( _offset - adcval );
+	int deviation = abs( _offset - (int)adcval );
 	if( deviation < MAX_AUTO_CORRECTED_OFFSET )
 		ESP_LOGI(FNAME,"Deviation in bounds");
 	else

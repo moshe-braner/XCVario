@@ -187,7 +187,7 @@ bool MS4525DO::doOffset( bool force ){
 	else
 		ESP_LOGI(FNAME,"offset from ADC is NOT plausible");
 
-	int deviation = abs( _offset - adcval );
+	int deviation = abs( _offset - (int)adcval );
 	if( deviation < MAX_AUTO_CORRECTED_OFFSET )
 		ESP_LOGI(FNAME,"Deviation in bounds");
 	else
@@ -208,7 +208,7 @@ bool MS4525DO::doOffset( bool force ){
 		_offset = rawOffset / 100;
 		if( offsetPlausible( _offset ) )
 		{
-			ESP_LOGI(FNAME,"Offset procedure finished, offset: %f", _offset);
+			ESP_LOGI(FNAME,"Offset procedure finished, offset: %d", _offset);
 			if( (int) as_offset.get() != _offset ){
 				as_offset.set( (float) _offset );
 				ESP_LOGI(FNAME,"Stored new offset in NVS");

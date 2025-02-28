@@ -181,7 +181,7 @@ bool ABPMRR::doOffset( bool force ){
 	else
 		ESP_LOGI(FNAME,"offset from ADC is NOT plausible");
 
-	int deviation = abs( _offset - adcval );
+	int deviation = abs( _offset - (int)adcval );
 	if( deviation < MAX_AUTO_CORRECTED_OFFSET )
 		ESP_LOGI(FNAME,"Deviation in bounds");
 	else
