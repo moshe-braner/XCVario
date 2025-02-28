@@ -159,7 +159,7 @@ float SPL06_007::get_temp_f()
 {
 	bool ok;
 	float traw_sc = get_traw_sc(ok);
-	return (((float(c0) * 0.5f) + (float(c1) * traw_sc)) * (9.f/5.f) + 32.f;
+	return (((float(c0) * 0.5f) + (float(c1) * traw_sc)) * (9.f/5.f) + 32.f);
 }
 
 int32_t SPL06_007::get_traw( bool &ok )
