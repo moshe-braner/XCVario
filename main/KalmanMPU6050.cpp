@@ -215,7 +215,7 @@ void IMU::Process()
 		pitch = IMU::PitchFromAccelRad();
 
 		// Centripetal forces to keep angle of bank while circling
-		cospitch = cos(pitch);
+		float cospitch = cos(pitch);
 		petal.a = -sin(pitch);          // Nose down (positive Y turn) results in negative X force
 		petal.b = sin(roll)*cospitch;   // Right wing down (or positive X roll) results in positive Y force
 		petal.c = cos(roll)*cospitch;   // Any roll or pitch creates a smaller positive Z, gravity Z is positive
