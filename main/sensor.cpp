@@ -1158,8 +1158,7 @@ void system_startup(void *args){
 		char ahrs[30];
 		accelG /= samples;
 		//float accel = sqrt(accelG[0]*accelG[0]+accelG[1]*accelG[1]+accelG[2]*accelG[2]);
-		//float accel = hypot(accelG[0], accelG[1], accelG[2]);
-		float accel = accelG.get_norm();
+		float accel = hypot((float)accelG[0], (float)accelG[1], (float)accelG[2]);
 		sprintf( ahrs,"AHRS Sensor: OK (%.2f g)", accel );
 		display->writeText( line++, ahrs );
 		logged_tests += "MPU6050 AHRS test: PASSED\n";
