@@ -14,6 +14,7 @@ This branch aims to offer some features not accepted (so far, anyway) into the "
 * Optional simpler FLARM warning screen, easier to interpret at a glance
 * Alternative horizon display screen - uncluttered and easy to view
 * A fix to allow use of Bluetooth Low Energy (BLE) connection to XCsoar
+* Wind estimation without circling and without a compass module
 
 The source code is in the "dev" branch (which is the default).
 
@@ -41,6 +42,11 @@ About the simplified FLARM warning screen and sound:
 * choice of short audio while visual continues
 * audio warning sounds again if alarm level rises
 * hold-off via pressing the knob
+
+About the new wind estimation algorithm:
+* automatically used for "straight wind" if there is no compass
+* is based on GPS data (from an attached FLARM) and airspeed
+* requires flying in several directions, and some time to converge
 
 
 This branch also aims to run on the Sunton ESP32-2432S028 board, which:
