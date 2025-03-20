@@ -81,7 +81,7 @@ void S2F::recalculatePolar()
 	a1 = a1 * ((bugs.get() + 100.0) / 100.0);
 	a2 = a2 * ((bugs.get() + 100.0) / 100.0);
 	ESP_LOGI(FNAME, "bugs:%d balo:%.1f%% a0=%f a1=%f  a2=%f s(80)=%f, s(160)=%f", (int)bugs.get(), myballast, a0, a1, a2, sink(80), sink(160));
-	_stall_speed_ms = stall_speed.get() / 3.6;
+	_stall_speed_ms = stall_speed.get() * (1.0 / 3.6);
 }
 
 void S2F::setPolar()

@@ -106,7 +106,7 @@ float Vector::reverse( float angle ){
 
 float Vector::polar(float y, float x)
 {
-	float angle = 0.0;
+	//float angle = 0.0;
 
 	// no need for special code for small x,
 	//   using atan2() instead of atan() takes care of that
@@ -116,7 +116,8 @@ float Vector::polar(float y, float x)
 	//else
 	//	angle = atan( y / x );
 	//angle = R2D(angle);
-	angle = R2D(atan2(y,x));
+
+	float angle = R2D(atan2(y,x));
 
 	// Normalize
 	if(angle < 0.0)

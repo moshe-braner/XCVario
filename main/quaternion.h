@@ -37,7 +37,7 @@ public:
     Quaternion get_conjugate() const;
     vector_ijk operator*(const vector_ijk& p) const;
     vector_d operator*(const vector_d& p) const;
-    friend Quaternion slerp(Quaternion q1, Quaternion q2, double lambda);
+    friend Quaternion slerp(Quaternion q1, Quaternion q2, float lambda);
     static Quaternion AlignVectors(const vector_ijk &start, const vector_ijk &dest);
     static Quaternion fromRotationMatrix(const vector_d &X, const vector_d &Y);
     static Quaternion fromAccelerometer(const vector_ijk& accel);

@@ -980,7 +980,7 @@ void SetupMenu::vario_menu_create_more( MenuEntry *top ){
 void SetupMenu::vario_menu_create( MenuEntry *vae ){
 	//ESP_LOGI(FNAME,"SetupMenu::vario_menu_create( %p )", vae );
 
-	SetupMenuValFloat * vga = new SetupMenuValFloat( "Range", "",	1.0, 30.0, 1, audio_setup_f, true, &range );
+	SetupMenuValFloat * vga = new SetupMenuValFloat( "Range", "", 1.0, 30.0, 1, audio_setup_f, true, &range );
 	vga->setHelp("Upper and lower value for Vario graphic display region");
 	vga->setPrecision( 0 );
 	vae->addEntry( vga );

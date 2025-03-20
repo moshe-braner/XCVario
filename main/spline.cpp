@@ -21,7 +21,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * ---------------------------------------------------------------------
  *
- * MB 2025: Replaced float with float throughout.
+ * MB 2025: Replaced double with float throughout.
  *
  */
 

@@ -2,9 +2,6 @@
 #include <math.h>
 #include <logdef.h>
 
-// Long term stability of Sensor as from datasheet FS* 0.15 + 0.3 (dT) % per year -> 16777216 * 0.00015 = 2516
-#define MAX_AUTO_CORRECTED_OFFSET 73000    // pressure for minimum of 60 Pa: 911868 Offset according to datasheet: 838861, difference: ~73000 and ~1% FS of 7549746
-
 MCPH21::MCPH21()
 {
 	// address = I2C_ADDRESS_MCPH21;
@@ -28,7 +25,7 @@ MCPH21::~MCPH21()
 // other subroutines for returning clean values should be get functions
 
 void MCPH21::changeConfig(){
-	multiplier = ((100.0 + speedcal.get()) / 100.0);
+	multiplier = ((100.0f + speedcal.get()) / 100.0f);
 	ESP_LOGI(FNAME,"changeConfig, speed multiplier %f, speed cal: %f ", multiplier, speedcal.get() );
 }
 
@@ -96,12 +93,12 @@ float MCPH21::readPascal( float minimum, bool &ok ){
 			ok=false;
 		}
 	}
-	float _pascal = (6.25 *(P_dat-_offset)/8388608)*1000*multiplier;
-	// ESP_LOGI(FNAME,"Praw: %d  Off: %f, Pa: %.2f, mp: %.2f", P_dat, _offset, _pascal, multiplier );
+	float _pascal = ((1000.f*6.25f/8388608.f) * (float)(P_dat-_offset))*multiplier;
+	// ESP_LOGI(FNAME,"Praw: %d  Off: %d, Pa: %.2f, mp: %.2f", P_dat, _offset, _pascal, multiplier );
 	if ( _pascal < minimum ) {
 		_pascal = 0.0;
 	};
-	// ESP_LOGI(FNAME,"pressure: %f offset: %d raw: %d  raw-off:%f m:%f", _pascal, (int)_offset, P_dat,  (_offset - P_dat),  MCPH21multiplier );
+	// ESP_LOGI(FNAME,"pressure: %f offset: %d raw: %d  raw-off:%f m:%f", _pascal, _offset, P_dat,  (_offset - P_dat),  MCPH21multiplier );
 	return( _pascal );
 }
 
@@ -133,7 +130,7 @@ bool MCPH21::selfTest( int& adval ){
 	float p = readPascal( 0, okay );
 	float t = getTemperature();
 	if( okay ){
-		ESP_LOGI(FNAME,"MCPH21 selftest OKAY, T: %.2f °C, P(off=%d): %.2f Pa", t,(int)_offset,p );
+		ESP_LOGI(FNAME,"MCPH21 selftest OKAY, T: %.2f °C, P(off=%d): %.2f Pa", t, _offset, p );
 	}else{
 		ESP_LOGI(FNAME,"MCPH21 selftest, scan for I2C address %02x FAILED",address );
 		return false;
@@ -152,7 +149,10 @@ float MCPH21::getTemperature(void){     // returns temperature of last measureme
 		return 0.0;
 	}else{
 		int t =((temp[0]*256)+temp[1]);
-		T = (float)(t/256.0);
+		//T = (float)(t/256.0);
+		t += 128;
+		t >>= 8;
+		T = (float)t;
 		ESP_LOGI(FNAME,"MCPH21 T val read ok: T: %.2f", T );
 	}
 	return T;
@@ -161,7 +161,7 @@ float MCPH21::getTemperature(void){     // returns temperature of last measureme
 float MCPH21::getAirSpeed(void){        // calculates and returns the airspeed in m/s IAS
 	/* Velocity calculation from a pitot tube explanation */
 	/* +/- 1PSI, approximately 100 m/s */
-	const float rhom = (2.0*100)/1.225; // density of air plus multiplier
+	const float rhom = (2.0f*100.0f)/1.225f; // density of air plus multiplier
 	// velocity = sqrt( (2*psi) / rho )   or sqt( psi /
 	float velocity = abs( sqrt(psi*rhom) );
 	// ESP_LOGI(FNAME,"velocity %f", velocity );
@@ -172,8 +172,8 @@ float MCPH21::getAirSpeed(void){        // calculates and returns the airspeed i
 bool MCPH21::offsetPlausible(uint32_t aoffset )
 {
 	ESP_LOGI(FNAME,"MCPH21 offsetPlausible( %d )", aoffset );
-	const int lower_val = 838861-MAX_AUTO_CORRECTED_OFFSET;
-	const int upper_val = 838861+MAX_AUTO_CORRECTED_OFFSET;
+	const int lower_val = 838861-MAX_AUTO_OFFSET_MCPH21;
+	const int upper_val = 838861+MAX_AUTO_OFFSET_MCPH21;
 	if( (aoffset > lower_val ) && (aoffset < upper_val )  )
 		return true;
 	else
@@ -183,11 +183,11 @@ bool MCPH21::offsetPlausible(uint32_t aoffset )
 bool MCPH21::doOffset( bool force ){
 	ESP_LOGI(FNAME,"MCPH21 () force:%d", force );
 
-	_offset = as_offset.get();
+	_offset = (int) as_offset.get();
 	if( _offset < 0 )
-		ESP_LOGI(FNAME,"offset not yet done: need to recalibrate. Current offset NVR: %f, autozero: %d", _offset, autozero.get() );
+		ESP_LOGI(FNAME,"offset not yet done: need to recalibrate. Current offset NVR: %d, autozero: %d", _offset, autozero.get() );
 	else
-		ESP_LOGI(FNAME,"offset from NVS: %0.1f", _offset );
+		ESP_LOGI(FNAME,"offset from NVS: %d", _offset );
 
 	uint32_t adcval;
 	uint16_t T;
@@ -201,29 +201,29 @@ bool MCPH21::doOffset( bool force ){
 	else
 		ESP_LOGI(FNAME,"offset from ADC is NOT plausible");
 
-	int deviation = abs( _offset - adcval );
-	if( deviation < MAX_AUTO_CORRECTED_OFFSET )
+	int deviation = abs( _offset - (int)adcval );
+	if( deviation < MAX_AUTO_OFFSET_MCPH21 )
 		ESP_LOGI(FNAME,"Deviation in bounds");
 	else
 		ESP_LOGI(FNAME,"Deviation out of bounds");
 
-	if( (_offset < 0 ) || ( plausible && (deviation < MAX_AUTO_CORRECTED_OFFSET ) ) || autozero.get() )
+	if( (_offset < 0 ) || ( plausible && (deviation < MAX_AUTO_OFFSET_MCPH21 ) ) || autozero.get() )
 	{
 		ESP_LOGI(FNAME,"Airspeed OFFSET correction ongoing, calculate new _offset, autozero: %d", autozero.get() );
 		if( autozero.get() )
 			autozero.set(0);
-		double rawOffset=0;
+		uint32_t rawOffset=0;
 		for( int i=0; i<100; i++){
 			fetch_pressure( adcval, T );
 			rawOffset += adcval;
 			vTaskDelay(10 / portTICK_PERIOD_MS);
 		}
-		_offset = rawOffset / 100.0;
+		_offset = rawOffset / 100;
 		if( offsetPlausible( _offset ) )
 		{
-			ESP_LOGI(FNAME,"Offset procedure finished, offset: %f", _offset);
-			if( as_offset.get() != _offset ){
-				as_offset.set( _offset );
+			ESP_LOGI(FNAME,"Offset procedure finished, offset: %d", _offset);
+			if( (int) as_offset.get() != _offset ){
+				as_offset.set( (float) _offset );
 				ESP_LOGI(FNAME,"Stored new offset in NVS");
 			}
 			else

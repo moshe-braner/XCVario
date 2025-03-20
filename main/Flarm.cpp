@@ -8,11 +8,11 @@
 #include "CircleWind.h"
 #include "Router.h"
 #include "SetupMenu.h"
-#include "ApproxMath.h"
 
 #include <time.h>
 #include <sys/time.h>
 #include <string.h>
+#include <math.h>
 
 #include <Arduino.h>
 
@@ -93,8 +93,8 @@ void Flarm::parsePFLAA( const char *pflaa ){
 #define CENTERX 120
 #define CENTERY 120
 
-#define RTD(x) (x*RAD_TO_DEG)
-#define DTR(x) (x*DEG_TO_RAD)
+#define RTD(x) (x*((float)(RAD_TO_DEG)))
+#define DTR(x) (x*((float)(DEG_TO_RAD)))
 
 int Flarm::oldDist = 0;
 int Flarm::oldVertical = 0;
@@ -436,8 +436,9 @@ void Flarm::setColorByAlt( int rel_alt ) {
 }
 
 void Flarm::drawTriangle( int x, int y, int rb, int dist, int size, int factor, int rel_alt, bool erase ) {
-	float s = sin_approx( rb );
-	float c = cos_approx( rb );
+	float rb_rad = DTR((float) rb);
+	float s = sin( rb_rad );
+	float c = cos( rb_rad );
 	int tipx = (int)(x + s*dist );
 	int tipy = (int)(y - c*dist );
 	float mx =  x + s*(dist+size);

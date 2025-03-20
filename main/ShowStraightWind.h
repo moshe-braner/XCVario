@@ -32,3 +32,16 @@ public:
 	virtual void up( int count ) { display(5); };
 	virtual void down( int count ) { display(5); };
 };
+
+class ShowBothWinds: public SetupMenuDisplay
+{
+public:
+
+	ShowBothWinds( const char* title );
+
+	virtual ~ShowBothWinds() {}
+
+	virtual void display( int mode=0 );
+	virtual void up( int count ) { display(5); };
+	virtual void down( int count ) { display(5); };
+};

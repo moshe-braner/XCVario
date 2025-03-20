@@ -484,9 +484,9 @@ SetupNG<float>  		range( "VARIO_RANGE", 5.0, true, SYNC_FROM_MASTER, PERSISTENT,
 SetupNG<int>			log_scale( "LOG_SCALE", 0 );
 SetupNG<float>  		ballast( "BALLAST" , 0.0, true, SYNC_NONE, VOLATILE, 0 );  // ballast increase from reference weight in %
 SetupNG<float>  		ballast_kg( "BAL_KG" , 0.0, true, SYNC_BIDIR, PERSISTENT, change_bal_water );
-SetupNG<float>			empty_weight( "EMPTY_WGT", 250, true, SYNC_BIDIR, PERSISTENT, change_empty_weight );
-SetupNG<float>			crew_weight( "CREW_WGT", 80, true, SYNC_BIDIR, PERSISTENT, change_crew_weight );
-SetupNG<float>			gross_weight( "CREW_WGT", 350, true, SYNC_NONE, VOLATILE ); // derived from above
+SetupNG<float>			empty_weight( "EMPTY_WGT", 250.0, true, SYNC_BIDIR, PERSISTENT, change_empty_weight );
+SetupNG<float>			crew_weight( "CREW_WGT", 80.0, true, SYNC_BIDIR, PERSISTENT, change_crew_weight );
+SetupNG<float>			gross_weight( "CREW_WGT", 350.0, true, SYNC_NONE, VOLATILE ); // derived from above
 SetupNG<float>  		bugs( "BUGS", 0.0, true, SYNC_BIDIR, VOLATILE, modifyPolar  );
 
 SetupNG<int>  			cruise_mode( "CRUISE", 0, RST_NONE, SYNC_BIDIR, VOLATILE );
@@ -506,10 +506,10 @@ SetupNG<float>  		te_vario( "TEVA", 0.0, true, SYNC_FROM_MASTER, VOLATILE );
 
 SetupNG<float>  		s2f_speed( "S2F_SPEED", 100.0, true, SYNC_FROM_MASTER, PERSISTENT, 0, UNIT_SPEED );
 SetupNG<float>  		s2f_hysteresis( "S2F_HYST", 5.0, true, SYNC_FROM_MASTER, PERSISTENT, 0, UNIT_SPEED  );
-SetupNG<float>  		s2f_flap_pos( "S2F_FLAP", 1, true, SYNC_FROM_MASTER, PERSISTENT, 0 );
-SetupNG<float>  		s2f_gyro_deg( "S2F_GYRO", 12, true, SYNC_FROM_MASTER, PERSISTENT, 0 );
+SetupNG<float>  		s2f_flap_pos( "S2F_FLAP", 1.0, true, SYNC_FROM_MASTER, PERSISTENT, 0 );
+SetupNG<float>  		s2f_gyro_deg( "S2F_GYRO", 12.0, true, SYNC_FROM_MASTER, PERSISTENT, 0 );
 
-SetupNG<float> 			audio_volume("AUD_VOL", 10, true, SYNC_BIDIR, VOLATILE, change_volume );
+SetupNG<float> 			audio_volume("AUD_VOL", 10.0, true, SYNC_BIDIR, VOLATILE, change_volume );
 SetupNG<int>  			audio_split_vol( "AUD_SPLIT", 0 );
 SetupNG<int>  			audio_variable_frequency( "AUD_VAFQ", 0);
 SetupNG<int>  			s2f_switch_mode( "AUDIO_MODE" ,  AM_AUTOSPEED );
@@ -526,27 +526,27 @@ SetupNG<int>  			show_mode("MASTER_MODE", 0, true, SYNC_NONE, VOLATILE );
 SetupNG<int>  			wireless_type("BT_ENABLE", WL_BLUETOOTH, true, SYNC_NONE, PERSISTENT, wireless_type_change );
 // new variable used in menu, translated internally into wireless_type:
 SetupNG<int>  			wireless_mode("WLTYPE", WL_BTSPP, true, SYNC_NONE, PERSISTENT, wireless_mode_change );
-SetupNG<float>  		wifi_max_power( "WIFI_MP" ,  50);
+SetupNG<float>  		wifi_max_power( "WIFI_MP" ,  50.0);
 SetupNG<int>  			factory_reset( "FACTORY_RES" , 0 );
 SetupNG<int>  			audio_range( "AUDIO_RANGE" , AUDIO_RANGE_5_MS );
 SetupNG<int>  			alt_select( "ALT_SELECT" , AS_BARO_SENSOR );
 SetupNG<int>  			fl_auto_transition( "FL_AUTO" , 0 );
 SetupNG<int>  			alt_display_mode( "ALT_DISP_MODE" , MODE_QNH );
-SetupNG<float>  		transition_alt( "TRANS_ALT", 50 );   // Transition Altitude
+SetupNG<float>  		transition_alt( "TRANS_ALT", 50.0 );   // Transition Altitude
 SetupNG<int>  			glider_type( "GLIDER_TYPE", 0, true, SYNC_FROM_MASTER, PERSISTENT,  polar_set );
 SetupNG<int>  			glider_type_index( "GLIDER_TYPE_IDX", 0, true, SYNC_FROM_MASTER, PERSISTENT, polar_update_name );
 SetupNG<int>  			ps_display( "PS_DISPLAY", 1 );
 
-SetupNG<float>  		as_offset( "AS_OFFSET" , -1 );
+SetupNG<float>  		as_offset( "AS_OFFSET" , -1.0 );
 SetupNG<float>  		bat_low_volt( "BAT_LOW_VOLT" , 11.5, true, SYNC_FROM_MASTER );
 SetupNG<float>  		bat_red_volt( "BAT_RED_VOLT", 11.75, true, SYNC_FROM_MASTER  );
 SetupNG<float>  		bat_yellow_volt( "BAT_YELLOW_VOLT" , 12.0, true, SYNC_FROM_MASTER  );
 SetupNG<float>  		bat_full_volt( "BAT_FULL_VOLT", 12.8, true, SYNC_FROM_MASTER  );
-SetupNG<float>  		core_climb_period( "CORE_CLIMB_P" , 60, true, SYNC_FROM_MASTER  );
+SetupNG<float>  		core_climb_period( "CORE_CLIMB_P" , 60.0, true, SYNC_FROM_MASTER  );
 SetupNG<float>  		core_climb_min( "CORE_CLIMB_MIN" , 0.5, true, SYNC_FROM_MASTER  );
-SetupNG<float>  		core_climb_history( "CORE_CLIMB_HIST" , 45, true, SYNC_FROM_MASTER  );
+SetupNG<float>  		core_climb_history( "CORE_CLIMB_HIST" , 45.0, true, SYNC_FROM_MASTER  );
 SetupNG<float>  		mean_climb_major_change( "MEAN_CLMC", 0.5, true, SYNC_FROM_MASTER );
-SetupNG<float>  		elevation( "ELEVATION", -1, true, SYNC_BIDIR, PERSISTENT, 0, UNIT_ALT );
+SetupNG<float>  		elevation( "ELEVATION", -1.0, true, SYNC_BIDIR, PERSISTENT, 0, UNIT_ALT );
 SetupNG<float>  		default_volume( "DEFAULT_VOL", 25.0 );
 SetupNG<float>  		max_volume( "MAXI_VOL", 60.0, true, SYNC_NONE, PERSISTENT, change_max_volume );
 SetupNG<int>  			sync_volume( "SYNC_VOL", 1, true, SYNC_BIDIR, PERSISTENT, set_volume_sync );
@@ -560,12 +560,12 @@ SetupNG<int>  			display_type( "DISPLAY_TYPE",  UNIVERSAL );
 SetupNG<int>  			display_test( "DISPLAY_TEST", 0, RST_NONE, SYNC_NONE, VOLATILE );
 SetupNG<int>  			display_orientation("DISPLAY_ORIENT" , DISPLAY_NORMAL, true, SYNC_NONE, PERSISTENT, chg_display_orientation );
 SetupNG<int>  			flap_enable( "FLAP_ENABLE", 0, true, SYNC_FROM_MASTER, PERSISTENT, flap_act);
-SetupNG<float>  		flap_minus_3( "FLAP_MINUS_3", 200,  true, SYNC_FROM_MASTER, PERSISTENT, flap_act, UNIT_SPEED );
-SetupNG<float>  		flap_minus_2( "FLAP_MINUS_2", 165,  true, SYNC_FROM_MASTER, PERSISTENT, flap_act, UNIT_SPEED );
-SetupNG<float>  		flap_minus_1( "FLAP_MINUS_1", 105,  true, SYNC_FROM_MASTER, PERSISTENT, flap_act, UNIT_SPEED );
-SetupNG<float>  		flap_0(       "FLAP_0", 88,  true, SYNC_FROM_MASTER, PERSISTENT, flap_act, UNIT_SPEED );
-SetupNG<float>  		flap_plus_1(  "FLAP_PLUS_1", 78,  true, SYNC_FROM_MASTER, PERSISTENT, flap_act, UNIT_SPEED );
-SetupNG<float>  		flap_plus_2(  "FLAP_PLUS_2", 70,  true, SYNC_FROM_MASTER, PERSISTENT, flap_act, UNIT_SPEED );
+SetupNG<float>  		flap_minus_3( "FLAP_MINUS_3", 200.0,  true, SYNC_FROM_MASTER, PERSISTENT, flap_act, UNIT_SPEED );
+SetupNG<float>  		flap_minus_2( "FLAP_MINUS_2", 165.0,  true, SYNC_FROM_MASTER, PERSISTENT, flap_act, UNIT_SPEED );
+SetupNG<float>  		flap_minus_1( "FLAP_MINUS_1", 105.0,  true, SYNC_FROM_MASTER, PERSISTENT, flap_act, UNIT_SPEED );
+SetupNG<float>  		flap_0(       "FLAP_0", 88.0,  true, SYNC_FROM_MASTER, PERSISTENT, flap_act, UNIT_SPEED );
+SetupNG<float>  		flap_plus_1(  "FLAP_PLUS_1", 78.0,  true, SYNC_FROM_MASTER, PERSISTENT, flap_act, UNIT_SPEED );
+SetupNG<float>  		flap_plus_2(  "FLAP_PLUS_2", 70.0,  true, SYNC_FROM_MASTER, PERSISTENT, flap_act, UNIT_SPEED );
 SetupNG<int>  			alt_unit( "ALT_UNIT", ALT_UNIT_METER );
 SetupNG<int>  			alt_quantization( "ALT_QUANT", ALT_QUANT_10 );
 SetupNG<int>  			ias_unit( "IAS_UNIT", SPEED_UNIT_KMH );
@@ -602,8 +602,8 @@ SetupNG<int>  			battery_display( "BAT_DISPLAY", 0 );
 SetupNG<int>  			airspeed_mode( "AIRSPEED_MODE", MODE_IAS );
 SetupNG<int>  			nmea_protocol( "NMEA_PROTOCOL", XCVARIO );
 SetupNG<int>		    log_level( "LOG_LEVEL", 3 );
-SetupNG<float>		    audio_factor( "AUDIO_FACTOR", 1 );
-SetupNG<float>		    te_comp_adjust ( "TECOMP_ADJ", 0);
+SetupNG<float>		    audio_factor( "AUDIO_FACTOR", 1.0 );
+SetupNG<float>		    te_comp_adjust ( "TECOMP_ADJ", 0.0);
 SetupNG<int>		    te_comp_enable( "TECOMP_ENA", TE_TEK_PROBE );
 SetupNG<int>		    rotary_dir( "ROTARY_DIR", 0 );
 SetupNG<int>		    rotary_inc( "ROTARY_INC", 1 );
@@ -613,16 +613,16 @@ SetupNG<int>		    rotary_dir_21( "ROTARY_DIR_21", 0 );
 SetupNG<int>		    rotary_dir_21( "ROTARY_DIR_21", 1 );
 #endif
 SetupNG<int>		    student_mode( "STUD_MOD", 0 );
-SetupNG<float>		    password( "PASSWORD", 0 );
+SetupNG<float>		    password( "PASSWORD", 0.0 );
 SetupNG<int>		    autozero( "AUTOZERO", 1 );  // AS autozero at factory
 SetupNG<int>		    attitude_indicator("AHRS", 1 );
-SetupNG<float>		    horizon_offset("HRZOFST", 0, RST_NONE, SYNC_NONE, VOLATILE );
+SetupNG<float>		    horizon_offset("HRZOFST", 0.0, RST_NONE, SYNC_NONE, VOLATILE );
 #if defined(NOSENSORS)
-SetupNG<float>		    hzn_roll("HZROLL", 0, RST_NONE, SYNC_FROM_MASTER, VOLATILE, change_roll );
-SetupNG<float>		    hzn_pitch("HZPTCH", 0, RST_NONE, SYNC_FROM_MASTER, VOLATILE, change_pitch );
+SetupNG<float>		    hzn_roll("HZROLL", 0.0, RST_NONE, SYNC_FROM_MASTER, VOLATILE, change_roll );
+SetupNG<float>		    hzn_pitch("HZPTCH", 0.0, RST_NONE, SYNC_FROM_MASTER, VOLATILE, change_pitch );
 #else
-SetupNG<float>		    hzn_roll("HZROLL", 0, RST_NONE, SYNC_FROM_MASTER, VOLATILE );
-SetupNG<float>		    hzn_pitch("HZPTCH", 0, RST_NONE, SYNC_FROM_MASTER, VOLATILE );
+SetupNG<float>		    hzn_roll("HZROLL", 0.0, RST_NONE, SYNC_FROM_MASTER, VOLATILE );
+SetupNG<float>		    hzn_pitch("HZPTCH", 0.0, RST_NONE, SYNC_FROM_MASTER, VOLATILE );
 #endif
 SetupNG<int>		horizon_colors("HRZCOLOR", 0, RST_NONE, SYNC_NONE, VOLATILE, update_horizon_options );
 SetupNG<int>		horizon_line("HRZLINE", 0, RST_NONE, SYNC_NONE, VOLATILE, update_horizon_options );
@@ -635,9 +635,9 @@ SetupNG<int>		horizon_nums("HRZNUMS", 0, RST_NONE, SYNC_NONE, VOLATILE, update_h
 SetupNG<int>		horizon_options("HRZOPT", 0 );  // now persistent
 SetupNG<int>		    ahrs_rpyl_dataset("RPYL", 0 );
 SetupNG<int>		    ahrs_autozero("AHRSAZ", 0 );
-SetupNG<float>		    ahrs_gyro_factor("AHRSMGYF", 100 );
-SetupNG<float>		    ahrs_min_gyro_factor("AHRSLGYF", 20 );
-SetupNG<float>		    ahrs_dynamic_factor("AHRSGDYN", 5 );
+SetupNG<float>		    ahrs_gyro_factor("AHRSMGYF", 100.0 );
+SetupNG<float>		    ahrs_min_gyro_factor("AHRSLGYF", 20.0 );
+SetupNG<float>		    ahrs_dynamic_factor("AHRSGDYN", 5.0 );
 SetupNG<int>		    ahrs_roll_check("AHRSRCHECK", 0 );
 SetupNG<float>       	gyro_gating("GYRO_GAT", 1.0 );
 SetupNG<int>		    display_style("DISPLAY_STYLE", 1 );
@@ -656,52 +656,52 @@ SetupNG<int>		    wk_sens_pos_minus_1("WKSM1", 3000);
 SetupNG<int>		    wk_sens_pos_minus_2("WKSM2", 3500);
 SetupNG<int>		    wk_sens_pos_minus_3("WKSM3", 4000);
 SetupNG<int>            stall_warning( "STALL_WARN", 0 );
-SetupNG<float>			stall_speed( "STALL_SPEED", 70, true, SYNC_FROM_MASTER, PERSISTENT, 0, UNIT_SPEED  );
+SetupNG<float>			stall_speed( "STALL_SPEED", 70.0, true, SYNC_FROM_MASTER, PERSISTENT, 0, UNIT_SPEED  );
 SetupNG<int>            flarm_visual( "FLARM_LEVEL", 1 );
 SetupNG<int>            flarm_sound( "FLARM_SOUND", 1 );
 SetupNG<int>            flarm_sound_continuous( "FLARM_CONT", 1 );
 SetupNG<int>            flarm_2icons( "FLARM_ICONS", 1 );
 SetupNG<int>            flarm_sim( "FLARM_SIM", 0 );
-SetupNG<float>          flarm_volume( "FLARM_VOL", 100 );
-SetupNG<float>          flarm_alarm_time( "FLARM_ALM", 5 );
+SetupNG<float>          flarm_volume( "FLARM_VOL", 100.0 );
+SetupNG<float>          flarm_alarm_time( "FLARM_ALM", 5.0 );
 SetupNG<int>            flap_sensor( "FLAP_SENS", 0, RST_NONE, SYNC_FROM_MASTER, PERSISTENT, flap_act);
-SetupNG<float>          flap_pos_max("FL_POS_M", +2, true, SYNC_FROM_MASTER, PERSISTENT, flap_act);
-SetupNG<float>          flap_neg_max("FL_NEG_M", -2, true, SYNC_FROM_MASTER, PERSISTENT, flap_act);
+SetupNG<float>          flap_pos_max("FL_POS_M", +2.0, true, SYNC_FROM_MASTER, PERSISTENT, flap_act);
+SetupNG<float>          flap_neg_max("FL_NEG_M", -2.0, true, SYNC_FROM_MASTER, PERSISTENT, flap_act);
 SetupNG<int>            compass_enable( "CP_ENABLE", 0 );
-SetupNG<float>          compass_dev_0( "CP_DEV_0", 0 );
-SetupNG<float>          compass_dev_45( "CP_DEV_45", 0 );
-SetupNG<float>          compass_dev_90( "CP_DEV_90", 0 );
-SetupNG<float>          compass_dev_135( "CP_DEV_135", 0 );
-SetupNG<float>          compass_dev_180( "CP_DEV_180", 0 );
-SetupNG<float>          compass_dev_225( "CP_DEV_225", 0 );
-SetupNG<float>          compass_dev_270( "CP_DEV_279", 0 );
-SetupNG<float>          compass_dev_315( "CP_DEV_315", 0 );
-SetupNG<float>          compass_x_bias( "CP_X_BIAS", 0 );
-SetupNG<float>          compass_y_bias( "CP_Y_BIAS", 0 );
-SetupNG<float>          compass_z_bias( "CP_Z_BIAS", 0 );
+SetupNG<float>          compass_dev_0( "CP_DEV_0", 0.0 );
+SetupNG<float>          compass_dev_45( "CP_DEV_45", 0.0 );
+SetupNG<float>          compass_dev_90( "CP_DEV_90", 0.0 );
+SetupNG<float>          compass_dev_135( "CP_DEV_135", 0.0 );
+SetupNG<float>          compass_dev_180( "CP_DEV_180", 0.0 );
+SetupNG<float>          compass_dev_225( "CP_DEV_225", 0.0 );
+SetupNG<float>          compass_dev_270( "CP_DEV_279", 0.0 );
+SetupNG<float>          compass_dev_315( "CP_DEV_315", 0.0 );
+SetupNG<float>          compass_x_bias( "CP_X_BIAS", 0.0 );
+SetupNG<float>          compass_y_bias( "CP_Y_BIAS", 0.0 );
+SetupNG<float>          compass_z_bias( "CP_Z_BIAS", 0.0 );
 SetupNG<float>          compass_x_scale( "CP_X_SCALE", 1.0 );
 SetupNG<float>          compass_y_scale( "CP_Y_SCALE", 1.0 );
 SetupNG<float>          compass_z_scale( "CP_Z_SCALE", 1.0 );
 SetupNG<int>            compass_calibrated( "CP_CALIBRATED", 0 );
-SetupNG<float>          compass_declination( "CP_DECL", 0 );
+SetupNG<float>          compass_declination( "CP_DECL", 0.0 );
 SetupNG<int>            compass_declination_valid( "CP_DECL_VALID", 0 );
 SetupNG<float>          compass_damping( "CPS_DAMP", 1.0 );
 SetupNG<int>            compass_nmea_hdm( "CP_NMEA_HDM", 0 );
 SetupNG<int>            compass_nmea_hdt( "CP_NMEA_HDT", 0 );
-SetupNG<float>          compass_i2c_cl("CP_I2C_CL", 100 );
+SetupNG<float>          compass_i2c_cl("CP_I2C_CL", 100.0 );
 SetupNG<float>          wind_as_filter( "WINDASF", 0.02 );
 SetupNG<float>          wind_gps_lowpass( "WINDGPSLP", 1.00 );
 SetupNG<float>          wind_dev_filter( "WINDDEVF", 0.010 );
 SetupNG<int> 			wind_enable( "WIND_ENA", WA_BOTH );
 SetupNG<int> 			wind_logging( "WIND_LOG", 0 );
 SetupNG<float> 			wind_as_calibration("WIND_AS_CAL", 1.0 );
-SetupNG<float> 			wind_filter_lowpass("SWINDAVER", 60 );
+SetupNG<float> 			wind_filter_lowpass("SWINDAVER", 60.0 );
 SetupNG<float> 			wind_straight_course_tolerance("WINDSTOL", 7.5 );
-SetupNG<float> 			wind_straight_speed_tolerance("WINDSSTOL", 15 );
+SetupNG<float> 			wind_straight_speed_tolerance("WINDSSTOL", 15.0 );
 SetupNG<int> 			wind_display( "WIND_DIS", WD_NONE );
 SetupNG<int> 			wind_reference( "WIND_REF", WR_HEADING );
 SetupNG<float> 			wind_max_deviation("WIND_MDEV", 30.0 );
-SetupNG<float> 			wind_as_min( "WIND_ASM", 25 );
+SetupNG<float> 			wind_as_min( "WIND_ASM", 25.0 );
 SetupNG<int> 			s2f_blockspeed( "S2G_BLOCKSPEED", 0, true, SYNC_BIDIR );  // considering netto vario and g load for S2F or not
 SetupNG<int> 			needle_color("NEEDLE_COLOR", VN_COLOR_ORANGE );
 SetupNG<int>			s2f_arrow_color("S2F_ARRCOL", AC_WHITE_WHITE );
@@ -712,7 +712,7 @@ SetupNG<int> 			wk_label_null_0( "WKL0",   9,  true, SYNC_FROM_MASTER, PERSISTEN
 SetupNG<int> 			wk_label_minus_1( "WKLM1", 8,  true, SYNC_FROM_MASTER, PERSISTENT, flap_act);  // -1
 SetupNG<int> 			wk_label_minus_2( "WKLM2", 7,  true, SYNC_FROM_MASTER, PERSISTENT, flap_act);  // -2
 SetupNG<int> 			wk_label_minus_3( "WKLM3", 42,  true, SYNC_FROM_MASTER, PERSISTENT, flap_act); //  S
-SetupNG<float>       	flap_takeoff("FLAPTO", 1,  true, SYNC_FROM_MASTER);
+SetupNG<float>       	flap_takeoff("FLAPTO", 1.0,  true, SYNC_FROM_MASTER);
 SetupNG<int> 			audio_mute_menu( "AUDIS", 0 );
 SetupNG<int> 			audio_mute_sink( "AUDISS", 0 );
 SetupNG<int> 			audio_mute_gen( "AUDISG", AUDIO_ON );
@@ -720,24 +720,24 @@ SetupNG<int>			vario_mode("VAMOD", CRUISE_NETTO );  // switch to netto mode when
 SetupNG<int>			airspeed_sensor_type("PTYPE", PS_NONE, RST_NONE);
 SetupNG<int>			cruise_audio_mode("CAUDIO", 0 );
 SetupNG<int>			netto_mode("NETMOD", NETTO_RELATIVE );  // regard polar sink
-SetupNG<float>			v_max("VMAX", 270, true, SYNC_FROM_MASTER, PERSISTENT, 0, UNIT_SPEED  );
+SetupNG<float>			v_max("VMAX", 270.0, true, SYNC_FROM_MASTER, PERSISTENT, 0, UNIT_SPEED  );
 SetupNG<int>			gload_mode("GLMOD", GLOAD_OFF );
-SetupNG<float>			gload_pos_thresh("GLOADPT", 4 );
-SetupNG<float>			gload_neg_thresh("GLOADNT", -3 );
-SetupNG<float>			gload_pos_limit_low("GLOADPLL", 3 );
-SetupNG<float>			gload_neg_limit_low("GLOADNLL", -2 );
-SetupNG<float>			gload_pos_limit("GLOADPL", 5 );
-SetupNG<float>			gload_neg_limit("GLOADNL", -3 );
-SetupNG<float>			gload_pos_max("GLOADPM", 1 );
-SetupNG<float>			gload_neg_max("GLOADNM", 1 );
-SetupNG<float>			airspeed_max("ASMAX", 0 );
-SetupNG<float>		    gload_alarm_volume("GLOADAVOL", 100 );
+SetupNG<float>			gload_pos_thresh("GLOADPT", 4.0 );
+SetupNG<float>			gload_neg_thresh("GLOADNT", -3.0 );
+SetupNG<float>			gload_pos_limit_low("GLOADPLL", 3.0 );
+SetupNG<float>			gload_neg_limit_low("GLOADNLL", -2.0 );
+SetupNG<float>			gload_pos_limit("GLOADPL", 5.0 );
+SetupNG<float>			gload_neg_limit("GLOADNL", -3.0 );
+SetupNG<float>			gload_pos_max("GLOADPM", 1.0 );
+SetupNG<float>			gload_neg_max("GLOADNM", 1.0 );
+SetupNG<float>			airspeed_max("ASMAX", 0.0 );
+SetupNG<float>		    gload_alarm_volume("GLOADAVOL", 100.0 );
 SetupNG<int>        	display_variant("DISPLAY_VARIANT", 0 );
 SetupNG<int>        	compass_dev_auto("COMPASS_DEV", 0 );
 SetupNG<float>       	max_circle_wind_diff("CI_WINDDM", 60.0 );
 SetupNG<float>       	max_circle_wind_delta_deg("CIMDELD", 20.0 );
 SetupNG<float>       	max_circle_wind_delta_speed("CIMDELS", 5.0 );
-SetupNG<float>       	circle_wind_lowpass("CI_WINDLOW", 5 );
+SetupNG<float>       	circle_wind_lowpass("CI_WINDLOW", 5.0 );
 SetupNG<int> 			can_speed( "CANSPEED", CAN_SPEED_OFF, true, SYNC_NONE, PERSISTENT, can_speed_change );
 
 // these are saved in flash indirectly via serial1_tx and serial2_tx and w3_routes
@@ -772,7 +772,7 @@ SetupNG<int>  			w3_tx_enable( "W3_TX_ENA", 0 );  // added
 
 // hidden historical variable, set internally based on master_mode (or vice versa):
 SetupNG<int> 			can_mode( "CANMOD", CAN_MODE_STANDALONE, true, SYNC_NONE, PERSISTENT, can_mode_change );
-SetupNG<float> 			master_xcvario( "MSXCV", 0 );
+SetupNG<float> 			master_xcvario( "MSXCV", 0.0 );
 SetupNG<int> 			master_xcvario_lock( "MSXCVL", 0 );
 SetupNG<int> 			menu_long_press("MENU_LONG", 0 );
 SetupNG<int> 			menu_screens("MENU_SCR", 0 );
@@ -786,7 +786,7 @@ SetupNG<int> 			gear_warning("GEARWA", 0 );
 SetupNG<t_wireless_id>  custom_wireless_id("WLID", t_wireless_id("") );
 SetupNG<int> 			drawing_prio("DRAWP", DP_NEEDLE );
 SetupNG<int> 			logging("LOGGING", LOG_DISABLE );
-SetupNG<float>      	display_clock_adj("DSCLADHJ", 0 );
+SetupNG<float>      	display_clock_adj("DSCLADHJ", 0.0 );
 
 static mpud::raw_axes_t zero_bias;
 SetupNG<float>				glider_ground_aa("GLD_GND_AA", 12.0, true, SYNC_FROM_MASTER);
