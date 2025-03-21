@@ -1,4 +1,4 @@
-# XCVario - Moshe Braner's branch
+# XCVario - Moshe Braner's fork
 
 https://github.com/moshe-braner/XCVario
 
@@ -10,7 +10,7 @@ This branch aims to offer some features not accepted (so far, anyway) into the "
 * Can escape from deep in the menus to the vario screen via long-press
 * Simplified the data routing settings - each route appears only once
 * Expanded data routing capabilities - more cross-device routes, and TCP port 2000
-* More audio style options including "RICO VACS" inspired ticking sound
+* More audio style options including ticking sound inspired by "RICO VACS"
 * Optional simpler FLARM warning screen, easier to interpret at a glance
 * Alternative horizon display screen - uncluttered and easy to view
 * A fix to allow use of Bluetooth Low Energy (BLE) connection to XCsoar
