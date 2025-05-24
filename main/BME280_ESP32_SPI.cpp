@@ -14,6 +14,7 @@
 #include <Arduino.h>
 #include <SPI.h>
 #include <logdef.h>
+#include "SetupNG.h"
 
 
 extern xSemaphoreHandle spiMutex;
@@ -169,6 +170,7 @@ void BME280_ESP32_SPI::WriteRegister(uint8_t reg_address, uint8_t data) {
 		if( err != ESP_OK )
 			ESP_LOGE(FNAME,"Error I2C write, status :%d", err );
 	//}
+#endif
 #else
 	xSemaphoreTake(spiMutex,portMAX_DELAY );
 	SPI.beginTransaction( spis );
@@ -519,7 +521,7 @@ uint8_t BME280_ESP32_SPI::readID()
 //***************BME280****************************
 uint16_t BME280_ESP32_SPI::read16bit(uint8_t reg) {
 #if defined(NOSENSORS)
-	uint16_t *data = 0;
+	uint16_t data = 0;
 #if defined(SUNTON28)
 	//if (_i2c_bus) {
 		//uint8_t tmp_MSB,tmp_LSB;
@@ -529,6 +531,7 @@ uint16_t BME280_ESP32_SPI::read16bit(uint8_t reg) {
 		esp_err_t err = _i2c_bus->read16bit(reg, &data);
 		if( err != ESP_OK )
 			ESP_LOGE(FNAME,"Error I2C 16bit read, status :%d", err );
+		ESP_LOGV(FNAME,"read 16bit: %04x", data );
 	//}
 #endif
 #else
