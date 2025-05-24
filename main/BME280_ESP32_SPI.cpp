@@ -519,15 +519,18 @@ uint8_t BME280_ESP32_SPI::readID()
 //***************BME280****************************
 uint16_t BME280_ESP32_SPI::read16bit(uint8_t reg) {
 #if defined(NOSENSORS)
+	uint16_t *data = 0;
 #if defined(SUNTON28)
 	//if (_i2c_bus) {
-		uint8_t tmp_MSB,tmp_LSB;
-		tmp_MSB = read8bit(reg);
-		tmp_LSB = read8bit(reg+1);
-		return (int16_t)(tmp_LSB | (tmp_MSB<<8));
+		//uint8_t tmp_MSB,tmp_LSB;
+		//tmp_MSB = read8bit(reg);
+		//tmp_LSB = read8bit(reg+1);
+		//return (int16_t)(tmp_LSB | (tmp_MSB<<8));
+		esp_err_t err = _i2c_bus->read16bit(reg, &data);
+		if( err != ESP_OK )
+			ESP_LOGE(FNAME,"Error I2C 16bit read, status :%d", err );
 	//}
 #endif
-	return 0;
 #else
 	uint16_t data;   //0xFD Humidity msb read =bit 7 high
 	uint8_t d1,d2;
@@ -542,8 +545,8 @@ uint16_t BME280_ESP32_SPI::read16bit(uint8_t reg) {
 	SPI.endTransaction();
 	xSemaphoreGive(spiMutex);
 	ESP_LOGV(FNAME,"read 16bit: %04x", data );
-	return data;
 #endif
+	return data;
 }
 
 #if defined(SUNTON28)
