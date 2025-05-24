@@ -156,8 +156,8 @@ public:
   static inline float getPitchRad()  { return filterPitch_rad; }
 
 #if defined(NOSENSORS)
-  static inline float setRollRad(float r)  { filterRoll_rad  = r; }
-  static inline float setPitchRad(float p) { filterPitch_rad = p; }
+  static inline void setRollRad(float r)  { filterRoll_rad  = r; }
+  static inline void setPitchRad(float p) { filterPitch_rad = p; }
 #endif
 
   // XCSoar uses a 180 deg rotated reference system with Z vector pointing down, so Yaw and Pitch inverted
