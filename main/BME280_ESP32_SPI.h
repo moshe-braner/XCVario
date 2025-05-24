@@ -33,14 +33,19 @@ altitude calculation by open source community on github.
 #include <esp32-hal-spi.h>
 #include <math.h>
 #include <hal/gpio_types.h>
+#include "I2Cbus.hpp"
 #include "PressureSensor.h"
 
+#define BMP280_ADDRESS  (0x77)
+#define BMP280_CHIPID   (0x58)
+#define BME280_CHIPID   (0x60)
+#define BMP280_REGISTER_CHIPID  (0xD0)
 
 class BME280_ESP32_SPI: public PressureSensor
 {
 public:
 	BME280_ESP32_SPI();
-	bool  setBus( I2C_t *_theBus ) { return true; };  // for future
+	bool  setBus( I2C_t *_theBus ) { _i2c_bus = theBus; return true; };
 	bool  setSPIBus(gpio_num_t sclk, gpio_num_t mosi, gpio_num_t miso, gpio_num_t cs, uint32_t freq );
 	bool begin();
     bool selfTest( float& p, float& t );
@@ -62,16 +67,28 @@ private:
 	uint32_t compensate_P(int32_t adc_P);
 	uint32_t compensate_H(int32_t adc_H);
 	uint16_t read16bit(uint8_t reg);
+#if defined(SUNTON28)
+	void read24bit(uint8_t reg, uint8_t *buf);
+#endif
 	uint8_t read8bit(uint8_t reg);
 	float _avg_alt;
 	float _avg_alt_std;
 
 
 private:
+#if defined(NOSENSORS)
+#if defined(SUNTON28)
+	I2C_t *_i2c_bus;      // using I2C instead of SPI for the BMP
+	char _i2c_address;
+#endif
+#else
 	gpio_num_t _sclk, _mosi, _miso;
 	uint8_t _cs;
 	uint32_t _freq;
+	SPISettings spis;
+#endif
 	int32_t  _t_fine;
+	char _BMP_chip_id;
 
 	uint16_t _dig_T1;
 	int16_t  _dig_T2;
@@ -95,7 +112,6 @@ private:
 	int8_t  _dig_H6;
 	float exponential_average;
 	bool init_err;
-	SPISettings spis;
 };
 
 #endif

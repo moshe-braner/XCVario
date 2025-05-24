@@ -60,6 +60,12 @@ BME280_ESP32_SPI::BME280_ESP32_SPI()
 	_miso = GPIO_NUM_MAX;
 	_mosi = GPIO_NUM_MAX;
 	_sclk = GPIO_NUM_MAX;
+
+#if defined(SUNTON28)
+	_i2c_bus = 0;
+	_i2c_address = BMP280_ADDRESS;
+#endif
+	_BMP_chip_id = 0;    // BMP vs. BME
 }
 
 #define c_sb      0   //stanby 0: 0,5 mS 1: 62,5 mS 2: 125 mS
@@ -71,7 +77,40 @@ BME280_ESP32_SPI::BME280_ESP32_SPI()
 
 //****************BME280_ESP32_SPI*************************************************
 bool BME280_ESP32_SPI::begin(){
-#if !defined(NOSENSORS)
+#if defined(NOSENSORS)
+#if defined(SUNTON28)
+	if (i2c_pins.get() != I2C_NONE) {
+		if (! _i2c_bus) {
+			ESP_LOGE(FNAME,"BMP280: must call setBus() before begin()");
+			init_err = true;
+			return init_err;
+		}
+		WriteRegister(0xE0, 0xB6); //reset device
+		delay( 20 );
+		WriteRegister(0xF4, 0x3F);
+		delay( 20 );
+		int id = readID();
+		if (id != BMP280_CHIPID && id != BME280_CHIPID) {
+			ESP_LOGE(FNAME,"BMP280 Chip ID wrong: ID=%02x !", id);
+			init_err = true;
+		} else {
+			ESP_LOGI(FNAME,"BMP280 ID = %02x", id );
+			_BMP_chip_id = id;
+			delay( 20 );
+			readCalibration();
+			if( _dig_T2 == 0 && _dig_T2 == 0 ) {
+				delay( 20 );
+				readCalibration();
+				ESP_LOGI(FNAME,"BMP280 Calibration Data read retry CS: %d ", _cs);
+			}
+			if( _dig_T2 == 0 && _dig_T2 == 0 ) {
+				ESP_LOGE(FNAME,"BMP280 Calibration Data Error  CS: %d !", _cs);
+				init_err = true;
+			}
+		}
+	}
+#endif
+#else
 	pinMode(_cs, GPIO_MODE_OUTPUT);
 	digitalWrite(_cs, HIGH);
 	spis = SPISettings( _freq, SPI_MSBFIRST, SPI_MODE3 );
@@ -88,7 +127,7 @@ bool BME280_ESP32_SPI::begin(){
 	WriteRegister(0xE0, 0xB6); //reset device
 	int id = readID();
 	int count = 0;
-	while( (id != 0x58) && (count < 20) ) {
+	while( (id != BMP280_CHIPID && id != BME280_CHIPID) && (count < 20) ) {
 		id = readID();
 		delay( 20 );
 		count++;
@@ -97,8 +136,10 @@ bool BME280_ESP32_SPI::begin(){
 		ESP_LOGE(FNAME,"Error init BMP280 CS=%d", _cs );
 		init_err = true;
 	}
-	else
+	else {
 		ESP_LOGI(FNAME,"BMP280 ID = %02x", id );
+		_BMP_chip_id = id;
+	}
 
 	WriteRegister(0xF2, ctrl_hum);
 	WriteRegister(0xF4, ctrl_meas);
@@ -121,7 +162,14 @@ bool BME280_ESP32_SPI::begin(){
 
 //***************BME280 ****************************
 void BME280_ESP32_SPI::WriteRegister(uint8_t reg_address, uint8_t data) {
-#if !defined(NOSENSORS)
+#if defined(NOSENSORS)
+#if defined(SUNTON28)
+	//if (_i2c_bus) {
+		esp_err_t err = _i2c_bus->writeByte(_i2c_address, reg_address, data );
+		if( err != ESP_OK )
+			ESP_LOGE(FNAME,"Error I2C write, status :%d", err );
+	//}
+#else
 	xSemaphoreTake(spiMutex,portMAX_DELAY );
 	SPI.beginTransaction( spis );
 	digitalWrite(_cs, LOW);
@@ -135,7 +183,6 @@ void BME280_ESP32_SPI::WriteRegister(uint8_t reg_address, uint8_t data) {
 
 //*******************************************************
 void BME280_ESP32_SPI::readCalibration(void) {
-#if !defined(NOSENSORS)
 	// ESP_LOGI(FNAME,"BME280_ESP32_SPI::readCalibration");
 	_dig_T1 = read16bit(0x88);
 
@@ -162,14 +209,29 @@ void BME280_ESP32_SPI::readCalibration(void) {
 	_dig_H5 = (int16_t)((read8bit(0xE6) << 4) | (read8bit(0xE5) >> 4));
 	_dig_H6 = (int8_t)read8bit(0xE7);
 	*/
-#endif
 }
 
 //***************BME280 ****************************
 float BME280_ESP32_SPI::readTemperature( bool& success ){
 #if defined(NOSENSORS)
+#if defined(SUNTON28)
+	uint32_t adc_T;
+	if (_i2c_bus) {
+		uint8_t rx[4];
+		read24bit(0xFA, rx);
+		if ( rx[0] == 0 && rx[1] == 0 && rx[3] == 0 )
+			success = false;
+		else
+			success = true;
+		adc_T = (rx[0] << 12) | (rx[1] << 4) | (rx[2] >> 4); //0xFA, msb+lsb+xlsb=19bit
+	} else {
+		success = true;
+		return 0.0;
+	}
+#else
 	success = true;
 	return 0.0;
+#endif
 #else
 	// ESP_LOGI(FNAME, "++BPM280 read Temp cs:%d ", _cs);
 	uint8_t tx[4];
@@ -194,19 +256,31 @@ float BME280_ESP32_SPI::readTemperature( bool& success ){
 	else
 		success = true;
 	uint32_t adc_T = (rx[0] << 12) | (rx[1] << 4) | (rx[2] >> 4); //0xFA, msb+lsb+xlsb=19bit
+#endif
 
 	// ESP_LOGI(FNAME, "--BMP280 raw adc_T=%d  CS=%d", adc_T, _cs );
 	float t=compensate_T((int32_t)adc_T) / 100.0;
 	// ESP_LOGI(FNAME, "--BMP280 read Temp=%0.1f  CS=%d", t, _cs );
 	// ESP_LOGI(FNAME,"   Calibration  CS %d  T1 %d T2 %02x T3 %02x", _cs, _dig_T1, _dig_T2, _dig_T3);
 	return t;
-#endif
 }
 
 //***************BME280 ****************************
 float BME280_ESP32_SPI::readPressure(bool &ok){
 #if defined(NOSENSORS)
 	ok = true;
+#if defined(SUNTON28)
+	if (_i2c_bus) {
+		bool success;
+		readTemperature( success );
+		if (success) {
+			uint8_t rx[4];
+			read24bit(0xF7, rx);
+			uint32_t adc_P = (rx[0] << 12) | (rx[1] << 4) | (rx[2] >> 4); //0xF7, msb+lsb+xlsb=19bit
+			return compensate_P((int32_t)adc_P) * 0.01;
+		}
+	}
+#endif
 	return 1000.0;
 #else
 	if( init_err ){
@@ -247,14 +321,14 @@ float BME280_ESP32_SPI::readPressure(bool &ok){
 	xSemaphoreGive(spiMutex);
 	uint32_t adc_P = (rx[0] << 12) | (rx[1] << 4) | (rx[2] >> 4); //0xF7, msb+lsb+xlsb=19bit
     // ESP_LOGI(FNAME,"--BMP280 readPressure");
-	return compensate_P((int32_t)adc_P) / 100.0;
+	return compensate_P((int32_t)adc_P) * 0.01;
 #endif
 }
 
 //***************BME280****************************
 float BME280_ESP32_SPI::readHumidity(){
 #if defined(NOSENSORS)
-	return 0.5;
+	return 0.5;      // if BME280 attached could read it via I2C
 #else
 	// ESP_LOGI(FNAME,"++BMP280 readHumidity");
 	uint32_t data[2];
@@ -383,7 +457,7 @@ bool BME280_ESP32_SPI::selfTest( float& t, float &p ) {
 	return true;
 #else
 	uint8_t id = readID();
-	if( id != 0x58 ) {
+	if( id != BMP280_CHIPID ) {
 		ESP_LOGE(FNAME,"BMP280 Error, Chip ID reading failed BMP280 chip select pin %d read 0x%.2X (instead 0x58) ", _cs, id  );
 		return( false );
 	}
@@ -422,6 +496,10 @@ bool BME280_ESP32_SPI::selfTest( float& t, float &p ) {
 uint8_t BME280_ESP32_SPI::readID()
 {
 #if defined(NOSENSORS)
+#if defined(SUNTON28)
+	//if (_i2c_bus)
+		return read8bit(BMP280_REGISTER_CHIPID);
+#endif
 	return 0;
 #else
 	xSemaphoreTake(spiMutex,portMAX_DELAY );
@@ -441,6 +519,14 @@ uint8_t BME280_ESP32_SPI::readID()
 //***************BME280****************************
 uint16_t BME280_ESP32_SPI::read16bit(uint8_t reg) {
 #if defined(NOSENSORS)
+#if defined(SUNTON28)
+	//if (_i2c_bus) {
+		uint8_t tmp_MSB,tmp_LSB;
+		tmp_MSB = read8bit(reg);
+		tmp_LSB = read8bit(reg+1);
+		return (int16_t)(tmp_LSB | (tmp_MSB<<8));
+	//}
+#endif
 	return 0;
 #else
 	uint16_t data;   //0xFD Humidity msb read =bit 7 high
@@ -460,10 +546,31 @@ uint16_t BME280_ESP32_SPI::read16bit(uint8_t reg) {
 #endif
 }
 
+#if defined(SUNTON28)
+void BME280_ESP32_SPI::read24bit(uint8_t reg, uint8_t *buf) {
+	//if (_i2c_bus) {
+		esp_err_t err = _i2c_bus->readBytes(_i2c_address, reg, 3, buf );
+		if( err != ESP_OK )
+			ESP_LOGE(FNAME,"Error I2C read, status :%d", err );
+	//}
+}
+#endif
+
+
 //***************BME280****************************
 uint8_t BME280_ESP32_SPI::read8bit(uint8_t reg) {
 #if defined(NOSENSORS)
-	return 0;
+	uint8_t rdata = 0;
+#if defined(SUNTON28)
+	//if (_i2c_bus) {
+		esp_err_t err = _i2c_bus->readByte(_i2c_address, reg, &rdata );
+		if( err != ESP_OK ){
+			ESP_LOGE(FNAME,"Error I2C read, status :%d", err );
+			return 0;
+		}
+	//}
+#endif
+	return rdata;
 #else
 	uint8_t data;
 	xSemaphoreTake(spiMutex,portMAX_DELAY );

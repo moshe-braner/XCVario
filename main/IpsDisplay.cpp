@@ -546,9 +546,11 @@ void IpsDisplay::drawThermometer( int x, int y) {
 void IpsDisplay::begin() {
 	ESP_LOGI(FNAME,"IpsDisplay::begin");
 #if defined(SUNTON28)
-	// for this board need to turn on the backlight via software
-	gpio_set_direction(GPIO_NUM_21, GPIO_MODE_OUTPUT);
-	gpio_set_level(GPIO_NUM_21, 1);
+	if (i2c_pins.get() != I2C_21) {
+		// for this board need to turn on the backlight via software
+		gpio_set_direction(GPIO_NUM_21, GPIO_MODE_OUTPUT);
+		gpio_set_level(GPIO_NUM_21, 1);
+	} // else assume board has been modified (Q2 drain grounded and GPIO21 disconnected)
 #endif
 	ucg->begin();
 	setup();
