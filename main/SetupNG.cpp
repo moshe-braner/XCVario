@@ -40,6 +40,10 @@
 #include <esp_http_server.h>
 #include "WifiApp.h"
 
+#if defined(NOSENSORS)
+#include "KalmanMPU6050.h"   // for IMU::setPitchRad() and IMU::setRollRad
+#endif
+
 const char *mode_shown = "Unknown";
 void show_mode_change() {
 	int canmode = can_mode.get();
