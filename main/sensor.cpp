@@ -1378,13 +1378,11 @@ void system_startup(void *args){
 
 #if defined(NOSENSORS)  // dummy sensors implemented in code
 
+	BME280_ESP32_SPI *bmpBA = new BME280_ESP32_SPI();
 	bool baok = false;
-	BME280_ESP32_SPI *bmpBA = 0;
-	BME280_ESP32_SPI *bmpTE = 0;
 #if defined(SUNTON28)
 	// a single BMP280 may have been connected via I2C, use it for both BA & TE
 	if (i2c_pins.get() != I2C_NONE) {
-		BME280_ESP32_SPI *bmpBA = new BME280_ESP32_SPI();
 		bmpBA->setBus( &i2c );
 		if (i2c_pins.get() == I2C_21)
 			i2c.begin(GPIO_NUM_21, GPIO_NUM_22, 100000 );
@@ -1405,23 +1403,20 @@ void system_startup(void *args){
 			}
 		}
 		if( !baok ){
-			delete bmpBA;
+			ESP_LOGE(FNAME,"HW Error: Self test Barometric Pressure Sensor failed!");
+			display->writeText( line++, "Baro Sensor: NOT FOUND");
+			selftestPassed = false;
+			logged_tests += "Baro Sensor Test: NOT FOUND\n";
 		}
-	}
-#endif
-	if( !baok ){
-		// set up dummy sensors
-		ESP_LOGE(FNAME,"HW Error: Self test Barometric Pressure Sensor failed!");
-		display->writeText( line++, "Baro Sensor: NOT FOUND");
-		selftestPassed = false;
-		logged_tests += "Baro Sensor Test: NOT FOUND\n";
-		bmpBA = new BME280_ESP32_SPI();
-		bmpTE= new BME280_ESP32_SPI();
-		bmpTE->begin();
+	} else {             // if i2c_pins.get() == I2C_NONE
 		bmpBA->begin();
-		baroSensor = bmpBA;
-		teSensor = bmpTE;
 	}
+#else
+	// set up dummy sensors
+	bmpBA->begin();
+#endif
+	baroSensor = bmpBA;
+	teSensor = baroSensor;      // one sensor for both purposes
 
 #else  // have actual sensors
 
