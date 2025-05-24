@@ -27,6 +27,7 @@ public:
   bool readVolume( float& val );
   bool writeVolume( float val );
   bool haveDevice();
+  void setHalfScale() { };
 
 private:
   bool readWiper( int& val );
