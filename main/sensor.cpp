@@ -714,9 +714,10 @@ void readSensors(void *pvParameters){
 //		static float te = 0;
 //		if ( FLAP )    // not available unless flap_enable set to true
 //			te = 0.95 * te + 0.05 * (0.002 * FLAP->getSensorRaw(16) - 1.0);
+		float te = 0.0;
 		if (i2c_pins.get() != I2C_NONE) {
 			// assume have a BMP280
-			float te = bmpVario.readTE( tasraw, teP );
+			te = bmpVario.readTE( tasraw, teP );
 		}
 #else
 		float te = bmpVario.readTE( tasraw, teP );   // TE value caclulation
@@ -1112,11 +1113,10 @@ void system_startup(void *args){
 		ota->doSoftwareUpdate( display );
 	}
 
-	esp_err_t err=ESP_ERR_NOT_FOUND;
 #if !defined(NOSENSORS)
 	MPU.setBus(i2c);  // set communication bus, for SPI -> pass 'hspi'
 	MPU.setAddr(mpud::MPU_I2CADDRESS_AD0_LOW);  // set address or handle, for SPI -> pass 'mpu_spi_handle'
-	err = MPU.reset();
+	esp_err_t err = MPU.reset();
 	ESP_LOGI( FNAME,"MPU Probing returned %d MPU enable: %d ", err, attitude_indicator.get() );
 	if( err == ESP_OK ){
 		if( hardwareRevision.get() < XCVARIO_21 ){
